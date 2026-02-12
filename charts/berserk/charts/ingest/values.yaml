@@ -1,0 +1,29 @@
+# Default values for ingest service (tjalfe)
+replicaCount: 1
+
+image:
+  repository: tjalfe
+  pullPolicy: Always
+  tag: ""
+
+service:
+  type: ClusterIP
+  ports:
+    otlpGrpc: 4317
+    otlpHttp: 4318
+    telemetry: 8888
+
+resources:
+  requests:
+    memory: "512Mi"
+    cpu: "500m"
+  limits:
+    memory: "2Gi"
+    cpu: "2000m"
+
+config:
+  metaEndpoint: "http://meta-service:9500"
+  s3Region: "us-east-1"
+  observability:
+    serviceName: "ingest-service"
+    logLevel: "info"

@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "nursery.fullname" . }}-config
+  labels:
+    {{- include "nursery.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    http_bind: "0.0.0.0:{{ .Values.service.port }}"
+    meta_endpoint: {{ .Values.config.metaEndpoint | quote }}
+    cloud_storage_access_key: ${NURSERY_STORAGE_ACCESS_KEY:not-set}
+    cloud_storage_secret_key: ${NURSERY_STORAGE_SECRET_KEY:not-set}
+    storage_region: {{ .Values.config.storageRegion | quote }}
+    working_dir: "/var/cache/nursery"
+    meta_default_poll_interval_secs: {{ .Values.config.metaPollIntervalSecs }}
+    stream_timeout_secs: {{ .Values.config.streamTimeoutSecs }}
+    {{- $otlpEnabled := .Values.config.observability.otlpEnabled | default .Values.global.observability.otlpEnabled }}
+    {{- $otlpEndpoint := .Values.config.observability.otlpEndpoint | default .Values.global.observability.otlpEndpoint }}
+    observability:
+      service_name: {{ .Values.config.observability.serviceName | quote }}
+      log_level: {{ .Values.config.observability.logLevel | quote }}
+      otlp_enabled: {{ $otlpEnabled }}
+      otlp_endpoint: {{ $otlpEndpoint | quote }}

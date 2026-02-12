@@ -1,0 +1,29 @@
+# Default values for janitor service
+replicaCount: 1
+
+image:
+  repository: janitor
+  pullPolicy: Always
+  tag: ""
+
+resources:
+  requests:
+    memory: "256Mi"
+    cpu: "200m"
+  limits:
+    memory: "1Gi"
+    cpu: "1000m"
+
+cache:
+  size: "10Gi"
+
+config:
+  metaEndpoint: "http://meta-service:9500"
+  queryEndpoint: "http://query-service:9510"
+  storageRegion: "auto"
+  mergerIntervalSeconds: 300
+  observability:
+    serviceName: "janitor-service"
+    logLevel: "info"
+    otlpEnabled: false
+    otlpEndpoint: ""

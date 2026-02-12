@@ -1,0 +1,34 @@
+# Default values for query service
+replicaCount: 1
+
+image:
+  repository: query
+  pullPolicy: Always
+  tag: ""
+
+service:
+  type: ClusterIP
+  port: 9510
+
+cache:
+  enabled: true
+  size: "128Gi"
+
+resources:
+  requests:
+    memory: "1Gi"
+    cpu: "12000m"
+  limits:
+    memory: "32Gi"
+    cpu: "24000m"
+
+config:
+  metaEndpoint: "http://meta-service:9500"
+  storageEndpoint: ""
+  storageBucket: ""
+  storageRegion: "auto"
+  observability:
+    serviceName: "query-service"
+    logLevel: "info"
+    otlpEnabled: false
+    otlpEndpoint: ""

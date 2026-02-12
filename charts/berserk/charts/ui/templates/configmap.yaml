@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "ui.fullname" . }}-config
+  labels:
+    {{- include "ui.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    bind: "0.0.0.0:{{ .Values.service.targetPort }}"
+    query_endpoint: {{ .Values.config.queryEndpoint | quote }}
+    meta_endpoint: {{ .Values.config.metaEndpoint | quote }}
+    {{- $otlpEnabled := .Values.config.observability.otlpEnabled | default .Values.global.observability.otlpEnabled }}
+    {{- $otlpEndpoint := .Values.config.observability.otlpEndpoint | default .Values.global.observability.otlpEndpoint }}
+    observability:
+      service_name: {{ .Values.config.observability.serviceName | quote }}
+      log_level: {{ .Values.config.observability.logLevel | quote }}
+      otlp_enabled: {{ $otlpEnabled }}
+      otlp_endpoint: {{ $otlpEndpoint | quote }}

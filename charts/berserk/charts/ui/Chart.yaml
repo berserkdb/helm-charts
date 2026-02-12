@@ -1,0 +1,6 @@
+apiVersion: v2
+name: ui
+description: Berserk UI - Web interface for query and visualization
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

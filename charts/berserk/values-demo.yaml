@@ -1,0 +1,41 @@
+# Demo environment values - full resources for snappy customer demos
+global:
+  imageTag: "latest"
+  storage:
+    endpoint: "https://hel1.your-objectstorage.com"
+    bucket: "bzrk-demo"
+  observability:
+    otlpEnabled: true
+  defaultDataset: "dev"
+
+# Meta service
+meta:
+  enabled: true
+  replicaCount: 1
+
+# Query service
+query:
+  enabled: true
+  replicaCount: 1
+
+# Ingest service
+ingest:
+  enabled: true
+  replicaCount: 1
+
+# Janitor service
+janitor:
+  enabled: true
+  replicaCount: 1
+
+# UI service
+ui:
+  enabled: true
+  replicaCount: 1
+  openai:
+    enabled: true
+
+# Nursery service
+nursery:
+  enabled: true
+  replicaCount: 1

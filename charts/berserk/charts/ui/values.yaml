@@ -1,0 +1,38 @@
+# Default values for ui service
+replicaCount: 1
+
+image:
+  repository: ui
+  pullPolicy: Always
+  tag: ""
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 3000
+
+resources:
+  requests:
+    memory: "128Mi"
+    cpu: "100m"
+  limits:
+    memory: "512Mi"
+    cpu: "500m"
+
+config:
+  queryEndpoint: "http://query-service:9510"
+  metaEndpoint: "http://meta-service:9500"
+  observability:
+    serviceName: "ui-service"
+    logLevel: "info"
+    # otlpEnabled: false
+    # otlpEndpoint: ""
+
+# OpenAI integration for AI chat
+openai:
+  # Enable OpenAI integration
+  enabled: false
+  # Secret name containing OPENAI_API_KEY
+  secretName: "openai-credentials"
+  # Key in the secret that contains the API key
+  secretKey: "OPENAI_API_KEY"

@@ -1,0 +1,227 @@
+# Global configuration applied to all subcharts
+global:
+  # Image registry for all Berserk images
+  imageRegistry: ghcr.io/berserkdb
+  # Image pull policy
+  imagePullPolicy: Always
+  # Image tag to use (applies to all services unless overridden)
+  imageTag: "latest"
+  # Image pull secrets
+  imagePullSecrets:
+    - name: ghcr-credentials
+  # Labels applied to all resources
+  labels: {}
+  # S3 storage configuration
+  storage:
+    endpoint: ""
+    bucket: ""
+    region: "auto"
+  # S3 credentials secret configuration
+  s3Credentials:
+    secretName: "s3-credentials"
+    accessKeyIdKey: "AWS_ACCESS_KEY_ID"
+    secretAccessKeyKey: "AWS_SECRET_ACCESS_KEY"
+  # PostgreSQL credentials secret configuration
+  postgresCredentials:
+    secretName: "postgres-credentials"
+    databaseUrlKey: "database_url"
+  # Observability configuration (OTLP telemetry)
+  observability:
+    otlpEnabled: true
+    otlpEndpoint: "ingest-service:4317"
+  # Default dataset name for Berserk
+  defaultDataset: "default"
+
+# Meta service configuration
+meta:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: meta
+    # tag: overrides global.imageTag
+
+  service:
+    type: ClusterIP
+    port: 9500
+
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "500m"
+
+  config:
+    # Storage configuration
+    storageEndpoint: ""
+    storageBucket: ""
+    storageRegion: "auto"
+    # Observability settings
+    observability:
+      serviceName: "meta-service"
+      logLevel: "info"
+      otlpEnabled: false
+      otlpEndpoint: ""
+
+# Query service configuration
+query:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: query
+
+  service:
+    type: ClusterIP
+    port: 9510
+
+  # Segment cache configuration
+  cache:
+    enabled: true
+    size: "128Gi"
+    sizeLimit: "128GiB"
+
+  resources:
+    requests:
+      memory: "1Gi"
+      cpu: "2000m"
+    limits:
+      memory: "32Gi"
+      cpu: "32000m"
+
+  config:
+    metaEndpoint: "http://meta-service:9500"
+    storageEndpoint: ""
+    storageBucket: ""
+    storageRegion: "auto"
+    observability:
+      serviceName: "query-service"
+      logLevel: "info"
+      otlpEnabled: false
+      otlpEndpoint: ""
+
+# Ingest (Tjalfe) configuration
+ingest:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: ingest
+
+  service:
+    type: ClusterIP
+    ports:
+      otlpGrpc: 4317
+      otlpHttp: 4318
+      health: 13133
+
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "500m"
+    limits:
+      memory: "8Gi"
+      cpu: "4000m"
+
+  # Custom collector configuration (optional override)
+  config: {}
+
+# Janitor service configuration
+janitor:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: janitor
+
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "200m"
+    limits:
+      memory: "4Gi"
+      cpu: "4000m"
+
+  cache:
+    size: "20Gi"
+
+  config:
+    metaEndpoint: "http://meta-service:9500"
+    queryEndpoint: "http://query-service:9510"
+    storageEndpoint: ""
+    storageBucket: ""
+    storageRegion: "auto"
+    # Merge settings
+    mergerIntervalSeconds: 300
+    observability:
+      serviceName: "janitor-service"
+      logLevel: "info"
+      otlpEnabled: false
+      otlpEndpoint: ""
+
+# UI configuration
+ui:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: ui
+
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 3000
+
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+  config:
+    queryEndpoint: "http://query-service:9510"
+
+  # OpenAI integration for AI chat
+  openai:
+    # Enable OpenAI integration
+    enabled: false
+    # Secret name containing OPENAI_API_KEY
+    secretName: "openai-credentials"
+    # Key in the secret that contains the API key
+    secretKey: "OPENAI_API_KEY"
+
+# Nursery service configuration
+nursery:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: nursery
+
+  service:
+    type: ClusterIP
+    port: 3002
+
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "200m"
+    limits:
+      memory: "1Gi"
+      cpu: "1000m"
+
+  # Working directory size limit for baby segments
+  workingDir:
+    sizeLimit: "50Gi"
+
+  config:
+    metaEndpoint: "http://meta-service:9500"
+    storageRegion: "us-east-1"
+    # Polling interval for meta service in seconds
+    metaPollIntervalSecs: 5
+    # Stream inactivity timeout in seconds
+    streamTimeoutSecs: 300

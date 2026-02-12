@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "janitor.fullname" . }}-config
+  labels:
+    {{- include "janitor.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    bind: "0.0.0.0:9502"
+    meta_endpoint: {{ .Values.config.metaEndpoint | quote }}
+    query_endpoint: {{ .Values.config.queryEndpoint | quote }}
+    cloud_storage_access_key: ${JANITOR_STORAGE_ACCESS_KEY:not-set}
+    cloud_storage_secret_key: ${JANITOR_STORAGE_SECRET_KEY:not-set}
+    storage_region: {{ .Values.config.storageRegion | quote }}
+    merger:
+      interval_seconds: {{ .Values.config.mergerIntervalSeconds }}
+    {{- $otlpEnabled := .Values.config.observability.otlpEnabled | default .Values.global.observability.otlpEnabled }}
+    {{- $otlpEndpoint := .Values.config.observability.otlpEndpoint | default .Values.global.observability.otlpEndpoint }}
+    observability:
+      service_name: {{ .Values.config.observability.serviceName | quote }}
+      log_level: {{ .Values.config.observability.logLevel | quote }}
+      otlp_enabled: {{ $otlpEnabled }}
+      otlp_endpoint: {{ $otlpEndpoint | quote }}
+    {{- $defaultDataset := .Values.global.defaultDataset | default "default" }}
+    probe_jobs:
+      - name: "default_take_one"
+        query: "{{ $defaultDataset }} | take 1"
+        interval_seconds: 60
+        since: "1h ago"
+      - name: "total_count"
+        query: "{{ $defaultDataset }} | count"
+        since: "40d ago"
+        interval_seconds: 631

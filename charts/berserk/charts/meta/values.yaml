@@ -1,0 +1,30 @@
+# Default values for meta service
+replicaCount: 1
+
+image:
+  repository: meta
+  pullPolicy: Always
+  # Overrides the image tag whose default is the chart appVersion
+  tag: ""
+
+service:
+  type: ClusterIP
+  port: 9500
+
+resources:
+  requests:
+    memory: "128Mi"
+    cpu: "100m"
+  limits:
+    memory: "256Mi"
+    cpu: "500m"
+
+config:
+  # storageEndpoint: ""
+  # storageBucket: ""
+  # storageRegion: "auto"
+  observability:
+    serviceName: "meta-service"
+    logLevel: "info"
+    # otlpEnabled: false
+    # otlpEndpoint: ""

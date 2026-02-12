@@ -1,0 +1,34 @@
+# Default values for nursery service
+replicaCount: 1
+
+image:
+  repository: nursery
+  pullPolicy: Always
+  tag: ""
+
+service:
+  type: ClusterIP
+  port: 3002
+
+resources:
+  requests:
+    memory: "256Mi"
+    cpu: "200m"
+  limits:
+    memory: "1Gi"
+    cpu: "1000m"
+
+# Working directory size limit for baby segments
+workingDir:
+  sizeLimit: "50Gi"
+
+config:
+  metaEndpoint: "http://meta-service:9500"
+  storageRegion: "us-east-1"
+  # Polling interval for meta service in seconds
+  metaPollIntervalSecs: 5
+  # Stream inactivity timeout in seconds
+  streamTimeoutSecs: 300
+  observability:
+    serviceName: "nursery-service"
+    logLevel: "info"

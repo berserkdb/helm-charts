@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "query.fullname" . }}-config
+  labels:
+    {{- include "query.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    bind: "0.0.0.0:{{ .Values.service.port }}"
+    meta_endpoint: {{ .Values.config.metaEndpoint | quote }}
+    cloud_storage_access_key: ${AWS_ACCESS_KEY_ID:not-set}
+    cloud_storage_secret_key: ${AWS_SECRET_ACCESS_KEY:not-set}
+
+    {{- if .Values.cache.enabled }}
+    segment_cache:
+      path: "/segment_cache"
+      size_limit: {{ .Values.cache.sizeLimit | quote }}
+    {{- end }}
+    {{- $otlpEnabled := .Values.config.observability.otlpEnabled | default .Values.global.observability.otlpEnabled }}
+    {{- $otlpEndpoint := .Values.config.observability.otlpEndpoint | default .Values.global.observability.otlpEndpoint }}
+    observability:
+      service_name: {{ .Values.config.observability.serviceName | quote }}
+      log_level: {{ .Values.config.observability.logLevel | quote }}
+      otlp_enabled: {{ $otlpEnabled }}
+      otlp_endpoint: {{ $otlpEndpoint | quote }}

@@ -1,0 +1,62 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "ingest.fullname" . }}-config
+  labels:
+    {{- include "ingest.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    extensions:
+      file_storage:
+        directory: /var/lib/tjalfe
+
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: "0.0.0.0:{{ .Values.service.ports.otlpGrpc }}"
+          http:
+            endpoint: "0.0.0.0:{{ .Values.service.ports.otlpHttp }}"
+
+    processors:
+      batch:
+        send_batch_size: 1024
+        timeout: 10s
+        send_batch_max_size: 2048
+
+    exporters:
+      berserk:
+        meta_endpoint: {{ .Values.config.metaEndpoint | quote }}
+        s3_access_key: "${env:AWS_ACCESS_KEY_ID}"
+        s3_secret_key: "${env:AWS_SECRET_ACCESS_KEY}"
+        s3_region: {{ .Values.config.s3Region | quote }}
+        buffer_size: 100
+        keep_alive_interval_secs: 120
+
+      debug:
+        verbosity: basic
+        sampling_initial: 5
+        sampling_thereafter: 200
+
+    service:
+      extensions: [file_storage]
+
+      pipelines:
+        logs:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [berserk]
+
+        metrics:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [berserk]
+
+        traces:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [berserk]
+
+      telemetry:
+        level: {{ .Values.config.observability.logLevel | quote }}
+        address: "0.0.0.0:{{ .Values.service.ports.telemetry }}"

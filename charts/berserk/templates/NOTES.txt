@@ -1,0 +1,36 @@
+Berserk has been installed!
+
+Services deployed:
+{{- if .Values.meta.enabled }}
+- Meta Service: http://meta-service.{{ .Release.Namespace }}:{{ .Values.meta.service.port }}
+{{- end }}
+{{- if .Values.query.enabled }}
+- Query Service: http://query-service.{{ .Release.Namespace }}:{{ .Values.query.service.port }}
+{{- end }}
+{{- if .Values.ingest.enabled }}
+- Ingest (OTLP):
+  - gRPC: ingest-service.{{ .Release.Namespace }}:{{ .Values.ingest.service.ports.otlpGrpc }}
+  - HTTP: ingest-service.{{ .Release.Namespace }}:{{ .Values.ingest.service.ports.otlpHttp }}
+{{- end }}
+{{- if .Values.janitor.enabled }}
+- Janitor Service: Running background maintenance
+{{- end }}
+{{- if .Values.ui.enabled }}
+- UI: http://ui.{{ .Release.Namespace }}:{{ .Values.ui.service.port }}
+{{- end }}
+
+To send telemetry data:
+  export OTEL_EXPORTER_OTLP_ENDPOINT=http://ingest-service.{{ .Release.Namespace }}:{{ .Values.ingest.service.ports.otlpGrpc }}
+
+To access the query service:
+  kubectl port-forward -n {{ .Release.Namespace }} svc/query-service {{ .Values.query.service.port }}:{{ .Values.query.service.port }}
+  curl http://localhost:{{ .Values.query.service.port }}/query -d '{"query": "default | take 10"}'
+
+{{- if .Values.ui.enabled }}
+To access the UI:
+  kubectl port-forward -n {{ .Release.Namespace }} svc/ui {{ .Values.ui.service.port }}:{{ .Values.ui.service.port }}
+  Open http://localhost:{{ .Values.ui.service.port }} in your browser
+{{- end }}
+
+Check pod status:
+  kubectl get pods -n {{ .Release.Namespace }}

@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "nursery.fullname" . }}
+  labels:
+    {{- include "nursery.labels" . | nindent 4 }}
+    component: backend
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "nursery.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "nursery.selectorLabels" . | nindent 8 }}
+        component: backend
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: nursery
+          image: {{ include "nursery.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | default .Values.global.imagePullPolicy | default "Always" }}
+          command: ["/nursery_bin"]
+          args:
+            - "--config"
+            - "/config/config.yaml"
+          ports:
+            - containerPort: {{ .Values.service.port }}
+              name: health
+          env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: RUST_BACKTRACE
+              value: "1"
+            - name: NURSERY_STORAGE_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.global.s3Credentials.secretName }}
+                  key: {{ .Values.global.s3Credentials.accessKeyIdKey }}
+            - name: NURSERY_STORAGE_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.global.s3Credentials.secretName }}
+                  key: {{ .Values.global.s3Credentials.secretAccessKeyKey }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: health
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: health
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          startupProbe:
+            httpGet:
+              path: /health/started
+              port: health
+            failureThreshold: 30
+            periodSeconds: 3
+          volumeMounts:
+            - name: config
+              mountPath: /config
+              readOnly: true
+            - name: working-dir
+              mountPath: /var/cache/nursery
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "nursery.fullname" . }}-config
+        - name: working-dir
+          emptyDir:
+            sizeLimit: {{ .Values.workingDir.sizeLimit }}
