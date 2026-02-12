@@ -27,8 +27,8 @@ global:
     databaseUrlKey: "database_url"
   # Observability configuration (OTLP telemetry)
   observability:
-    otlpEnabled: true
-    otlpEndpoint: "ingest-service:4317"
+    otlpEnabled: false
+    otlpEndpoint: "ingest:4317"
   # Default dataset name for Berserk
   defaultDataset: "default"
 
@@ -60,7 +60,7 @@ meta:
     storageRegion: "auto"
     # Observability settings
     observability:
-      serviceName: "meta-service"
+      serviceName: "meta"
       logLevel: "info"
       otlpEnabled: false
       otlpEndpoint: ""
@@ -92,7 +92,7 @@ query:
       cpu: "32000m"
 
   config:
-    metaEndpoint: "http://meta-service:9500"
+    metaEndpoint: "http://meta:9500"
     storageEndpoint: ""
     storageBucket: ""
     storageRegion: "auto"
@@ -148,7 +148,7 @@ janitor:
     size: "20Gi"
 
   config:
-    metaEndpoint: "http://meta-service:9500"
+    metaEndpoint: "http://meta:9500"
     queryEndpoint: "http://query-service:9510"
     storageEndpoint: ""
     storageBucket: ""
@@ -156,7 +156,7 @@ janitor:
     # Merge settings
     mergerIntervalSeconds: 300
     observability:
-      serviceName: "janitor-service"
+      serviceName: "janitor"
       logLevel: "info"
       otlpEnabled: false
       otlpEndpoint: ""
@@ -219,7 +219,7 @@ nursery:
     sizeLimit: "50Gi"
 
   config:
-    metaEndpoint: "http://meta-service:9500"
+    metaEndpoint: "http://meta:9500"
     storageRegion: "us-east-1"
     # Polling interval for meta service in seconds
     metaPollIntervalSecs: 5

@@ -24,7 +24,7 @@ config:
   # storageBucket: ""
   # storageRegion: "auto"
   observability:
-    serviceName: "meta-service"
+    serviceName: "meta"
     logLevel: "info"
     # otlpEnabled: false
     # otlpEndpoint: ""

@@ -23,7 +23,7 @@ workingDir:
   sizeLimit: "50Gi"
 
 config:
-  metaEndpoint: "http://meta-service:9500"
+  metaEndpoint: "http://meta:9500"
   storageRegion: "us-east-1"
   # Polling interval for meta service in seconds
   metaPollIntervalSecs: 5

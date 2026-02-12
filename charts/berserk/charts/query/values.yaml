@@ -23,7 +23,7 @@ resources:
     cpu: "24000m"
 
 config:
-  metaEndpoint: "http://meta-service:9500"
+  metaEndpoint: "http://meta:9500"
   storageEndpoint: ""
   storageBucket: ""
   storageRegion: "auto"

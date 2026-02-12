@@ -18,12 +18,12 @@ cache:
   size: "10Gi"
 
 config:
-  metaEndpoint: "http://meta-service:9500"
+  metaEndpoint: "http://meta:9500"
   queryEndpoint: "http://query-service:9510"
   storageRegion: "auto"
   mergerIntervalSeconds: 300
   observability:
-    serviceName: "janitor-service"
+    serviceName: "janitor"
     logLevel: "info"
     otlpEnabled: false
     otlpEndpoint: ""

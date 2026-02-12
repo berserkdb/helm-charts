@@ -21,7 +21,7 @@ resources:
 
 config:
   queryEndpoint: "http://query-service:9510"
-  metaEndpoint: "http://meta-service:9500"
+  metaEndpoint: "http://meta:9500"
   observability:
     serviceName: "ui-service"
     logLevel: "info"

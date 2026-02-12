@@ -2,7 +2,7 @@ Berserk has been installed!
 
 Services deployed:
 {{- if .Values.meta.enabled }}
-- Meta Service: http://meta-service.{{ .Release.Namespace }}:{{ .Values.meta.service.port }}
+- Meta Service: http://meta.{{ .Release.Namespace }}:{{ .Values.meta.service.port }}
 {{- end }}
 {{- if .Values.query.enabled }}
 - Query Service: http://query-service.{{ .Release.Namespace }}:{{ .Values.query.service.port }}
