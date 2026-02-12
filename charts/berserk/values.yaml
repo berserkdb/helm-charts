@@ -97,7 +97,7 @@ query:
     storageBucket: ""
     storageRegion: "auto"
     observability:
-      serviceName: "query-service"
+      serviceName: "query"
       logLevel: "info"
       otlpEnabled: false
       otlpEndpoint: ""
@@ -149,7 +149,7 @@ janitor:
 
   config:
     metaEndpoint: "http://meta:9500"
-    queryEndpoint: "http://query-service:9510"
+    queryEndpoint: "http://query:9510"
     storageEndpoint: ""
     storageBucket: ""
     storageRegion: "auto"
@@ -183,7 +183,7 @@ ui:
       cpu: "500m"
 
   config:
-    queryEndpoint: "http://query-service:9510"
+    queryEndpoint: "http://query:9510"
 
   # OpenAI integration for AI chat
   openai:

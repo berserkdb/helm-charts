@@ -20,10 +20,10 @@ resources:
     cpu: "500m"
 
 config:
-  queryEndpoint: "http://query-service:9510"
+  queryEndpoint: "http://query:9510"
   metaEndpoint: "http://meta:9500"
   observability:
-    serviceName: "ui-service"
+    serviceName: "ui"
     logLevel: "info"
     # otlpEnabled: false
     # otlpEndpoint: ""

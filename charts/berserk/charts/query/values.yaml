@@ -28,7 +28,7 @@ config:
   storageBucket: ""
   storageRegion: "auto"
   observability:
-    serviceName: "query-service"
+    serviceName: "query"
     logLevel: "info"
     otlpEnabled: false
     otlpEndpoint: ""

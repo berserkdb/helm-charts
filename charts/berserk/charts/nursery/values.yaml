@@ -30,5 +30,5 @@ config:
   # Stream inactivity timeout in seconds
   streamTimeoutSecs: 300
   observability:
-    serviceName: "nursery-service"
+    serviceName: "nursery"
     logLevel: "info"

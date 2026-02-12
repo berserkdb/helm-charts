@@ -9,7 +9,7 @@ Expand the name of the chart.
 Create a default fully qualified app name.
 */}}
 {{- define "ingest.fullname" -}}
-ingest-service
+ingest
 {{- end }}
 
 {{/*
