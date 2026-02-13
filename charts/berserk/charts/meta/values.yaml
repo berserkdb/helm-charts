@@ -1,5 +1,6 @@
 # Default values for meta service
 replicaCount: 1
+component: backend
 
 image:
   repository: meta

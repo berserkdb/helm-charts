@@ -1,5 +1,6 @@
 # Default values for nursery service
 replicaCount: 1
+component: backend
 
 image:
   repository: nursery
@@ -9,6 +10,7 @@ image:
 service:
   type: ClusterIP
   port: 3002
+  portName: health
 
 resources:
   requests:

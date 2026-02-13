@@ -1,9 +1,4 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: {{ include "meta.fullname" . }}-config
-  labels:
-    {{- include "meta.labels" . | nindent 4 }}
+{{ include "berserk-common.configmap.metadata" . }}
 data:
   config.yaml: |
     bind: "0.0.0.0:{{ .Values.service.port }}"
@@ -16,10 +11,4 @@ data:
     storage_bucket: {{ $storageBucket | quote }}
 
     {{- end }}
-    {{- $otlpEnabled := .Values.config.observability.otlpEnabled | default .Values.global.observability.otlpEnabled }}
-    {{- $otlpEndpoint := .Values.config.observability.otlpEndpoint | default .Values.global.observability.otlpEndpoint }}
-    observability:
-      service_name: {{ .Values.config.observability.serviceName | quote }}
-      log_level: {{ .Values.config.observability.logLevel | quote }}
-      otlp_enabled: {{ $otlpEnabled }}
-      otlp_endpoint: {{ $otlpEndpoint | quote }}
+    {{- include "berserk-common.observability-config" . | nindent 4 }}

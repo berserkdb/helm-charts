@@ -1,5 +1,6 @@
 # Default values for ingest service (tjalfe)
 replicaCount: 1
+component: collector
 
 image:
   repository: tjalfe

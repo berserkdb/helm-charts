@@ -1,0 +1,21 @@
+dependencies:
+- name: meta
+  repository: ""
+  version: 0.1.1
+- name: query
+  repository: ""
+  version: 0.1.1
+- name: ingest
+  repository: ""
+  version: 0.1.1
+- name: janitor
+  repository: ""
+  version: 0.1.1
+- name: ui
+  repository: ""
+  version: 0.1.1
+- name: nursery
+  repository: ""
+  version: 0.1.1
+digest: sha256:78088bd1cc8e0bc5655ad5aa5d57b9f22cdef164408ac156e4236485143c52f5
+generated: "2026-02-12T22:59:49.286379827+01:00"

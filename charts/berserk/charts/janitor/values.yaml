@@ -1,5 +1,6 @@
 # Default values for janitor service
 replicaCount: 1
+component: backend
 
 image:
   repository: janitor

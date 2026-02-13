@@ -115,7 +115,7 @@ ingest:
     ports:
       otlpGrpc: 4317
       otlpHttp: 4318
-      health: 13133
+      telemetry: 8888
 
   resources:
     requests:

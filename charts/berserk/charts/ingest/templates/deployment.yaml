@@ -1,30 +1,7 @@
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: {{ include "ingest.fullname" . }}
-  labels:
-    {{- include "ingest.labels" . | nindent 4 }}
-    component: collector
-spec:
-  replicas: {{ .Values.replicaCount }}
-  selector:
-    matchLabels:
-      {{- include "ingest.selectorLabels" . | nindent 6 }}
-  template:
-    metadata:
-      labels:
-        {{- include "ingest.selectorLabels" . | nindent 8 }}
-        component: collector
-      annotations:
-        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
-    spec:
-      {{- with .Values.global.imagePullSecrets }}
-      imagePullSecrets:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
+{{- include "berserk-common.deployment.header" . }}
       containers:
         - name: tjalfe
-          image: {{ include "ingest.image" . }}
+          image: {{ include "berserk-common.image" . }}
           imagePullPolicy: {{ .Values.image.pullPolicy | default .Values.global.imagePullPolicy | default "Always" }}
           args:
             - "/config/config.yaml"
@@ -59,16 +36,7 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.uid
-            - name: AWS_ACCESS_KEY_ID
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.global.s3Credentials.secretName }}
-                  key: {{ .Values.global.s3Credentials.accessKeyIdKey }}
-            - name: AWS_SECRET_ACCESS_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.global.s3Credentials.secretName }}
-                  key: {{ .Values.global.s3Credentials.secretAccessKeyKey }}
+            {{- include "berserk-common.env.s3-credentials" (dict "accessKeyEnv" "AWS_ACCESS_KEY_ID" "secretKeyEnv" "AWS_SECRET_ACCESS_KEY" "Values" .Values) | nindent 12 }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           livenessProbe:
@@ -86,14 +54,10 @@ spec:
             periodSeconds: 5
             failureThreshold: 3
           volumeMounts:
-            - name: config
-              mountPath: /config
-              readOnly: true
+            {{- include "berserk-common.volumeMount.config" . | nindent 12 }}
             - name: state
               mountPath: /var/lib/tjalfe
       volumes:
-        - name: config
-          configMap:
-            name: {{ include "ingest.fullname" . }}-config
+        {{- include "berserk-common.volume.config" . | nindent 8 }}
         - name: state
           emptyDir: {}

@@ -1,30 +1,7 @@
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: {{ include "janitor.fullname" . }}
-  labels:
-    {{- include "janitor.labels" . | nindent 4 }}
-    component: backend
-spec:
-  replicas: {{ .Values.replicaCount }}
-  selector:
-    matchLabels:
-      {{- include "janitor.selectorLabels" . | nindent 6 }}
-  template:
-    metadata:
-      labels:
-        {{- include "janitor.selectorLabels" . | nindent 8 }}
-        component: backend
-      annotations:
-        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
-    spec:
-      {{- with .Values.global.imagePullSecrets }}
-      imagePullSecrets:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
+{{- include "berserk-common.deployment.header" . }}
       containers:
         - name: janitor
-          image: {{ include "janitor.image" . }}
+          image: {{ include "berserk-common.image" . }}
           imagePullPolicy: {{ .Values.image.pullPolicy | default .Values.global.imagePullPolicy | default "Always" }}
           command: ["/janitor_bin"]
           args:
@@ -40,16 +17,7 @@ spec:
                   fieldPath: status.podIP
             - name: RUST_BACKTRACE
               value: "1"
-            - name: JANITOR_STORAGE_ACCESS_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.global.s3Credentials.secretName }}
-                  key: {{ .Values.global.s3Credentials.accessKeyIdKey }}
-            - name: JANITOR_STORAGE_SECRET_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.global.s3Credentials.secretName }}
-                  key: {{ .Values.global.s3Credentials.secretAccessKeyKey }}
+            {{- include "berserk-common.env.s3-credentials" (dict "accessKeyEnv" "JANITOR_STORAGE_ACCESS_KEY" "secretKeyEnv" "JANITOR_STORAGE_SECRET_KEY" "Values" .Values) | nindent 12 }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           livenessProbe:
@@ -69,15 +37,11 @@ spec:
             timeoutSeconds: 5
             failureThreshold: 3
           volumeMounts:
-            - name: config
-              mountPath: /config
-              readOnly: true
+            {{- include "berserk-common.volumeMount.config" . | nindent 12 }}
             - name: cache
               mountPath: /tmp/segment-cache
       volumes:
-        - name: config
-          configMap:
-            name: {{ include "janitor.fullname" . }}-config
+        {{- include "berserk-common.volume.config" . | nindent 8 }}
         - name: cache
           emptyDir:
             sizeLimit: {{ .Values.cache.size }}

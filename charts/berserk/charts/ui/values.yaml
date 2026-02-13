@@ -1,5 +1,6 @@
 # Default values for ui service
 replicaCount: 1
+component: frontend
 
 image:
   repository: ui

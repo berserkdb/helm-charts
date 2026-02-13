@@ -1,30 +1,7 @@
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: {{ include "ui.fullname" . }}
-  labels:
-    {{- include "ui.labels" . | nindent 4 }}
-    component: frontend
-spec:
-  replicas: {{ .Values.replicaCount }}
-  selector:
-    matchLabels:
-      {{- include "ui.selectorLabels" . | nindent 6 }}
-  template:
-    metadata:
-      labels:
-        {{- include "ui.selectorLabels" . | nindent 8 }}
-        component: frontend
-      annotations:
-        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
-    spec:
-      {{- with .Values.global.imagePullSecrets }}
-      imagePullSecrets:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
+{{- include "berserk-common.deployment.header" . }}
       containers:
         - name: ui
-          image: {{ include "ui.image" . }}
+          image: {{ include "berserk-common.image" . }}
           imagePullPolicy: {{ .Values.image.pullPolicy | default .Values.global.imagePullPolicy | default "Always" }}
           args:
             - "-c"
@@ -78,10 +55,6 @@ spec:
             failureThreshold: 30
             periodSeconds: 3
           volumeMounts:
-            - name: config
-              mountPath: /config
-              readOnly: true
+            {{- include "berserk-common.volumeMount.config" . | nindent 12 }}
       volumes:
-        - name: config
-          configMap:
-            name: {{ include "ui.fullname" . }}-config
+        {{- include "berserk-common.volume.config" . | nindent 8 }}
