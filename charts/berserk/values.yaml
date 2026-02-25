@@ -4,8 +4,8 @@ global:
   imageRegistry: ghcr.io/berserkdb
   # Image pull policy
   imagePullPolicy: Always
-  # Image tag to use (applies to all services unless overridden)
-  imageTag: "latest"
+  # Override image tag for all services (defaults to Chart appVersion)
+  imageTag: ""
   # Image pull secrets
   imagePullSecrets:
     - name: ghcr-credentials

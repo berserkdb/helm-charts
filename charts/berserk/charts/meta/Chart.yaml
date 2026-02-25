@@ -3,8 +3,7 @@ name: meta
 description: Berserk Meta Service - Metadata management
 type: application
 version: 0.1.1
-appVersion: "1.0.0"
 dependencies:
   - name: berserk-common
-    version: "0.1.0"
+    version: "*"
     repository: "file://../berserk-common"

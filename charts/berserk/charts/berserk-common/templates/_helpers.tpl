@@ -26,9 +26,7 @@ Common labels
 {{- define "berserk-common.labels" -}}
 helm.sh/chart: {{ include "berserk-common.chart" . }}
 {{ include "berserk-common.selectorLabels" . }}
-{{- if .Chart.AppVersion }}
-app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
-{{- end }}
+app.kubernetes.io/version: {{ .Chart.Version | quote }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}
 
@@ -47,6 +45,6 @@ Image name
 {{- define "berserk-common.image" -}}
 {{- $registry := .Values.global.imageRegistry | default "ghcr.io/berserkdb" }}
 {{- $repository := .Values.image.repository | default .Chart.Name }}
-{{- $tag := .Values.image.tag | default .Values.global.imageTag | default .Chart.AppVersion }}
+{{- $tag := .Values.image.tag | default .Values.global.imageTag | default .Chart.Version }}
 {{- printf "%s/%s:%s" $registry $repository $tag }}
 {{- end }}

@@ -3,29 +3,28 @@ name: berserk
 description: Berserk - High-performance observability data platform
 type: application
 version: 0.1.1
-appVersion: "1.0.0"
 
 dependencies:
   - name: meta
-    version: "0.1.1"
+    version: "*"
     condition: meta.enabled
 
   - name: query
-    version: "0.1.1"
+    version: "*"
     condition: query.enabled
 
   - name: ingest
-    version: "0.1.1"
+    version: "*"
     condition: ingest.enabled
 
   - name: janitor
-    version: "0.1.1"
+    version: "*"
     condition: janitor.enabled
 
   - name: ui
-    version: "0.1.1"
+    version: "*"
     condition: ui.enabled
 
   - name: nursery
-    version: "0.1.1"
+    version: "*"
     condition: nursery.enabled
