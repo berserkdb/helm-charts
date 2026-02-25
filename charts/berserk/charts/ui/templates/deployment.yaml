@@ -15,6 +15,11 @@
               valueFrom:
                 fieldRef:
                   fieldPath: status.podIP
+            - name: UI_COOKIE_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ printf "%s-cookie-secret" (include "berserk-common.fullname" .) }}
+                  key: UI_COOKIE_SECRET
             - name: OPENAI_API_KEY
               valueFrom:
                 secretKeyRef:

@@ -29,6 +29,10 @@ config:
     # otlpEnabled: false
     # otlpEndpoint: ""
 
+# Cookie secret for session signing (auto-generated if not set)
+cookieSecret:
+  value: ""
+
 # OpenAI integration for AI chat
 openai:
   # Enable OpenAI integration
