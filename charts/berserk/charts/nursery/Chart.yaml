@@ -2,7 +2,7 @@ apiVersion: v2
 name: nursery
 description: Berserk Nursery Service - Baby segment management and promotion
 type: application
-version: 0.1.1
+version: 1.0.4
 dependencies:
   - name: berserk-common
     version: "*"
