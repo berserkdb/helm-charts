@@ -19,6 +19,13 @@ helm install berserk berserk/berserk \
   -f values.yaml
 ```
 
+### Release new version
+When releasing a new version run:
+
+```bash
+scripts/set-version.sh
+```
+
 ### Prerequisites
 
 Before installing, create the required Kubernetes secrets:
