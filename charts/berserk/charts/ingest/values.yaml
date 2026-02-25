@@ -2,6 +2,8 @@
 replicaCount: 1
 component: collector
 
+logLevel: "info"
+
 image:
   repository: tjalfe
   pullPolicy: Always

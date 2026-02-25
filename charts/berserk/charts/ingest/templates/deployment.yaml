@@ -16,6 +16,8 @@
               name: telemetry
               protocol: TCP
           env:
+            - name: RUST_LOG
+              value: {{ .Values.logLevel | quote }}
             - name: K8S_NODE_NAME
               valueFrom:
                 fieldRef:

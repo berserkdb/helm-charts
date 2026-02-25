@@ -2,7 +2,7 @@ apiVersion: v2
 name: berserk
 description: Berserk - High-performance observability data platform
 type: application
-version: 1.0.9
+version: 1.0.10
 appVersion: 1.0.6
 
 dependencies:
