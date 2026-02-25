@@ -16,7 +16,3 @@ data:
         query: "{{ $defaultDataset }} | take 1"
         interval_seconds: 60
         since: "1h ago"
-      - name: "total_count"
-        query: "{{ $defaultDataset }} | count"
-        since: "40d ago"
-        interval_seconds: 631
