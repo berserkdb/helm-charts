@@ -20,7 +20,12 @@ helm install berserk berserk/berserk \
 ```
 
 ### Release new version
-When releasing a new version run:
+When updating the container versions used run
+
+```bash
+scripts/set-app-version.sh
+```
+and if you want to release a new Chart version run:
 
 ```bash
 scripts/set-version.sh

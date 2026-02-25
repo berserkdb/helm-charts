@@ -45,6 +45,6 @@ Image name
 {{- define "berserk-common.image" -}}
 {{- $registry := .Values.global.imageRegistry | default "ghcr.io/berserkdb" }}
 {{- $repository := .Values.image.repository | default .Chart.Name }}
-{{- $tag := .Values.image.tag | default .Values.global.imageTag | default (printf "v%s" .Chart.Version) }}
+{{- $tag := .Values.image.tag | default .Values.global.imageTag | default (printf "v%s" .Chart.AppVersion) }}
 {{- printf "%s/%s:%s" $registry $repository $tag }}
 {{- end }}
