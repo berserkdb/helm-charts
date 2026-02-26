@@ -2,4 +2,4 @@ apiVersion: v2
 name: berserk-common
 description: Shared templates for Berserk platform services
 type: library
-version: 1.0.11
+version: 1.0.12
