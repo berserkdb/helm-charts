@@ -1,4 +1,28 @@
-{{- include "berserk-common.deployment.header" . }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "berserk-common.fullname" . }}
+  labels:
+    {{- include "berserk-common.labels" . | nindent 4 }}
+    component: {{ .Values.component | default "backend" }}
+spec:
+  serviceName: {{ include "berserk-common.fullname" . }}
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "berserk-common.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "berserk-common.selectorLabels" . | nindent 8 }}
+        component: {{ .Values.component | default "backend" }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
         - name: query
           image: {{ include "berserk-common.image" . }}
@@ -49,8 +73,16 @@
             {{- end }}
       volumes:
         {{- include "berserk-common.volume.config" . | nindent 8 }}
-        {{- if .Values.cache.enabled }}
-        - name: segment-cache
-          emptyDir:
-            sizeLimit: {{ .Values.cache.size }}
+  {{- if .Values.cache.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: segment-cache
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        {{- with .Values.cache.storageClass }}
+        storageClassName: {{ . }}
         {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.cache.size }}
+  {{- end }}
