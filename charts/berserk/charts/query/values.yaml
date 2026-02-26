@@ -19,10 +19,10 @@ cache:
 resources:
   requests:
     memory: "1Gi"
-    cpu: "12000m"
+    cpu: "2000m"
   limits:
-    memory: "32Gi"
-    cpu: "24000m"
+    memory: "16Gi"
+    cpu: "8000m"
 
 config:
   metaEndpoint: "http://meta:9500"
