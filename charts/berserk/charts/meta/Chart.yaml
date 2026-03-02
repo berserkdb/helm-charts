@@ -3,7 +3,7 @@ name: meta
 description: Berserk Meta Service - Metadata management
 type: application
 version: 1.0.12
-appVersion: 1.0.7
+appVersion: 1.0.9
 dependencies:
   - name: berserk-common
     version: "*"

@@ -3,7 +3,7 @@ name: query
 description: Berserk Query Service - Query engine for observability data
 type: application
 version: 1.0.12
-appVersion: 1.0.7
+appVersion: 1.0.9
 dependencies:
   - name: berserk-common
     version: "*"

@@ -28,7 +28,7 @@ config:
   metaEndpoint: "http://meta:9500"
   s3Region: "us-east-1"
   k8sAttributes:
-    passthrough: false
+    passthrough: true
   observability:
     serviceName: "ingest"
     logLevel: "info"
