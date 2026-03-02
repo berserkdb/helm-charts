@@ -19,13 +19,13 @@ data:
     
     processors:
       batch:
-        send_batch_size: 1024
-        timeout: 10s
-        send_batch_max_size: 2048
+        send_batch_size: {{ .Values.config.batch.sendBatchSize }}
+        timeout: {{ .Values.config.batch.timeout }}
+        send_batch_max_size: {{ .Values.config.batch.sendBatchMaxSize }}
       # Kubernetes attributes enrichment
       k8sattributes:
         auth_type: serviceAccount
-        passthrough: {{ .Values.config.k8sAttributes.passthrough | default true }}
+        passthrough: {{ .Values.config.k8sAttributes.passthrough }}
         extract:
           metadata:
             - k8s.namespace.name
