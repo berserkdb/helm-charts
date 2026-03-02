@@ -1,4 +1,4 @@
-{{- if not .Values.config.k8sAttributes.passthrough }}
+{{- if ne (.Values.config.k8sAttributes.passthrough | toString) "true" }}
 apiVersion: v1
 kind: ServiceAccount
 metadata:

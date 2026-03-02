@@ -1,5 +1,5 @@
 {{- include "berserk-common.deployment.header" . }}
-      {{- if not .Values.config.k8sAttributes.passthrough }}
+      {{- if ne (.Values.config.k8sAttributes.passthrough | toString) "true" }}
       serviceAccountName: {{ include "berserk-common.fullname" . }}
       {{- end }}
       containers:
