@@ -1,4 +1,7 @@
 {{- include "berserk-common.deployment.header" . }}
+      {{- if not .Values.config.k8sAttributes.passthrough }}
+      serviceAccountName: {{ include "berserk-common.fullname" . }}
+      {{- end }}
       containers:
         - name: tjalfe
           image: {{ include "berserk-common.image" . }}

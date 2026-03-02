@@ -53,8 +53,6 @@ data:
           - sources:
               - from: connection
 
-
-
     exporters:
       berserk:
         meta_endpoint: {{ .Values.config.metaEndpoint | quote }}
