@@ -36,3 +36,5 @@ config:
   observability:
     serviceName: "ingest"
     logLevel: "info"
+    otlpEnabled: false
+    otlpEndpoint: ""

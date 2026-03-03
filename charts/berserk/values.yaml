@@ -125,8 +125,12 @@ ingest:
       memory: "8Gi"
       cpu: "4000m"
 
-  # Custom collector configuration (optional override)
-  config: {}
+  config:
+    observability:
+      serviceName: "ingest"
+      logLevel: "info"
+      otlpEnabled: false
+      otlpEndpoint: ""
 
 # Janitor service configuration
 janitor:

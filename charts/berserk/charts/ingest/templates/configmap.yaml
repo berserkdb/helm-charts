@@ -88,5 +88,36 @@ data:
           exporters: [berserk]
 
       telemetry:
-        level: {{ .Values.config.observability.logLevel | quote }}
-        address: "0.0.0.0:{{ .Values.service.ports.telemetry }}"
+{{- $otlpEnabled := .Values.config.observability.otlpEnabled | default .Values.global.observability.otlpEnabled }}
+{{- $otlpEndpoint := .Values.config.observability.otlpEndpoint | default .Values.global.observability.otlpEndpoint }}
+{{- if $otlpEnabled }}
+        resource:
+          service.name: {{ .Values.config.observability.serviceName | quote }}
+        logs:
+          level: {{ .Values.config.observability.logLevel | quote }}
+          processors:
+            - batch:
+                exporter:
+                  otlp:
+                    protocol: grpc
+                    endpoint: {{ $otlpEndpoint | quote }}
+                    insecure: true
+        metrics:
+          level: basic
+          address: "0.0.0.0:{{ .Values.service.ports.telemetry }}"
+          readers:
+            - periodic:
+                exporter:
+                  otlp:
+                    protocol: grpc
+                    endpoint: {{ $otlpEndpoint | quote }}
+                    insecure: true
+        traces:
+          processors:
+            - batch:
+                exporter:
+                  otlp:
+                    protocol: grpc
+                    endpoint: {{ $otlpEndpoint | quote }}
+                    insecure: true
+{{- end }}
