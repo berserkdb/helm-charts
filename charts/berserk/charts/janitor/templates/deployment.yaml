@@ -3,6 +3,8 @@
         - name: janitor
           image: {{ include "berserk-common.image" . }}
           imagePullPolicy: {{ .Values.image.pullPolicy | default .Values.global.imagePullPolicy | default "Always" }}
+          securityContext:
+            allowPrivilegeEscalation: false
           command: ["/janitor_bin"]
           args:
             - "--config"

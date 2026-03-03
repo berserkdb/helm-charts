@@ -3,6 +3,8 @@
         - name: ui
           image: {{ include "berserk-common.image" . }}
           imagePullPolicy: {{ .Values.image.pullPolicy | default .Values.global.imagePullPolicy | default "Always" }}
+          securityContext:
+            allowPrivilegeEscalation: false
           args:
             - "-c"
             - "/config/config.yaml"
