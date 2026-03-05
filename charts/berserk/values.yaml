@@ -189,15 +189,6 @@ ui:
   config:
     queryEndpoint: "http://query:9510"
 
-  # OpenAI integration for AI chat
-  openai:
-    # Enable OpenAI integration
-    enabled: false
-    # Secret name containing OPENAI_API_KEY
-    secretName: "openai-credentials"
-    # Key in the secret that contains the API key
-    secretKey: "OPENAI_API_KEY"
-
 # Nursery service configuration
 nursery:
   enabled: true

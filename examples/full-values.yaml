@@ -32,9 +32,3 @@ ingest:
     limits:
       memory: "16Gi"
       cpu: "8000m"
-
-ui:
-  openai:
-    enabled: true
-    secretName: "openai-credentials"
-    secretKey: "OPENAI_API_KEY"

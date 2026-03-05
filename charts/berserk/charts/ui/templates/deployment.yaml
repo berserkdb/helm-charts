@@ -22,12 +22,6 @@
                 secretKeyRef:
                   name: {{ printf "%s-cookie-secret" (include "berserk-common.fullname" .) }}
                   key: UI_COOKIE_SECRET
-            - name: OPENAI_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.openai.secretName }}
-                  key: {{ .Values.openai.secretKey }}
-                  optional: true                  
             - name: LEPTOS_OUTPUT_NAME
               value: "ui"
             - name: LEPTOS_SITE_ROOT

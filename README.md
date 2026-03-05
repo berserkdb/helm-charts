@@ -83,7 +83,6 @@ See the [examples/](examples/) directory for ready-to-use configurations:
 | `query.cache.sizeLimit` | Query segment cache size limit | `"128GiB"` |
 | `ingest.service.ports.otlpGrpc` | OTLP gRPC ingestion port | `4317` |
 | `ingest.service.ports.otlpHttp` | OTLP HTTP ingestion port | `4318` |
-| `ui.openai.enabled` | Enable OpenAI integration for AI chat | `false` |
 | `janitor.config.mergerIntervalSeconds` | Interval between merge operations | `300` |
 
 ## Services
