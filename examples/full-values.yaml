@@ -1,0 +1,40 @@
+# Full example values.yaml for a production Berserk deployment.
+# Adjust replica counts, resource limits, and cache sizes to match your workload.
+
+global:
+  storage:
+    endpoint: "https://s3.example.com"
+    bucket: "berserk-data"
+    region: "us-east-1"
+  observability:
+    otlpEnabled: true
+    otlpEndpoint: "ingest:4317"
+
+query:
+  replicaCount: 1
+  cache:
+    size: "256Gi"
+    sizeLimit: "256GiB"
+  resources:
+    requests:
+      memory: "4Gi"
+      cpu: "4000m"
+    limits:
+      memory: "64Gi"
+      cpu: "32000m"
+
+ingest:
+  replicaCount: 2
+  resources:
+    requests:
+      memory: "1Gi"
+      cpu: "1000m"
+    limits:
+      memory: "16Gi"
+      cpu: "8000m"
+
+ui:
+  openai:
+    enabled: true
+    secretName: "openai-credentials"
+    secretKey: "OPENAI_API_KEY"

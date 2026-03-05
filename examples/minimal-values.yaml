@@ -1,0 +1,9 @@
+# Minimal values.yaml for Berserk
+# This is the minimum configuration needed to get Berserk running.
+# See full-values.yaml for a production-ready example.
+
+global:
+  storage:
+    endpoint: "https://s3.example.com"
+    bucket: "berserk-data"
+    region: "us-east-1"
