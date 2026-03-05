@@ -2,6 +2,8 @@
 
 Helm charts for deploying [Berserk](https://github.com/berserkdb) - a high-performance observability data platform.
 
+In order to run Berserk, it requires a Postgres (at least version 18) and an S3-compatible blob storage.
+
 ## Prerequisites
 
 Before installing, create the namespace and required Kubernetes secrets:
