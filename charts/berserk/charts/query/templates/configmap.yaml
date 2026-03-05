@@ -9,6 +9,6 @@ data:
     {{- if .Values.cache.enabled }}
     segment_cache:
       path: "/segment_cache"
-      size_limit: {{ .Values.cache.sizeLimit | quote }}
+      size_limit: "{{ .Values.cache.size }}"
     {{- end }}
     {{- include "berserk-common.observability-config" . | nindent 4 }}

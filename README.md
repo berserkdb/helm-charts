@@ -79,8 +79,7 @@ See the [examples/](examples/) directory for ready-to-use configurations:
 | `global.observability.otlpEndpoint` | OTLP collector endpoint | `"ingest:4317"` |
 | `global.s3Credentials.secretName` | Name of the S3 credentials secret | `"s3-credentials"` |
 | `global.postgresCredentials.secretName` | Name of the Postgres credentials secret | `"postgres-credentials"` |
-| `query.cache.size` | Query segment cache volume size | `"128Gi"` |
-| `query.cache.sizeLimit` | Query segment cache size limit | `"128GiB"` |
+| `query.cache.size` | Query segment cache size | `"128Gi"` |
 | `ingest.service.ports.otlpGrpc` | OTLP gRPC ingestion port | `4317` |
 | `ingest.service.ports.otlpHttp` | OTLP HTTP ingestion port | `4318` |
 | `janitor.config.mergerIntervalSeconds` | Interval between merge operations | `300` |

@@ -13,8 +13,7 @@ global:
 query:
   replicaCount: 1
   cache:
-    size: "256Gi"
-    sizeLimit: "256GiB"
+    size: "256GiB"
   resources:
     requests:
       memory: "4Gi"
