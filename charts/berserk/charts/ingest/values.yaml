@@ -28,11 +28,15 @@ config:
   metaEndpoint: "http://meta:9500"
   s3Region: "us-east-1"
   batch:
-    sendBatchSize: 1024
+    sendBatchSize: 10240
     timeout: "10s"
-    sendBatchMaxSize: 2048
+    sendBatchMaxSize: 20480
   k8sAttributes:
     passthrough: true
+  ingestToken:
+    # If secretName set to "", then no ingest token will be used.
+    secretName: "ingest-token"
+    key: "default_ingest_token"
   observability:
     serviceName: "ingest"
     logLevel: "info"

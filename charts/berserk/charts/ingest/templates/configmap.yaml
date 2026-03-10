@@ -61,7 +61,10 @@ data:
         s3_region: {{ .Values.config.s3Region | quote }}
         buffer_size: 100
         keep_alive_interval_secs: 120
-        combined_signals: true        
+        {{- if .Values.config.ingestToken.secretName }}
+        default_ingest_token: "${env:DEFAULT_INGEST_TOKEN}"
+        {{- end }}
+ 
 
       debug:
         verbosity: basic

@@ -44,6 +44,13 @@
                 fieldRef:
                   fieldPath: metadata.uid
             {{- include "berserk-common.env.s3-credentials" (dict "accessKeyEnv" "AWS_ACCESS_KEY_ID" "secretKeyEnv" "AWS_SECRET_ACCESS_KEY" "Values" .Values) | nindent 12 }}
+            {{- if .Values.config.ingestToken.secretName }}
+            - name: DEFAULT_INGEST_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.ingestToken.secretName }}
+                  key: {{ .Values.config.ingestToken.key }}
+            {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           livenessProbe:
