@@ -32,6 +32,14 @@ global:
   # Default dataset name for Berserk
   defaultDataset: "default"
 
+# Post-install setup job configuration
+setup:
+  # Enable the post-install job that creates the default dataset
+  enabled: true
+  image:
+    repository: cli
+    # tag: overrides global.imageTag
+
 # Meta service configuration
 meta:
   enabled: true

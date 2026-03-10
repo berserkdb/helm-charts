@@ -1,0 +1,53 @@
+{{- if .Values.setup.enabled }}
+{{- $registry := .Values.global.imageRegistry | default "ghcr.io/berserkdb" }}
+{{- $repository := .Values.setup.image.repository | default "cli" }}
+{{- $tag := .Values.setup.image.tag | default .Values.global.imageTag | default (printf "v%s" .Chart.AppVersion) }}
+{{- $image := printf "%s/%s:%s" $registry $repository $tag }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "berserk.fullname" . }}-setup
+  labels:
+    {{- include "berserk.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: post-install
+    helm.sh/hook-weight: "0"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 10
+  template:
+    metadata:
+      labels:
+        {{- include "berserk.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: setup
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      restartPolicy: OnFailure
+      containers:
+        - name: setup
+          image: {{ $image }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy | default "Always" }}
+          securityContext:
+            allowPrivilegeEscalation: false
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -e
+              META_ENDPOINT="meta:{{ .Values.meta.service.port }}"
+              echo "Waiting for meta to be ready at ${META_ENDPOINT}..."
+              until wget -q --spider "http://${META_ENDPOINT}/health/ready" 2>/dev/null; do
+                echo "Meta not ready yet, retrying in 5s..."
+                sleep 5
+              done
+              echo "Meta is ready. Creating default dataset '{{ .Values.global.defaultDataset }}'..."
+              bzrk --endpoint "${META_ENDPOINT}" dataset create "{{ .Values.global.defaultDataset }}"
+              echo "Setup complete."
+{{- end }}

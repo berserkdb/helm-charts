@@ -62,6 +62,26 @@ helm install berserk berserk/berserk \
   -f values.yaml
 ```
 
+### Create an ingest token
+
+If you need to create an ingest token, you can run the following command:
+
+```bash
+  kubectl run bzrk-cli --rm -it -n bzrk --image=ghcr.io/berserkdb/cli:latest -- \
+    --endpoint meta:9500 ingest-token create --dataset default my-ingest-token
+```
+
+Use it in your otel-collectors export
+
+Alternatively, you can set it as a default ingest token in the ingester service by
+creating a Kubernetes secret via:
+
+```bash
+kubectl create secret generic ingest-token \
+  --namespace=bzrk\
+  --from-literal=default_ingest_token="your-token-value-here"
+```
+
 ### Example Values
 
 See the [examples/](examples/) directory for ready-to-use configurations:

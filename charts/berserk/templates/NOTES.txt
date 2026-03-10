@@ -32,5 +32,12 @@ To access the UI:
   Open http://localhost:{{ .Values.ui.service.port }} in your browser
 {{- end }}
 
+{{- $registry := .Values.global.imageRegistry | default "ghcr.io/berserkdb" }}
+{{- $cliRepo := .Values.setup.image.repository | default "cli" }}
+{{- $cliTag := .Values.setup.image.tag | default .Values.global.imageTag | default (printf "v%s" .Chart.AppVersion) }}
+To create an ingest token for the "{{ .Values.global.defaultDataset }}" dataset:
+  kubectl run bzrk-cli --rm -it -n {{ .Release.Namespace }} --image={{ $registry }}/{{ $cliRepo }}:{{ $cliTag }} -- \
+    --endpoint meta:{{ .Values.meta.service.port }} ingest-token create --dataset {{ .Values.global.defaultDataset }} my-ingest-token
+
 Check pod status:
   kubectl get pods -n {{ .Release.Namespace }}
