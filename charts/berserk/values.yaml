@@ -35,7 +35,8 @@ global:
 # Post-install setup job configuration
 setup:
   # Enable the post-install job that creates the default dataset
-  enabled: true
+  # Right now not, needed as Meta creates it
+  enabled: false
   image:
     repository: cli
     # tag: overrides global.imageTag
