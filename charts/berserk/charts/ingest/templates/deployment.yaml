@@ -50,6 +50,7 @@
                 secretKeyRef:
                   name: {{ .Values.config.ingestToken.secretName }}
                   key: {{ .Values.config.ingestToken.key }}
+                  optional: true
             {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
