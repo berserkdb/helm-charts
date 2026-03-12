@@ -1,6 +1,6 @@
 dependencies:
 - name: berserk-common
   repository: file://../berserk-common
-  version: 0.1.0
-digest: sha256:d496152b5556195fd38fa3b1a15ac4408b38779136993b904a9712e47ceb7510
-generated: "2026-02-12T23:06:58.395246498+01:00"
+  version: 1.0.27
+digest: sha256:97524009e9e8b71fc8f8c3dcd7e4d25f723273857f23786b1ae63ff06d0d66f0
+generated: "2026-03-12T13:53:31.694093089+01:00"

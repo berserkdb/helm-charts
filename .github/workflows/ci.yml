@@ -1,0 +1,196 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "charts/**"
+      - "ci/**"
+      - ".github/workflows/ci.yml"
+  push:
+    branches: [main]
+    paths:
+      - "charts/**"
+      - "ci/**"
+      - ".github/workflows/ci.yml"
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/setup-helm@v4
+
+      - name: Build Helm dependencies
+        run: |
+          for chart in charts/berserk/charts/meta charts/berserk/charts/query charts/berserk/charts/ingest charts/berserk/charts/janitor charts/berserk/charts/ui charts/berserk/charts/nursery; do
+            helm dependency update "$chart"
+          done
+          helm dependency update charts/berserk
+
+      - name: Helm template (validates all templates render)
+        run: helm template berserk charts/berserk -f ci/values-ci.yaml > /dev/null
+
+  integration:
+    runs-on: ubuntu-latest
+    needs: lint
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/setup-helm@v4
+
+      - name: Create Kind cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: berserk-ci
+
+      - name: Login to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Create test namespace
+        run: kubectl create namespace berserk-test
+
+      - name: Create GHCR image pull secret
+        run: |
+          kubectl create secret docker-registry ghcr-credentials \
+            --namespace berserk-test \
+            --docker-server=ghcr.io \
+            --docker-username="${{ github.actor }}" \
+            --docker-password="${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Install PostgreSQL
+        run: |
+          helm repo add bitnami https://charts.bitnami.com/bitnami
+          helm install postgres bitnami/postgresql \
+            --namespace berserk-test \
+            --set auth.postgresPassword=testpassword \
+            --set auth.database=berserk \
+            --set primary.resources.requests.memory=128Mi \
+            --set primary.resources.requests.cpu=100m \
+            --wait --timeout 120s
+
+      - name: Deploy MinIO
+        run: |
+          kubectl apply -n berserk-test -f - <<'EOF'
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: minio
+          spec:
+            replicas: 1
+            selector:
+              matchLabels:
+                app: minio
+            template:
+              metadata:
+                labels:
+                  app: minio
+              spec:
+                containers:
+                  - name: minio
+                    image: pgsty/minio:latest
+                    args: ["server", "/data"]
+                    env:
+                      - name: MINIO_ROOT_USER
+                        value: minioadmin
+                      - name: MINIO_ROOT_PASSWORD
+                        value: minioadmin
+                    ports:
+                      - containerPort: 9000
+                    resources:
+                      requests:
+                        memory: "128Mi"
+                        cpu: "100m"
+                    readinessProbe:
+                      httpGet:
+                        path: /minio/health/ready
+                        port: 9000
+                      initialDelaySeconds: 5
+                      periodSeconds: 5
+          ---
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: minio
+          spec:
+            selector:
+              app: minio
+            ports:
+              - port: 9000
+                targetPort: 9000
+          EOF
+          kubectl wait deployment/minio -n berserk-test --for=condition=Available --timeout=120s
+
+      - name: Create MinIO bucket
+        run: |
+          kubectl run minio-init -n berserk-test --rm -i --restart=Never \
+            --image=minio/mc:latest \
+            --command -- sh -c '
+              mc alias set ci http://minio:9000 minioadmin minioadmin &&
+              mc mb ci/berserk-test
+            '
+
+      - name: Create S3 credentials secret
+        run: |
+          kubectl create secret generic s3-credentials \
+            --namespace berserk-test \
+            --from-literal=AWS_ACCESS_KEY_ID=minioadmin \
+            --from-literal=AWS_SECRET_ACCESS_KEY=minioadmin
+
+      - name: Create PostgreSQL credentials secret
+        run: |
+          kubectl create secret generic postgres-credentials \
+            --namespace berserk-test \
+            --from-literal=database_url="postgres://postgres:testpassword@postgres-postgresql:5432/berserk?sslmode=disable"
+
+      - name: Build Helm dependencies
+        run: |
+          for chart in charts/berserk/charts/meta charts/berserk/charts/query charts/berserk/charts/ingest charts/berserk/charts/janitor charts/berserk/charts/ui charts/berserk/charts/nursery; do
+            helm dependency update "$chart"
+          done
+          helm dependency update charts/berserk
+
+      - name: Install Berserk chart
+        run: |
+          helm install berserk charts/berserk \
+            --namespace berserk-test \
+            -f ci/values-ci.yaml \
+            --timeout 300s
+
+      - name: Wait for deployments
+        run: |
+          for deploy in meta ingest janitor nursery ui; do
+            echo "Waiting for deployment/$deploy..."
+            kubectl wait deployment/"$deploy" \
+              --namespace berserk-test \
+              --for=condition=Available \
+              --timeout=180s
+          done
+
+      - name: Wait for query StatefulSet
+        run: |
+          echo "Waiting for statefulset/query..."
+          kubectl rollout status statefulset/query \
+            --namespace berserk-test \
+            --timeout=180s
+
+      - name: Debug on failure
+        if: failure()
+        run: |
+          echo "=== Pod status ==="
+          kubectl get pods -n berserk-test -o wide
+          echo ""
+          echo "=== Events ==="
+          kubectl get events -n berserk-test --sort-by='.lastTimestamp'
+          echo ""
+          for pod in $(kubectl get pods -n berserk-test -o name); do
+            echo "=== Logs: $pod ==="
+            kubectl logs "$pod" -n berserk-test --tail=50 || true
+          done
+          echo ""
+          echo "=== Describe failing pods ==="
+          kubectl describe pods -n berserk-test --field-selector=status.phase!=Running || true
