@@ -45,11 +45,13 @@ Usage: {{ include "berserk-common.env.s3-credentials" (dict "accessKeyEnv" "AWS_
     secretKeyRef:
       name: {{ .Values.global.s3Credentials.secretName }}
       key: {{ .Values.global.s3Credentials.accessKeyIdKey }}
+      optional: true
 - name: {{ .secretKeyEnv }}
   valueFrom:
     secretKeyRef:
       name: {{ .Values.global.s3Credentials.secretName }}
       key: {{ .Values.global.s3Credentials.secretAccessKeyKey }}
+      optional: true
 {{- end }}
 
 {{/*
