@@ -159,6 +159,15 @@ jobs:
             --namespace berserk-test \
             --timeout=180s
 
+      - name: Verify query service
+        run: |
+          APP_VERSION=$(grep '^appVersion:' charts/berserk/Chart.yaml | awk '{print $2}')
+          kubectl run query-test -n berserk-test \
+            --image="ghcr.io/berserkdb/cli:v${APP_VERSION}" \
+            --restart=Never \
+            --rm -i \
+            --command -- bzrk --endpoint query:9510 search "default | take 1"
+
       - name: Debug on failure
         if: failure()
         run: |
