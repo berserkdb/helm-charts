@@ -166,7 +166,7 @@ jobs:
             --image="ghcr.io/berserkdb/cli:v${APP_VERSION}" \
             --restart=Never \
             --rm -i \
-            --command -- cli --endpoint query:9510 search "default | take 1"
+            --command -- /bin/sh -c '/cli --endpoint query:9510 search "default | take 1"'
 
       - name: Debug on failure
         if: failure()
