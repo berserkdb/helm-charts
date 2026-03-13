@@ -7,6 +7,16 @@ global:
     bucket: "berserk-test"
     region: "us-east-1"
   imagePullPolicy: IfNotPresent
+  s3Credentials:
+    create: true
+    accessKeyId: "minioadmin"
+    secretAccessKey: "minioadmin"
+  postgresCredentials:
+    create: true
+    databaseUrl: "postgres://postgres:testpassword@postgres-postgresql:5432/berserk?sslmode=disable"
+  imageCredentials:
+    create: true
+    registry: "ghcr.io"
 
 meta:
   resources:

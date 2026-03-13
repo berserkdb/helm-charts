@@ -18,13 +18,27 @@ global:
     region: "auto"
   # S3 credentials secret configuration
   s3Credentials:
+    # Set create: true and provide accessKeyId/secretAccessKey to have the chart create the secret
+    create: false
     secretName: "s3-credentials"
+    accessKeyId: ""
+    secretAccessKey: ""
     accessKeyIdKey: "AWS_ACCESS_KEY_ID"
     secretAccessKeyKey: "AWS_SECRET_ACCESS_KEY"
   # PostgreSQL credentials secret configuration
   postgresCredentials:
+    # Set create: true and provide databaseUrl to have the chart create the secret
+    create: false
     secretName: "postgres-credentials"
+    databaseUrl: ""
     databaseUrlKey: "database_url"
+  # Image registry credentials (e.g. GHCR)
+  # Set create: true and provide username/password to have the chart create the pull secret
+  imageCredentials:
+    create: false
+    registry: "ghcr.io"
+    username: ""
+    password: ""
   # Observability configuration (OTLP telemetry)
   observability:
     otlpEnabled: false

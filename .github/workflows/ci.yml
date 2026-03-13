@@ -54,14 +54,6 @@ jobs:
       - name: Create test namespace
         run: kubectl create namespace berserk-test
 
-      - name: Create GHCR image pull secret
-        run: |
-          kubectl create secret docker-registry ghcr-credentials \
-            --namespace berserk-test \
-            --docker-server=ghcr.io \
-            --docker-username="${{ github.actor }}" \
-            --docker-password="${{ secrets.GITHUB_TOKEN }}"
-
       - name: Install PostgreSQL
         run: |
           helm repo add bitnami https://charts.bitnami.com/bitnami
@@ -134,19 +126,6 @@ jobs:
               mc mb ci/berserk-test
             '
 
-      - name: Create S3 credentials secret
-        run: |
-          kubectl create secret generic s3-credentials \
-            --namespace berserk-test \
-            --from-literal=AWS_ACCESS_KEY_ID=minioadmin \
-            --from-literal=AWS_SECRET_ACCESS_KEY=minioadmin
-
-      - name: Create PostgreSQL credentials secret
-        run: |
-          kubectl create secret generic postgres-credentials \
-            --namespace berserk-test \
-            --from-literal=database_url="postgres://postgres:testpassword@postgres-postgresql:5432/berserk?sslmode=disable"
-
       - name: Build Helm dependencies
         run: |
           for chart in charts/berserk/charts/meta charts/berserk/charts/query charts/berserk/charts/ingest charts/berserk/charts/janitor charts/berserk/charts/ui charts/berserk/charts/nursery; do
@@ -159,6 +138,8 @@ jobs:
           helm install berserk charts/berserk \
             --namespace berserk-test \
             -f ci/values-ci.yaml \
+            --set global.imageCredentials.username="${{ github.actor }}" \
+            --set global.imageCredentials.password="${{ secrets.GITHUB_TOKEN }}" \
             --timeout 300s
 
       - name: Wait for deployments
