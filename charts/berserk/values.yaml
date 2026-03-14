@@ -33,11 +33,10 @@ global:
     databaseUrl: ""
     databaseUrlKey: "database_url"
   # Image registry credentials (e.g. GHCR)
-  # Set create: true and provide username/password to have the chart create the pull secret
+  # Set create: true and provide password (GHCR token) to have the chart create the pull secret
   imageCredentials:
     create: false
     registry: "ghcr.io"
-    username: ""
     password: ""
   # Observability configuration (OTLP telemetry)
   observability:
