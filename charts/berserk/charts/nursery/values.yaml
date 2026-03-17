@@ -26,7 +26,6 @@ workingDir:
 
 config:
   metaEndpoint: "http://meta:9500"
-  storageRegion: "us-east-1"
   # Polling interval for meta service in seconds
   metaPollIntervalSecs: 5
   # Stream inactivity timeout in seconds

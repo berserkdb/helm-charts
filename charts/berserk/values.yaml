@@ -119,7 +119,6 @@ query:
     metaEndpoint: "http://meta:9500"
     storageEndpoint: ""
     storageBucket: ""
-    storageRegion: "auto"
     observability:
       serviceName: "query"
       logLevel: "info"
@@ -180,7 +179,6 @@ janitor:
     queryEndpoint: "http://query:9510"
     storageEndpoint: ""
     storageBucket: ""
-    storageRegion: "auto"
     # Merge settings
     mergerIntervalSeconds: 300
     observability:
@@ -239,7 +237,6 @@ nursery:
 
   config:
     metaEndpoint: "http://meta:9500"
-    storageRegion: "us-east-1"
     # Polling interval for meta service in seconds
     metaPollIntervalSecs: 5
     # Stream inactivity timeout in seconds

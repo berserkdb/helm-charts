@@ -28,7 +28,6 @@ config:
   metaEndpoint: "http://meta:9500"
   storageEndpoint: ""
   storageBucket: ""
-  storageRegion: "auto"
   observability:
     serviceName: "query"
     logLevel: "info"

@@ -5,7 +5,6 @@ data:
     meta_endpoint: {{ .Values.config.metaEndpoint | quote }}
     cloud_storage_access_key: ${NURSERY_STORAGE_ACCESS_KEY:not-set}
     cloud_storage_secret_key: ${NURSERY_STORAGE_SECRET_KEY:not-set}
-    storage_region: {{ .Values.config.storageRegion | quote }}
     working_dir: "/var/cache/nursery"
     meta_default_poll_interval_secs: {{ .Values.config.metaPollIntervalSecs }}
     stream_timeout_secs: {{ .Values.config.streamTimeoutSecs }}
