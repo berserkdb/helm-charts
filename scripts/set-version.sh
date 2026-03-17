@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+CHARTS_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
 # Read current version from the parent chart
-CURRENT_VERSION=$(grep '^version:' "$REPO_ROOT/charts/berserk/Chart.yaml" | awk '{print $2}')
+CURRENT_VERSION=$(grep '^version:' "$CHARTS_DIR/berserk/Chart.yaml" | awk '{print $2}')
 
 # Bump patch version by 1
 MAJOR=$(echo "$CURRENT_VERSION" | cut -d. -f1)
@@ -20,6 +20,6 @@ else
   VERSION="${VERSION:-$NEXT_VERSION}"
 fi
 
-find "$REPO_ROOT/charts" -name Chart.yaml -exec sed -i "s/^version: .*/version: ${VERSION}/" {} +
+find "$CHARTS_DIR" -name Chart.yaml -exec sed -i "s/^version: .*/version: ${VERSION}/" {} +
 
 echo "Updated all Chart.yaml files to version ${VERSION}"

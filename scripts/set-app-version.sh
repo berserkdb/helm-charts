@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+CHARTS_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
 # Read current appVersion from the parent chart
-CURRENT_VERSION=$(grep '^appVersion:' "$REPO_ROOT/charts/berserk/Chart.yaml" | awk '{print $2}')
+CURRENT_VERSION=$(grep '^appVersion:' "$CHARTS_DIR/berserk/Chart.yaml" | awk '{print $2}')
 
 # Fetch latest release from GitHub (private repo — needs auth)
 RELEASE_JSON=""
@@ -61,6 +61,6 @@ else
 fi
 
 # Update appVersion in parent chart and all subcharts (skip berserk-common library chart)
-find "$REPO_ROOT/charts" -name Chart.yaml -not -path "*/berserk-common/*" -exec sed -i "s/^appVersion: .*/appVersion: ${VERSION}/" {} +
+find "$CHARTS_DIR" -name Chart.yaml -not -path "*/berserk-common/*" -exec sed -i "s/^appVersion: .*/appVersion: ${VERSION}/" {} +
 
 echo "Updated appVersion in all Chart.yaml files to ${VERSION}"
