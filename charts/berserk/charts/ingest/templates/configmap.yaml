@@ -16,7 +16,7 @@ data:
             endpoint: "0.0.0.0:{{ .Values.service.ports.otlpHttp }}"
             # Allow invalid UTF-8 in string fields (e.g., journald binary data)
             lax_utf8: true
-    
+
     processors:
       batch:
         send_batch_size: {{ .Values.config.batch.sendBatchSize }}
@@ -59,12 +59,13 @@ data:
         s3_access_key: "${env:AWS_ACCESS_KEY_ID}"
         s3_secret_key: "${env:AWS_SECRET_ACCESS_KEY}"
         s3_region: {{ .Values.config.s3Region | quote }}
-        buffer_size: 100
+        max_batch_bytes: 4194304
+        max_batch_age_secs: 2
         keep_alive_interval_secs: 120
         {{- if .Values.config.ingestToken.secretName }}
         default_ingest_token: "${env:DEFAULT_INGEST_TOKEN}"
         {{- end }}
- 
+
 
       debug:
         verbosity: basic

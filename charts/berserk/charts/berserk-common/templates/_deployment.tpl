@@ -36,6 +36,16 @@ spec:
 {{- end }}
 
 {{/*
+ServiceAccount name from global config.
+Usage: {{ include "berserk-common.serviceAccountName" . }}
+*/}}
+{{- define "berserk-common.serviceAccountName" -}}
+{{- with .Values.global.serviceAccountName }}
+      serviceAccountName: {{ . }}
+{{- end }}
+{{- end }}
+
+{{/*
 S3 credentials env vars from secret.
 Usage: {{ include "berserk-common.env.s3-credentials" (dict "accessKeyEnv" "AWS_ACCESS_KEY_ID" "secretKeyEnv" "AWS_SECRET_ACCESS_KEY" "Values" .Values) }}
 */}}

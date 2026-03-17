@@ -9,6 +9,8 @@ global:
   # Image pull secrets
   imagePullSecrets:
     - name: ghcr-credentials
+  # ServiceAccount name for pod specs (e.g. for IRSA on EKS)
+  serviceAccountName: ""
   # Labels applied to all resources
   labels: {}
   # S3 storage configuration
@@ -110,8 +112,8 @@ query:
       memory: "1Gi"
       cpu: "2000m"
     limits:
-      memory: "32Gi"
-      cpu: "32000m"
+      memory: "4Gi"
+      cpu: "4000m"
 
   config:
     metaEndpoint: "http://meta:9500"
@@ -144,7 +146,7 @@ ingest:
       memory: "512Mi"
       cpu: "500m"
     limits:
-      memory: "8Gi"
+      memory: "2Gi"
       cpu: "4000m"
 
   config:

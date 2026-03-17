@@ -1,6 +1,8 @@
 {{- include "berserk-common.deployment.header" . }}
       {{- if ne (.Values.config.k8sAttributes.passthrough | toString) "true" }}
       serviceAccountName: {{ include "berserk-common.fullname" . }}
+      {{- else if .Values.global.serviceAccountName }}
+      serviceAccountName: {{ .Values.global.serviceAccountName }}
       {{- end }}
       containers:
         - name: tjalfe
