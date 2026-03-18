@@ -17,7 +17,7 @@ global:
   storage:
     endpoint: ""
     bucket: ""
-    region: "auto"
+    region: ""
   # S3 credentials secret configuration
   s3Credentials:
     # Set create: true and provide accessKeyId/secretAccessKey to have the chart create the secret
@@ -81,7 +81,7 @@ meta:
     # Storage configuration
     storageEndpoint: ""
     storageBucket: ""
-    storageRegion: "auto"
+    storageRegion: ""
     # Observability settings
     observability:
       serviceName: "meta"
@@ -117,8 +117,6 @@ query:
 
   config:
     metaEndpoint: "http://meta:9500"
-    storageEndpoint: ""
-    storageBucket: ""
     observability:
       serviceName: "query"
       logLevel: "info"
@@ -177,8 +175,6 @@ janitor:
   config:
     metaEndpoint: "http://meta:9500"
     queryEndpoint: "http://query:9510"
-    storageEndpoint: ""
-    storageBucket: ""
     # Merge settings
     mergerIntervalSeconds: 300
     observability:

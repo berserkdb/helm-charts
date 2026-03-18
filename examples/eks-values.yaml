@@ -1,0 +1,71 @@
+# Example values.yaml for Berserk on Amazon EKS with IRSA.
+#
+# S3 access is handled by IAM Roles for Service Accounts (IRSA).
+# You only need to provide PostgreSQL credentials via a Kubernetes secret.
+#
+# Prerequisites:
+#   1. Create a Kubernetes service account "berserk" annotated with your IAM role ARN
+#   2. Create the postgres-credentials secret in the bzrk namespace
+#
+
+global:
+  storage:
+    endpoint: "https://s3.eu-central-1.amazonaws.com"
+    bucket: "my-berserk-data"
+    region: "eu-central-1"
+  s3Credentials:
+    create: false
+    # S3 access is provided by IRSA — no secret needed.
+  ## Pass the credentials via --set flags to helm install
+  postgresCredentials:
+    create: true
+  imageCredentials:
+    create: true
+  serviceAccountName: "berserk"
+  observability:
+    otlpEnabled: true
+
+meta:
+  replicaCount: 1
+
+query:
+  replicaCount: 1
+  cache:
+    enabled: true
+    persistent: false
+    # Use the local NVMe SSD mounted by the node bootstrap script.
+    hostPath: "/mnt/nvme"
+    size: "400Gi"
+  resources:
+    requests:
+      memory: "1Gi"
+      cpu: "2000m"
+    limits:
+      memory: "4Gi"
+      cpu: "4000m"
+
+ingest:
+  replicaCount: 1
+
+janitor:
+  replicaCount: 1
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "500m"
+    limits:
+      memory: "4Gi"
+      cpu: "2000m"
+
+nursery:
+  replicaCount: 1
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "500m"
+    limits:
+      memory: "2Gi"
+      cpu: "1500m"
+
+ui:
+  replicaCount: 1

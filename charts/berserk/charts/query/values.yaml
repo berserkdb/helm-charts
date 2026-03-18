@@ -13,8 +13,13 @@ service:
 
 cache:
   enabled: true
+  # persistent: true uses a PVC (StatefulSet), false uses emptyDir (Deployment).
+  persistent: true
   size: "128Gi"
   storageClass: ""
+  # hostPath: set to a path (e.g. /mnt/nvme) to use a local NVMe mount instead of emptyDir.
+  # Only used when persistent is false.
+  hostPath: ""
 
 resources:
   requests:
@@ -26,8 +31,6 @@ resources:
 
 config:
   metaEndpoint: "http://meta:9500"
-  storageEndpoint: ""
-  storageBucket: ""
   observability:
     serviceName: "query"
     logLevel: "info"

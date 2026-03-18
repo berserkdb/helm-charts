@@ -9,6 +9,6 @@ data:
     {{- if $storageEndpoint }}
     storage_endpoint: {{ $storageEndpoint | quote }}
     storage_bucket: {{ $storageBucket | quote }}
-
+    storage_region: {{ $storageRegion | quote }}
     {{- end }}
     {{- include "berserk-common.observability-config" . | nindent 4 }}

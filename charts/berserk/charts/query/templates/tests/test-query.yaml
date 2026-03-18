@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "berserk-common.fullname" . }}-test-query
+  labels:
+    {{- include "berserk-common.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-weight: "0"
+    helm.sh/hook-delete-policy: before-hook-creation
+spec:
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+  restartPolicy: Never
+  containers:
+    - name: test-query
+      image: busybox:1.37
+      securityContext:
+        allowPrivilegeEscalation: false
+      command: ["/bin/sh", "-c"]
+      args:
+        - |
+          set -e
+          QUERY_ENDPOINT="http://query:{{ .Values.service.port }}"
+
+          echo "Waiting for query service to be ready..."
+          until wget -q --spider "${QUERY_ENDPOINT}/health/ready" 2>/dev/null; do
+            echo "Query not ready yet, retrying in 3s..."
+            sleep 3
+          done
+
+          echo "Running: default | take 1"
+          RESPONSE=$(wget -qO- \
+            --header="Content-Type: application/json" \
+            --post-data='{"query": "default | take 1"}' \
+            "${QUERY_ENDPOINT}/query")
+
+          echo "Response: ${RESPONSE}"
+
+          # Verify we got a Tables array back (successful query response)
+          echo "${RESPONSE}" | grep -q '"Tables"'
+          echo "PASSED: query returned a valid response with Tables"

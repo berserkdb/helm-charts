@@ -26,7 +26,6 @@ resources:
 
 config:
   metaEndpoint: "http://meta:9500"
-  s3Region: "us-east-1"
   batch:
     sendBatchSize: 10240
     timeout: "10s"
