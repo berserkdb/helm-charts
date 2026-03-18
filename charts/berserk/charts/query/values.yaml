@@ -14,7 +14,7 @@ service:
 cache:
   enabled: true
   # persistent: true uses a PVC (StatefulSet), false uses emptyDir (Deployment).
-  persistent: true
+  persistent: false
   size: "128Gi"
   storageClass: ""
   # hostPath: set to a path (e.g. /mnt/nvme) to use a local NVMe mount instead of emptyDir.

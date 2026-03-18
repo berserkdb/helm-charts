@@ -39,6 +39,7 @@ global:
   imageCredentials:
     create: false
     registry: "ghcr.io"
+    secretName: "ghcr-credentials"
     password: ""
   # Observability configuration (OTLP telemetry)
   observability:

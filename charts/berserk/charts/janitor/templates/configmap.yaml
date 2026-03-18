@@ -4,8 +4,8 @@ data:
     bind: "0.0.0.0:9502"
     meta_endpoint: {{ .Values.config.metaEndpoint | quote }}
     query_endpoint: {{ .Values.config.queryEndpoint | quote }}
-    cloud_storage_access_key: ${JANITOR_STORAGE_ACCESS_KEY:not-set}
-    cloud_storage_secret_key: ${JANITOR_STORAGE_SECRET_KEY:not-set}
+    cloud_storage_access_key: ${JANITOR_STORAGE_ACCESS_KEY:}
+    cloud_storage_secret_key: ${JANITOR_STORAGE_SECRET_KEY:}
     merger:
       interval_seconds: {{ .Values.config.mergerIntervalSeconds }}
     {{- include "berserk-common.observability-config" . | nindent 4 }}
