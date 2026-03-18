@@ -18,7 +18,7 @@
           imagePullPolicy: {{ .Values.global.imagePullPolicy | default "Always" }}
           securityContext:
             allowPrivilegeEscalation: false
-          command: ["bzrk"]
+          command: ["/bzrk"]
           args:
             - "--meta-endpoint"
             - {{ printf "meta.%s.svc.cluster.local:9500" .Release.Namespace | quote }}

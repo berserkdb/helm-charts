@@ -1,0 +1,56 @@
+# Quick start values for running POC of Berserk.
+# Note this sets up our ingest with a default ingest token, meaning it accepts unauthenticated requests.
+# So be sure to protect the cluster and don't expose it to the Internet.
+#
+# To start:
+# $ curl -o quick-start-values.yaml https://raw.githubusercontent.com/berserkdb/helm-charts/refs/heads/main/examples/quick-start-values.yaml
+#
+# Install with
+# helm repo add berserk https://berserkdb.github.io/helm-charts
+# helm repo update
+# helm install berserk berserk/berserk \
+#   --namespace bzrk \
+#   --create-namespace \
+#   --set global.s3Credentials.accessKeyId=YOUR_ACCESS_KEY \
+#   --set global.s3Credentials.secretAccessKey=YOUR_SECRET_KEY \
+#   --set global.postgresCredentials.databaseUrl="postgres://<user>:<password>@<host>:5432/<database>" \
+#   --set global.imageCredentials.password=ghp_xxxx \
+#   -f values.yaml
+
+global:
+  storage:
+    endpoint: "https://s3.example.com". #!<-- Set to your S3 endpoint, e.g. https://s3.amazonaws.com for AWS.
+    bucket: "berserk-data".             #!<-- Set to your S3 bucket name.
+    region: "us-east-1"                 #!<-- Set to your S3 region, e.g. us-east-1 for AWS.
+  s3Credentials:
+    managed: true
+  postgresCredentials:
+    managed: true
+  imageCredentials:
+    managed: true
+  ingestToken:
+    managed: true
+
+# Feel free to modify the allocations below.
+
+query:
+  replicaCount: 1
+  cache:
+    size: "256GiB"
+  resources:
+    requests:
+      memory: "4Gi"
+      cpu: "4000m"
+    limits:
+      memory: "64Gi"
+      cpu: "16000m"
+
+ingest:
+  replicaCount: 1
+  resources:
+    requests:
+      memory: "1Gi"
+      cpu: "1000m"
+    limits:
+      memory: "16Gi"
+      cpu: "8000m"
