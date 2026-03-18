@@ -8,14 +8,14 @@ global:
     region: "us-east-1"
   imagePullPolicy: IfNotPresent
   s3Credentials:
-    create: true
+    managed: true
     accessKeyId: "minioadmin"
     secretAccessKey: "minioadmin"
   postgresCredentials:
-    create: true
+    managed: true
     databaseUrl: "postgres://postgres:testpassword@postgres-postgresql:5432/berserk?sslmode=disable"
   imageCredentials:
-    create: true
+    managed: true
     registry: "ghcr.io"
 
 meta:

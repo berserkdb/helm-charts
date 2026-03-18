@@ -20,8 +20,8 @@ global:
     region: ""
   # S3 credentials secret configuration
   s3Credentials:
-    # Set create: true and provide accessKeyId/secretAccessKey to have the chart create the secret
-    create: false
+    # Set managed: true and provide accessKeyId/secretAccessKey to have the chart manage the secret
+    managed: false
     secretName: "s3-credentials"
     accessKeyId: ""
     secretAccessKey: ""
@@ -29,15 +29,15 @@ global:
     secretAccessKeyKey: "AWS_SECRET_ACCESS_KEY"
   # PostgreSQL credentials secret configuration
   postgresCredentials:
-    # Set create: true and provide databaseUrl to have the chart create the secret
-    create: false
+    # Set managed: true and provide databaseUrl to have the chart manage the secret
+    managed: false
     secretName: "postgres-credentials"
     databaseUrl: ""
     databaseUrlKey: "database_url"
   # Image registry credentials (e.g. GHCR)
-  # Set create: true and provide password (GHCR token) to have the chart create the pull secret
+  # Set managed: true and provide password (GHCR token) to have the chart manage the pull secret
   imageCredentials:
-    create: false
+    managed: false
     registry: "ghcr.io"
     secretName: "ghcr-credentials"
     password: ""

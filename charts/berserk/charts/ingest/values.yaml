@@ -33,8 +33,8 @@ config:
   k8sAttributes:
     passthrough: true
   ingestToken:
-    # Set create: true and provide value to have the chart create the secret
-    create: false
+    # Set managed: true and provide value to have the chart manage the secret
+    managed: false
     # If secretName set to "", then no ingest token will be used.
     secretName: "ingest-token"
     key: "default_ingest_token"

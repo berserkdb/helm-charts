@@ -14,13 +14,13 @@ global:
     bucket: "my-berserk-data"
     region: "eu-central-1"
   s3Credentials:
-    create: false
+    managed: false
     # S3 access is provided by IRSA — no secret needed.
   ## Pass the credentials via --set flags to helm install
   postgresCredentials:
-    create: true
+    managed: true
   imageCredentials:
-    create: true
+    managed: true
   serviceAccountName: "berserk"
   observability:
     otlpEnabled: true
