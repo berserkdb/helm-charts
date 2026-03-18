@@ -34,7 +34,7 @@ spec:
           echo "Running: default | take 1"
           RESPONSE=$(wget -qO- \
             --header="Content-Type: application/json" \
-            --post-data='{"query": "default | take 1"}' \
+            --post-data='{"query": "default | take 1", "since": "1h ago"}' \
             "${QUERY_ENDPOINT}/query")
 
           echo "Response: ${RESPONSE}"
