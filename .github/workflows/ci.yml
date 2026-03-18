@@ -144,7 +144,7 @@ jobs:
 
       - name: Wait for deployments
         run: |
-          for deploy in meta ingest janitor nursery ui; do
+          for deploy in meta ingest janitor nursery ui query; do
             echo "Waiting for deployment/$deploy..."
             kubectl wait deployment/"$deploy" \
               --namespace berserk-test \
@@ -152,21 +152,11 @@ jobs:
               --timeout=180s
           done
 
-      - name: Wait for query StatefulSet
+      - name: Run Helm tests
         run: |
-          echo "Waiting for statefulset/query..."
-          kubectl rollout status statefulset/query \
+          helm test berserk \
             --namespace berserk-test \
-            --timeout=180s
-
-      - name: Verify query service
-        run: |
-          APP_VERSION=$(grep '^appVersion:' charts/berserk/Chart.yaml | awk '{print $2}')
-          kubectl run query-test -n berserk-test \
-            --image="ghcr.io/berserkdb/cli:v${APP_VERSION}" \
-            --restart=Never \
-            --rm -i \
-            --command -- /bin/sh -c '/cli --endpoint query:9510 search "default | take 1"'
+            --timeout 180s
 
       - name: Debug on failure
         if: failure()
