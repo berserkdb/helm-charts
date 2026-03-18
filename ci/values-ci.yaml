@@ -17,6 +17,8 @@ global:
   imageCredentials:
     managed: true
     registry: "ghcr.io"
+  ingestToken:
+    managed: true
 
 meta:
   resources:
