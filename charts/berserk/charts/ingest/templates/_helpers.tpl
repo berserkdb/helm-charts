@@ -4,3 +4,24 @@
 {{- define "ingest.labels" -}}{{ include "berserk-common.labels" . }}{{- end }}
 {{- define "ingest.selectorLabels" -}}{{ include "berserk-common.selectorLabels" . }}{{- end }}
 {{- define "ingest.image" -}}{{ include "berserk-common.image" . }}{{- end }}
+
+{{/* Resolve ingest token config: local values override global */}}
+{{- define "ingest.tokenManaged" -}}
+{{- .Values.config.ingestToken.managed | default .Values.global.ingestToken.managed -}}
+{{- end -}}
+{{- define "ingest.tokenSecretName" -}}
+{{- .Values.config.ingestToken.secretName | default .Values.global.ingestToken.secretName | default "ingest-token" -}}
+{{- end -}}
+{{- define "ingest.tokenKey" -}}
+{{- .Values.config.ingestToken.key | default .Values.global.ingestToken.key | default "default_ingest_token" -}}
+{{- end -}}
+{{- define "ingest.tokenName" -}}
+{{- .Values.config.ingestToken.tokenName | default .Values.global.ingestToken.tokenName | default "default_ingest_token" -}}
+{{- end -}}
+
+{{/* CLI image for init containers (matching setup-job.yaml pattern) */}}
+{{- define "ingest.cliImage" -}}
+{{- $registry := .Values.global.imageRegistry | default "ghcr.io/berserkdb" -}}
+{{- $tag := .Values.global.imageTag | default (printf "v%s" .Chart.AppVersion) -}}
+{{- printf "%s/cli:%s" $registry $tag -}}
+{{- end -}}

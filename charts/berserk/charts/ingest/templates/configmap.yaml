@@ -61,7 +61,7 @@ data:
         max_batch_bytes: 4194304
         max_batch_age_secs: 2
         keep_alive_interval_secs: 120
-        {{- if .Values.config.ingestToken.secretName }}
+        {{- if (include "ingest.tokenSecretName" . | trim) }}
         default_ingest_token: "${env:DEFAULT_INGEST_TOKEN}"
         {{- end }}
 

@@ -1,8 +1,43 @@
 {{- include "berserk-common.deployment.header" . }}
+{{- $managed := include "ingest.tokenManaged" . | trim | eq "true" }}
+{{- $secretName := include "ingest.tokenSecretName" . | trim }}
+{{- $secretKey := include "ingest.tokenKey" . | trim }}
       {{- if ne (.Values.config.k8sAttributes.passthrough | toString) "true" }}
       serviceAccountName: {{ include "berserk-common.fullname" . }}
       {{- else if .Values.global.serviceAccountName }}
       serviceAccountName: {{ .Values.global.serviceAccountName }}
+      {{- else if $managed }}
+      serviceAccountName: {{ include "berserk-common.fullname" . }}
+      {{- end }}
+      {{- $existingSecret := lookup "v1" "Secret" .Release.Namespace $secretName }}
+      {{- $secretHasKey := and $existingSecret (hasKey (default dict $existingSecret.data) $secretKey) }}
+      {{- if and $managed (not $secretHasKey) }}
+      initContainers:
+        - name: init-ingest-token
+          image: {{ include "ingest.cliImage" . }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy | default "Always" }}
+          securityContext:
+            allowPrivilegeEscalation: false
+          command: ["bzrk"]
+          args:
+            - "--meta-endpoint"
+            - {{ printf "meta.%s.svc.cluster.local:9500" .Release.Namespace | quote }}
+            - "ingest-token"
+            - "init"
+            - {{ include "ingest.tokenName" . | trim | quote }}
+            - "--dataset"
+            - {{ .Values.global.defaultDataset | default "default" | quote }}
+            - "--secret-name"
+            - {{ $secretName | quote }}
+            - "--secret-key"
+            - {{ $secretKey | quote }}
+          env:
+            - name: K8S_POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: RUST_LOG
+              value: "info"
       {{- end }}
       containers:
         - name: tjalfe
@@ -46,13 +81,13 @@
                 fieldRef:
                   fieldPath: metadata.uid
             {{- include "berserk-common.env.s3-credentials" (dict "accessKeyEnv" "AWS_ACCESS_KEY_ID" "secretKeyEnv" "AWS_SECRET_ACCESS_KEY" "Values" .Values) | nindent 12 }}
-            {{- if .Values.config.ingestToken.secretName }}
+            {{- if $secretName }}
             - name: DEFAULT_INGEST_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.config.ingestToken.secretName }}
-                  key: {{ .Values.config.ingestToken.key }}
-                  optional: true
+                  name: {{ $secretName }}
+                  key: {{ $secretKey }}
+                  optional: {{ not $managed }}
             {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}

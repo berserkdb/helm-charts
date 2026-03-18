@@ -1,10 +1,17 @@
-{{- if ne (.Values.config.k8sAttributes.passthrough | toString) "true" }}
+{{/* ServiceAccount: needed when k8sAttributes is not passthrough OR when token is managed (and no global SA) */}}
+{{- $needsK8sAttrs := ne (.Values.config.k8sAttributes.passthrough | toString) "true" }}
+{{- $managed := include "ingest.tokenManaged" . | trim | eq "true" }}
+{{- $hasGlobalSA := .Values.global.serviceAccountName }}
+{{- $needsSA := and (or $needsK8sAttrs $managed) (not $hasGlobalSA) }}
+{{- if $needsSA }}
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: {{ include "berserk-common.fullname" . }}
   labels:
     {{- include "berserk-common.labels" . | nindent 4 }}
+{{- end }}
+{{- if $needsK8sAttrs }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -45,6 +52,40 @@ roleRef:
   name: {{ include "berserk-common.fullname" . }}-{{ .Release.Namespace }}
 subjects:
   - kind: ServiceAccount
-    name: {{ include "berserk-common.fullname" . }}
+    name: {{ $hasGlobalSA | default (include "berserk-common.fullname" .) }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}
+{{- if $managed }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "berserk-common.fullname" . }}-token-init
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "berserk-common.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: [{{ include "ingest.tokenSecretName" . | trim | quote }}]
+    verbs: ["get", "update", "patch"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "berserk-common.fullname" . }}-token-init
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "berserk-common.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "berserk-common.fullname" . }}-token-init
+subjects:
+  - kind: ServiceAccount
+    name: {{ $hasGlobalSA | default (include "berserk-common.fullname" .) }}
     namespace: {{ .Release.Namespace }}
 {{- end }}

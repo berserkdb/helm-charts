@@ -41,6 +41,13 @@ global:
     registry: "ghcr.io"
     secretName: "ghcr-credentials"
     password: ""
+  # Ingest token configuration
+  # Set managed: true to auto-create the token via an init container on the ingest service
+  ingestToken:
+    managed: false
+    secretName: "ingest-token"
+    key: "default_ingest_token"
+    tokenName: "default_ingest_token"
   # Observability configuration (OTLP telemetry)
   observability:
     otlpEnabled: false

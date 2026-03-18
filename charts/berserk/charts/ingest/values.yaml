@@ -33,12 +33,13 @@ config:
   k8sAttributes:
     passthrough: true
   ingestToken:
-    # Set managed: true and provide value to have the chart manage the secret
+    # Set managed: true to auto-create the token via an init container (requires Meta)
     managed: false
     # If secretName set to "", then no ingest token will be used.
     secretName: "ingest-token"
     key: "default_ingest_token"
-    value: ""
+    # Name of the ingest token in Meta (used when managed: true)
+    tokenName: "default_ingest_token"
   observability:
     serviceName: "ingest"
     logLevel: "info"
