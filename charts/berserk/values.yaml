@@ -171,10 +171,10 @@ janitor:
 
   resources:
     requests:
-      memory: "256Mi"
-      cpu: "200m"
+      memory: "512Mi"
+      cpu: "1500m"
     limits:
-      memory: "4Gi"
+      memory: "12Gi"
       cpu: "4000m"
 
   cache:
