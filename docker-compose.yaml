@@ -1,0 +1,494 @@
+# Berserk local development stack
+# Derived from charts/berserk helm chart
+#
+# Prerequisites:
+#   1. Log in to GHCR with a GitHub PAT (packages:read scope):
+#      echo $GITHUB_TOKEN | docker login ghcr.io -u USERNAME --password-stdin
+#
+# Usage:
+#   docker compose up -d
+#   docker compose logs -f
+#   docker compose down -v  # removes volumes too
+#
+#   open http://localhost:9540
+#   bzrk --endpoint localhost:9510 query "default | count"
+#
+# Requires Docker Compose v2.23.1+ (for inline configs)
+
+x-common: &common
+  restart: unless-stopped
+  networks:
+    - berserk
+  environment: &common-env
+    RUST_BACKTRACE: "1"
+
+configs:
+  meta-config:
+    content: |
+      bind: "0.0.0.0:9500"
+      database_url: $${META_DATABASE_URL}
+      storage_endpoint: "http://minio:9000"
+      storage_bucket: "berserk"
+      storage_region: "us-east-1"
+      observability:
+        service_name: "meta"
+        log_level: "info"
+        otlp_enabled: true
+        otlp_endpoint: "ingest:4317"
+
+  query-config:
+    content: |
+      bind: "0.0.0.0:9510"
+      meta_endpoint: "http://meta:9500"
+      cloud_storage_access_key: $${AWS_ACCESS_KEY_ID:}
+      cloud_storage_secret_key: $${AWS_SECRET_ACCESS_KEY:}
+      segment_cache:
+        path: "/segment_cache"
+        size_limit: "10Gi"
+      observability:
+        service_name: "query"
+        log_level: "info"
+        otlp_enabled: true
+        otlp_endpoint: "ingest:4317"
+
+  ingest-config:
+    content: |
+      extensions:
+        file_storage:
+          directory: /var/lib/tjalfe
+
+      receivers:
+        otlp:
+          protocols:
+            grpc:
+              endpoint: "0.0.0.0:4317"
+              lax_utf8: true
+            http:
+              endpoint: "0.0.0.0:4318"
+              lax_utf8: true
+
+      processors:
+        batch:
+          send_batch_size: 10240
+          timeout: "10s"
+          send_batch_max_size: 20480
+
+      exporters:
+        berserk:
+          meta_endpoint: "http://meta:9500"
+          s3_access_key: "$${env:AWS_ACCESS_KEY_ID}"
+          s3_secret_key: "$${env:AWS_SECRET_ACCESS_KEY}"
+          max_batch_bytes: 4194304
+          max_batch_age_secs: 2
+          keep_alive_interval_secs: 120
+          default_ingest_token: "$${env:DEFAULT_INGEST_TOKEN}"
+
+        debug:
+          verbosity: basic
+          sampling_initial: 5
+          sampling_thereafter: 200
+
+      service:
+        extensions: [file_storage]
+
+        pipelines:
+          logs:
+            receivers: [otlp]
+            processors: [batch]
+            exporters: [berserk]
+
+          metrics:
+            receivers: [otlp]
+            processors: [batch]
+            exporters: [berserk]
+
+          traces:
+            receivers: [otlp]
+            processors: [batch]
+            exporters: [berserk]
+
+        telemetry:
+          resource:
+            service.name: "ingest"
+          logs:
+            level: "info"
+            processors:
+              - batch:
+                  exporter:
+                    otlp:
+                      protocol: grpc
+                      endpoint: "ingest:4317"
+                      insecure: true
+          metrics:
+            level: basic
+            address: "0.0.0.0:8888"
+            readers:
+              - periodic:
+                  exporter:
+                    otlp:
+                      protocol: grpc
+                      endpoint: "ingest:4317"
+                      insecure: true
+          traces:
+            processors:
+              - batch:
+                  exporter:
+                    otlp:
+                      protocol: grpc
+                      endpoint: "ingest:4317"
+                      insecure: true
+
+  janitor-config:
+    content: |
+      bind: "0.0.0.0:9502"
+      meta_endpoint: "http://meta:9500"
+      query_endpoint: "http://query:9510"
+      cloud_storage_access_key: $${JANITOR_STORAGE_ACCESS_KEY:}
+      cloud_storage_secret_key: $${JANITOR_STORAGE_SECRET_KEY:}
+      merger:
+        interval_seconds: 300
+      observability:
+        service_name: "janitor"
+        log_level: "info"
+        otlp_enabled: true
+        otlp_endpoint: "ingest:4317"
+      probe_jobs:
+        - name: "default_take_one"
+          query: "default | take 1"
+          interval_seconds: 60
+          since: "1h ago"
+
+  nursery-config:
+    content: |
+      http_bind: "0.0.0.0:9530"
+      meta_endpoint: "http://meta:9500"
+      cloud_storage_access_key: $${NURSERY_STORAGE_ACCESS_KEY:}
+      cloud_storage_secret_key: $${NURSERY_STORAGE_SECRET_KEY:}
+      working_dir: "/var/cache/nursery"
+      meta_default_poll_interval_secs: 5
+      stream_timeout_secs: 300
+      observability:
+        service_name: "nursery"
+        log_level: "info"
+        otlp_enabled: true
+        otlp_endpoint: "ingest:4317"
+
+  ui-config:
+    content: |
+      bind: "0.0.0.0:9540"
+      query_endpoint: "http://query:9510"
+      meta_endpoint: "http://meta:9500"
+      observability:
+        service_name: "ui"
+        log_level: "info"
+        otlp_enabled: true
+        otlp_endpoint: "ingest:4317"
+
+  init-ingest-token-script:
+    content: |
+      #!/bin/sh
+      set -e
+      TOKEN_FILE="/token/ingest-token"
+      if [ -f "$$TOKEN_FILE" ] && [ -s "$$TOKEN_FILE" ]; then
+        echo "Ingest token already exists at $$TOKEN_FILE, skipping creation."
+        exit 0
+      fi
+      BZRK="/bzrk --meta-endpoint meta:9500"
+      TOKEN_NAME="default_ingest_token"
+      echo "Creating default ingest token..."
+      if ! TOKEN=$$($$BZRK ingest-token create $$TOKEN_NAME --dataset default --simple 2>&1); then
+        echo "Token '$$TOKEN_NAME' already exists in meta, replacing..."
+        $$BZRK ingest-token revoke "$$TOKEN_NAME" || true
+        $$BZRK ingest-token delete "$$TOKEN_NAME" || true
+        TOKEN=$$($$BZRK ingest-token create $$TOKEN_NAME --dataset default --simple)
+      fi
+      echo "$$TOKEN" > "$$TOKEN_FILE"
+      echo "Ingest token written to $$TOKEN_FILE"
+
+  ingest-entrypoint-script:
+    content: |
+      #!/bin/sh
+      set -e
+      TOKEN_FILE="/token/ingest-token"
+      if [ -f "$$TOKEN_FILE" ] && [ -s "$$TOKEN_FILE" ]; then
+        export DEFAULT_INGEST_TOKEN=$$(cat "$$TOKEN_FILE")
+        echo "Loaded ingest token from $$TOKEN_FILE"
+      fi
+      exec /tjalfe_bin "$$@"
+
+services:
+  # --- Infrastructure ---
+
+  postgres:
+    image: postgres:18
+    networks:
+      - berserk
+    environment:
+      POSTGRES_USER: berserk
+      POSTGRES_PASSWORD: berserk
+      POSTGRES_DB: berserk
+    ports:
+      - "15432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U berserk"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio:latest
+    networks:
+      - berserk
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "19000:9000"
+      - "19001:9001"  # MinIO Console
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  # Create the default bucket on startup
+  minio-init:
+    image: minio/mc:latest
+    networks:
+      - berserk
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 minioadmin minioadmin &&
+      mc mb --ignore-existing local/berserk &&
+      echo 'Bucket created successfully'
+      "
+    restart: "no"
+
+  # Fix volume ownership for UID 1000 (mirrors Helm fsGroup: 1000)
+  volume-init:
+    image: alpine:latest
+    entrypoint: /bin/sh -c "chown -R 1000:1000 /mnt/*"
+    volumes:
+      - query-cache:/mnt/query-cache
+      - ingest-state:/mnt/ingest-state
+      - ingest-token:/mnt/ingest-token
+      - janitor-cache:/mnt/janitor-cache
+      - nursery-workdir:/mnt/nursery-workdir
+    restart: "no"
+
+  # --- Berserk Services ---
+
+  meta:
+    <<: *common
+    image: ghcr.io/berserkdb/meta:v1.0.28
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      <<: *common-env
+      META_DATABASE_URL: "postgres://berserk:berserk@postgres:5432/berserk"
+    command: ["-c", "/config/config.yaml"]
+    ports:
+      - "9500:9500"
+    configs:
+      - source: meta-config
+        target: /config/config.yaml
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/9500'"]
+      interval: 5s
+      timeout: 3s
+      start_period: 10s
+      retries: 10
+
+  query:
+    <<: *common
+    image: ghcr.io/berserkdb/query:v1.0.28
+    depends_on:
+      meta:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+      volume-init:
+        condition: service_completed_successfully
+    environment:
+      <<: *common-env
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
+    command: ["-c", "/config/config.yaml"]
+    ports:
+      - "9510:9510"
+    configs:
+      - source: query-config
+        target: /config/config.yaml
+    volumes:
+      - query-cache:/segment_cache
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/9510'"]
+      interval: 5s
+      timeout: 3s
+      start_period: 10s
+      retries: 10
+
+  # Create a default ingest token in meta and write it to a shared volume.
+  # Mirrors the managed ingest token init container from the helm chart.
+  ingest-token-init:
+    image: ghcr.io/berserkdb/cli:v1.0.28
+    networks:
+      - berserk
+    depends_on:
+      meta:
+        condition: service_healthy
+      volume-init:
+        condition: service_completed_successfully
+    entrypoint: ["/bin/sh", "/scripts/init-ingest-token.sh"]
+    configs:
+      - source: init-ingest-token-script
+        target: /scripts/init-ingest-token.sh
+    volumes:
+      - ingest-token:/token
+    restart: "no"
+
+  ingest:
+    <<: *common
+    image: ghcr.io/berserkdb/ingest:v1.0.28
+    depends_on:
+      meta:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+      ingest-token-init:
+        condition: service_completed_successfully
+      volume-init:
+        condition: service_completed_successfully
+    entrypoint: ["/bin/sh", "/scripts/ingest-entrypoint.sh"]
+    command: ["/config/config.yaml"]
+    environment:
+      RUST_LOG: info
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
+    ports:
+      - "14317:4317"   # OTLP gRPC
+      - "14318:4318"   # OTLP HTTP
+      - "18888:8888"   # Telemetry
+    configs:
+      - source: ingest-config
+        target: /config/config.yaml
+      - source: ingest-entrypoint-script
+        target: /scripts/ingest-entrypoint.sh
+    volumes:
+      - ingest-state:/var/lib/tjalfe
+      - ingest-token:/token:ro
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/8888'"]
+      interval: 5s
+      timeout: 3s
+      start_period: 10s
+      retries: 10
+
+  janitor:
+    <<: *common
+    image: ghcr.io/berserkdb/janitor:v1.0.28
+    depends_on:
+      meta:
+        condition: service_healthy
+      query:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+      volume-init:
+        condition: service_completed_successfully
+    environment:
+      <<: *common-env
+      JANITOR_STORAGE_ACCESS_KEY: minioadmin
+      JANITOR_STORAGE_SECRET_KEY: minioadmin
+    command: ["-c", "/config/config.yaml"]
+    configs:
+      - source: janitor-config
+        target: /config/config.yaml
+    volumes:
+      - janitor-cache:/tmp/segment-cache
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/9502'"]
+      interval: 10s
+      timeout: 5s
+      start_period: 10s
+      retries: 10
+
+  nursery:
+    <<: *common
+    image: ghcr.io/berserkdb/nursery:v1.0.28
+    depends_on:
+      meta:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+      volume-init:
+        condition: service_completed_successfully
+    environment:
+      <<: *common-env
+      NURSERY_STORAGE_ACCESS_KEY: minioadmin
+      NURSERY_STORAGE_SECRET_KEY: minioadmin
+    command: ["-c", "/config/config.yaml"]
+    configs:
+      - source: nursery-config
+        target: /config/config.yaml
+    volumes:
+      - nursery-workdir:/var/cache/nursery
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/9530'"]
+      interval: 10s
+      timeout: 5s
+      start_period: 10s
+      retries: 10
+
+  ui:
+    <<: *common
+    image: ghcr.io/berserkdb/ui:v1.0.28
+    depends_on:
+      query:
+        condition: service_healthy
+      meta:
+        condition: service_healthy
+    environment:
+      <<: *common-env
+      UI_COOKIE_SECRET: "local-dev-cookie-secret-change-me"
+      LEPTOS_OUTPUT_NAME: ui
+      LEPTOS_SITE_ROOT: /
+      LEPTOS_SITE_PKG_DIR: pkg
+      LEPTOS_SITE_ADDR: "0.0.0.0:9540"
+      ENVIRONMENT: local
+    command: ["-c", "/config/config.yaml"]
+    ports:
+      - "9540:9540"
+    configs:
+      - source: ui-config
+        target: /config/config.yaml
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/9540'"]
+      interval: 5s
+      timeout: 3s
+      start_period: 10s
+      retries: 10
+
+networks:
+  berserk:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  minio-data:
+  query-cache:
+  ingest-state:
+  ingest-token:
+  janitor-cache:
+  nursery-workdir:
