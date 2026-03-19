@@ -54,6 +54,9 @@
             - containerPort: {{ .Values.service.ports.otlpHttp }}
               name: otlp-http
               protocol: TCP
+            - containerPort: {{ .Values.service.ports.loki }}
+              name: loki
+              protocol: TCP
             - containerPort: {{ .Values.service.ports.telemetry }}
               name: telemetry
               protocol: TCP
