@@ -10,6 +10,15 @@ global:
   observability:
     otlpEnabled: true
     otlpEndpoint: "ingest:4317"
+  # Node scheduling constraints (applied to all services unless overridden per-service)
+  # nodeSelector:
+  #   disktype: ssd
+  # tolerations:
+  #   - key: "dedicated"
+  #     operator: "Equal"
+  #     value: "berserk"
+  #     effect: "NoSchedule"
+  # affinity: {}
 
 query:
   replicaCount: 1

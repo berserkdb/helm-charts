@@ -33,6 +33,27 @@ spec:
         runAsUser: 1000
         runAsGroup: 1000
         fsGroup: 1000
+{{- include "berserk-common.scheduling" . }}
+{{- end }}
+
+{{/*
+Node scheduling constraints: nodeSelector, tolerations, affinity.
+Per-service values override global defaults.
+Usage: {{ include "berserk-common.scheduling" . }}
+*/}}
+{{- define "berserk-common.scheduling" -}}
+      {{- with (.Values.nodeSelector | default .Values.global.nodeSelector) }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with (.Values.tolerations | default .Values.global.tolerations) }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with (.Values.affinity | default .Values.global.affinity) }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
 {{- end }}
 
 {{/*

@@ -54,6 +54,10 @@ global:
     otlpEndpoint: "ingest:4317"
   # Default dataset name for Berserk
   defaultDataset: "default"
+  # Node scheduling constraints (applied to all services unless overridden)
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
 
 # Post-install setup job configuration
 setup:
