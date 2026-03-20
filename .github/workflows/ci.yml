@@ -174,3 +174,25 @@ jobs:
           echo ""
           echo "=== Describe failing pods ==="
           kubectl describe pods -n berserk-test --field-selector=status.phase!=Running || true
+
+      - name: Discord Failure Notification
+        if: failure() && github.ref == 'refs/heads/main'
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        run: |
+          if [ -z "${DISCORD_WEBHOOK}" ]; then
+            echo "DISCORD_WEBHOOK secret not set; skipping notification"
+            exit 0
+          fi
+
+          STATUS_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          COMMIT_MSG=$(git log --format=%s -n 1 "${GITHUB_SHA}")
+
+          MSG="❌ **helm-charts CI** failed"
+          MSG="${MSG}"$'\n'"commit: \`${GITHUB_SHA::7}\` ${COMMIT_MSG}"
+          MSG="${MSG}"$'\n'"[View Details](<${STATUS_URL}>)"
+
+          JSON_PAYLOAD=$(jq -n --arg msg "$MSG" '{content: $msg}')
+
+          curl -H "Content-Type: application/json" -X POST "$DISCORD_WEBHOOK" \
+            -d "$JSON_PAYLOAD"
