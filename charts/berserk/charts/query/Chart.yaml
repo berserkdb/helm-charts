@@ -2,8 +2,8 @@ apiVersion: v2
 name: query
 description: Berserk Query Service - Query engine for observability data
 type: application
-version: 1.0.33
-appVersion: 1.0.30
+version: 1.0.34
+appVersion: 1.0.39
 dependencies:
   - name: berserk-common
     version: "*"
