@@ -303,6 +303,7 @@ services:
     configs:
       - source: meta-config
         target: /config/config.yaml
+        mode: 0444
     healthcheck:
       test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/9500'"]
       interval: 5s
@@ -330,6 +331,7 @@ services:
     configs:
       - source: query-config
         target: /config/config.yaml
+        mode: 0444
     volumes:
       - query-cache:/segment_cache
     healthcheck:
@@ -354,6 +356,7 @@ services:
     configs:
       - source: init-ingest-token-script
         target: /scripts/init-ingest-token.sh
+        mode: 0555
     volumes:
       - ingest-token:/token
     restart: "no"
@@ -383,8 +386,10 @@ services:
     configs:
       - source: ingest-config
         target: /config/config.yaml
+        mode: 0444
       - source: ingest-entrypoint-script
         target: /scripts/ingest-entrypoint.sh
+        mode: 0555
     volumes:
       - ingest-state:/var/lib/tjalfe
       - ingest-token:/token:ro
@@ -415,6 +420,7 @@ services:
     configs:
       - source: janitor-config
         target: /config/config.yaml
+        mode: 0444
     volumes:
       - janitor-cache:/tmp/segment-cache
     healthcheck:
@@ -442,6 +448,7 @@ services:
     configs:
       - source: nursery-config
         target: /config/config.yaml
+        mode: 0444
     volumes:
       - nursery-workdir:/var/cache/nursery
     healthcheck:
@@ -473,6 +480,7 @@ services:
     configs:
       - source: ui-config
         target: /config/config.yaml
+        mode: 0444
     healthcheck:
       test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/9540'"]
       interval: 5s
