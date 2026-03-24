@@ -2,6 +2,12 @@
 replicaCount: 1
 component: backend
 
+# Recreate strategy: stop old pod before starting new.
+# The nursery owns stream offsets and merge state — running two instances
+# simultaneously causes offset mismatch errors when both register segments.
+strategy:
+  type: Recreate
+
 image:
   repository: nursery
   pullPolicy: Always

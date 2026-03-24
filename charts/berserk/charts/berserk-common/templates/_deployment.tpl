@@ -13,6 +13,10 @@ metadata:
     component: {{ .Values.component | default "backend" }}
 spec:
   replicas: {{ .Values.replicaCount }}
+  {{- with .Values.strategy }}
+  strategy:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
   selector:
     matchLabels:
       {{- include "berserk-common.selectorLabels" . | nindent 6 }}
