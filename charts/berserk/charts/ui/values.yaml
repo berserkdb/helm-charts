@@ -29,6 +29,17 @@ config:
     # otlpEnabled: false
     # otlpEndpoint: ""
 
+library:
+  # Git sync settings (omit gitRepo to use file-only mode)
+  gitRepo: ""
+  gitToken: ""
+  gitBranch: "main"
+  # Storage: "emptyDir" (ephemeral, fine with git sync) or "pvc" (persistent).
+  # NOTE: "pvc" uses ReadWriteOnce — only works with replicaCount: 1.
+  storage: "emptyDir"
+  storageSize: "1Gi"
+  storageClass: ""
+
 # Cookie secret for session signing (auto-generated if not set)
 cookieSecret:
   value: ""

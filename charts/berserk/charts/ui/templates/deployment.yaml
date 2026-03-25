@@ -35,6 +35,21 @@
               value: "1"
             - name: ENVIRONMENT
               value: "demo"
+            - name: UI_LIBRARY_DIR
+              value: "/library"
+            {{- if .Values.library.gitRepo }}
+            - name: UI_GIT_REPO
+              value: {{ .Values.library.gitRepo | quote }}
+            - name: UI_GIT_BRANCH
+              value: {{ .Values.library.gitBranch | default "main" | quote }}
+            {{- if .Values.library.gitToken }}
+            - name: UI_GIT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ printf "%s-library-git" (include "berserk-common.fullname" .) }}
+                  key: token
+            {{- end }}
+            {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           livenessProbe:
@@ -57,5 +72,15 @@
             periodSeconds: 3
           volumeMounts:
             {{- include "berserk-common.volumeMount.config" . | nindent 12 }}
+            - name: library
+              mountPath: /library
       volumes:
         {{- include "berserk-common.volume.config" . | nindent 8 }}
+        {{- if eq (.Values.library.storage | default "emptyDir") "pvc" }}
+        - name: library
+          persistentVolumeClaim:
+            claimName: {{ printf "%s-library" (include "berserk-common.fullname" .) }}
+        {{- else }}
+        - name: library
+          emptyDir: {}
+        {{- end }}
