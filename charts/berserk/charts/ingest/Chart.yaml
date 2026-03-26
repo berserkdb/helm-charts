@@ -2,8 +2,8 @@ apiVersion: v2
 name: ingest
 description: Berserk Ingest Service - Tjalfe telemetry collector for data ingestion
 type: application
-version: 1.0.34
-appVersion: 1.0.39
+version: 1.0.49
+appVersion: 1.0.49
 dependencies:
   - name: berserk-common
     version: "*"

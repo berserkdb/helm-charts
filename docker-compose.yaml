@@ -290,7 +290,7 @@ services:
 
   meta:
     <<: *common
-    image: ghcr.io/berserkdb/meta:v1.0.39
+    image: ghcr.io/berserkdb/meta:v1.0.49
     depends_on:
       postgres:
         condition: service_healthy
@@ -313,7 +313,7 @@ services:
 
   query:
     <<: *common
-    image: ghcr.io/berserkdb/query:v1.0.39
+    image: ghcr.io/berserkdb/query:v1.0.49
     depends_on:
       meta:
         condition: service_healthy
@@ -344,7 +344,7 @@ services:
   # Create a default ingest token in meta and write it to a shared volume.
   # Mirrors the managed ingest token init container from the helm chart.
   ingest-token-init:
-    image: ghcr.io/berserkdb/cli:v1.0.39
+    image: ghcr.io/berserkdb/cli:v1.0.49
     networks:
       - berserk
     depends_on:
@@ -363,7 +363,7 @@ services:
 
   ingest:
     <<: *common
-    image: ghcr.io/berserkdb/ingest:v1.0.39
+    image: ghcr.io/berserkdb/ingest:v1.0.49
     depends_on:
       meta:
         condition: service_healthy
@@ -402,7 +402,7 @@ services:
 
   janitor:
     <<: *common
-    image: ghcr.io/berserkdb/janitor:v1.0.39
+    image: ghcr.io/berserkdb/janitor:v1.0.49
     depends_on:
       meta:
         condition: service_healthy
@@ -432,7 +432,7 @@ services:
 
   nursery:
     <<: *common
-    image: ghcr.io/berserkdb/nursery:v1.0.39
+    image: ghcr.io/berserkdb/nursery:v1.0.49
     depends_on:
       meta:
         condition: service_healthy
@@ -460,7 +460,7 @@ services:
 
   ui:
     <<: *common
-    image: ghcr.io/berserkdb/ui:v1.0.39
+    image: ghcr.io/berserkdb/ui:v1.0.49
     depends_on:
       query:
         condition: service_healthy
