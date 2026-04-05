@@ -23,4 +23,7 @@ observability:
   log_level: {{ .Values.config.observability.logLevel | quote }}
   otlp_enabled: {{ $otlpEnabled }}
   otlp_endpoint: {{ $otlpEndpoint | quote }}
+{{- if .Values.config.observability.profilerSampleHz }}
+  profiler_sample_hz: {{ .Values.config.observability.profilerSampleHz }}
+{{- end }}
 {{- end }}

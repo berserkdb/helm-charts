@@ -6,8 +6,16 @@ data:
     query_endpoint: {{ .Values.config.queryEndpoint | quote }}
     cloud_storage_access_key: ${JANITOR_STORAGE_ACCESS_KEY:}
     cloud_storage_secret_key: ${JANITOR_STORAGE_SECRET_KEY:}
-    merger:
-      interval_seconds: {{ .Values.config.mergerIntervalSeconds }}
+    cache_dir: {{ .Values.config.cacheDir | quote }}
+    merger_interval_seconds: {{ .Values.config.mergerIntervalSeconds }}
+    max_segments_per_batch: {{ .Values.config.maxSegmentsPerBatch }}
+    min_segments: {{ .Values.config.minSegments }}
+    max_segment_age_days: {{ .Values.config.maxSegmentAgeDays }}
+    {{- if .Values.config.targetDatasets }}
+    target_datasets: {{ .Values.config.targetDatasets | toJson }}
+    {{- else }}
+    target_datasets: []
+    {{- end }}
     {{- include "berserk-common.observability-config" . | nindent 4 }}
     {{- $defaultDataset := .Values.global.defaultDataset | default "default" }}
     probe_jobs:

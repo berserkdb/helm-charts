@@ -31,6 +31,7 @@ resources:
 
 config:
   metaEndpoint: "http://meta:9500"
+  maxConcurrentQueries: 16
   observability:
     serviceName: "query"
     logLevel: "info"
