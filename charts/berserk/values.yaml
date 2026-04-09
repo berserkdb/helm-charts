@@ -178,7 +178,7 @@ janitor:
       memory: "512Mi"
       cpu: "1500m"
     limits:
-      memory: "12Gi"
+      memory: "8Gi"
       cpu: "4000m"
 
   cache:
