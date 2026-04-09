@@ -14,6 +14,7 @@ spec:
   serviceName: {{ include "berserk-common.fullname" . }}
   {{- end }}
   replicas: {{ .Values.replicaCount }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit | default 2 }}
   selector:
     matchLabels:
       {{- include "berserk-common.selectorLabels" . | nindent 6 }}

@@ -13,6 +13,7 @@ metadata:
     component: {{ .Values.component | default "backend" }}
 spec:
   replicas: {{ .Values.replicaCount }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit | default 2 }}
   {{- with .Values.strategy }}
   strategy:
     {{- toYaml . | nindent 4 }}
