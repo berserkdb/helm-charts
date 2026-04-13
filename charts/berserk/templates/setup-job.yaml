@@ -1,4 +1,13 @@
 {{- if .Values.setup.enabled }}
+{{- /*
+Post-install hook that creates the `global.defaultDataset` dataset by calling
+the `bzrk dataset create` CLI against meta once its /health/ready endpoint is
+up. This is the only code path that creates the default dataset — meta does
+NOT auto-create it on startup. Operators creating ingest tokens that route to
+`global.defaultDataset` must wait for this job to succeed before tokens will
+resolve. On `helm upgrade` this hook does not re-run, so the dataset is
+expected to still exist from the original install.
+*/ -}}
 {{- $registry := .Values.global.imageRegistry | default "ghcr.io/berserkdb" }}
 {{- $repository := .Values.setup.image.repository | default "cli" }}
 {{- $tag := .Values.setup.image.tag | default .Values.global.imageTag | default (printf "v%s" .Chart.AppVersion) }}

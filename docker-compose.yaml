@@ -195,6 +195,10 @@ configs:
       fi
       BZRK="/bzrk --meta-endpoint meta:9500"
       TOKEN_NAME="default_ingest_token"
+      # Meta no longer auto-creates the "default" dataset on startup; create it
+      # explicitly here (idempotent — ignore "already exists" errors).
+      echo "Ensuring 'default' dataset exists in meta..."
+      $$BZRK dataset create default 2>/dev/null || true
       echo "Creating default ingest token..."
       if ! TOKEN=$$($$BZRK ingest-token create $$TOKEN_NAME --dataset default --simple 2>&1); then
         echo "Token '$$TOKEN_NAME' already exists in meta, replacing..."
