@@ -61,8 +61,9 @@ global:
 
 # Post-install setup job configuration
 setup:
-  # Enable the post-install job that creates the default dataset
-  # Right now not, needed as Meta creates it
+  # The init-ingest-token init container now ensures the dataset exists before
+  # creating the token, so this job is only needed for installs without managed
+  # ingest tokens.
   enabled: false
   image:
     repository: cli
