@@ -1,10 +1,6 @@
 # Berserk local development stack
 # Derived from charts/berserk helm chart
 #
-# Prerequisites:
-#   1. Log in to GHCR with a GitHub PAT (packages:read scope):
-#      echo $GITHUB_TOKEN | docker login ghcr.io -u USERNAME --password-stdin
-#
 # Usage:
 #   docker compose up -d
 #   docker compose logs -f

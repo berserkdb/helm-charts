@@ -6,9 +6,8 @@ global:
   imagePullPolicy: Always
   # Override image tag for all services (defaults to Chart appVersion)
   imageTag: ""
-  # Image pull secrets
-  imagePullSecrets:
-    - name: ghcr-credentials
+  # Image pull secrets (for private registry mirrors, air-gapped environments, etc.)
+  imagePullSecrets: []
   # ServiceAccount name for pod specs (e.g. for IRSA on EKS)
   serviceAccountName: ""
   # Labels applied to all resources
@@ -34,13 +33,6 @@ global:
     secretName: "postgres-credentials"
     databaseUrl: ""
     databaseUrlKey: "database_url"
-  # Image registry credentials (e.g. GHCR)
-  # Set managed: true and provide password (GHCR token) to have the chart manage the pull secret
-  imageCredentials:
-    managed: false
-    registry: "ghcr.io"
-    secretName: "ghcr-credentials"
-    password: ""
   # Ingest token configuration
   # Set managed: true to auto-create the token via an init container on the ingest service
   ingestToken:

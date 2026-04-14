@@ -14,9 +14,6 @@ global:
   postgresCredentials:
     managed: true
     databaseUrl: "postgres://postgres:testpassword@postgres-postgresql:5432/berserk?sslmode=disable"
-  imageCredentials:
-    managed: true
-    registry: "ghcr.io"
   ingestToken:
     managed: true
 

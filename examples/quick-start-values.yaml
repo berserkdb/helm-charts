@@ -14,7 +14,6 @@
 #   --set global.s3Credentials.accessKeyId=YOUR_ACCESS_KEY \
 #   --set global.s3Credentials.secretAccessKey=YOUR_SECRET_KEY \
 #   --set global.postgresCredentials.databaseUrl="postgres://<user>:<password>@<host>:5432/<database>" \
-#   --set global.imageCredentials.password=ghp_xxxx \
 #   -f values.yaml
 
 global:
@@ -25,8 +24,6 @@ global:
   s3Credentials:
     managed: true
   postgresCredentials:
-    managed: true
-  imageCredentials:
     managed: true
   ingestToken:
     managed: true

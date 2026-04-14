@@ -19,8 +19,6 @@ global:
   ## Pass the credentials via --set flags to helm install
   postgresCredentials:
     managed: true
-  imageCredentials:
-    managed: true
   serviceAccountName: "berserk"
   observability:
     otlpEnabled: true

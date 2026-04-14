@@ -61,13 +61,3 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
-
-{{/*
-Image pull secrets
-*/}}
-{{- define "berserk.imagePullSecrets" -}}
-{{- with .Values.global.imagePullSecrets }}
-imagePullSecrets:
-{{- toYaml . | nindent 2 }}
-{{- end }}
-{{- end }}
