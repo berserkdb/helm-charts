@@ -41,3 +41,26 @@ To create an ingest token for the "{{ .Values.global.defaultDataset }}" dataset:
 
 Check pod status:
   kubectl get pods -n {{ .Release.Namespace }}
+
+{{- if .Values.global.networkPolicy.enabled }}
+
+NetworkPolicy is ENABLED. Ensure your cluster has a CNI plugin that supports
+NetworkPolicy enforcement (Calico, Cilium, or EKS VPC CNI v1.14+).
+
+{{- $otlpEndpoint := .Values.global.observability.otlpEndpoint | default "ingest:4317" }}
+{{- if and .Values.global.observability.otlpEnabled (ne $otlpEndpoint "ingest:4317") (not .Values.global.networkPolicy.otlpEgress) }}
+
+WARNING: OTLP telemetry is enabled with a non-default endpoint ({{ $otlpEndpoint }})
+but no egress rules are configured for it. Telemetry export will be blocked by
+NetworkPolicy. Configure global.networkPolicy.otlpEgress with the appropriate
+CIDR and port rules for your OTLP collector:
+
+  global:
+    networkPolicy:
+      otlpEgress:
+        - cidr: <collector-cidr>
+          ports:
+            - port: <collector-port>
+              protocol: TCP
+{{- end }}
+{{- end }}

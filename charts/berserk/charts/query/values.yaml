@@ -11,6 +11,22 @@ service:
   type: ClusterIP
   port: 9510
 
+# NetworkPolicy: UI and janitor connect; external clients query directly
+networkPolicy:
+  allowExternal: true
+  allowExternalEgress: true
+
+  ingressFrom:
+    - app: ui
+      ports: [{port: 9510}]
+    - app: janitor
+      ports: [{port: 9510}]
+  egressTo:
+    - app: meta
+      ports: [{port: 9500}]
+  additionalIngress: []
+  additionalEgress: []
+
 cache:
   enabled: true
   # persistent: true uses a PVC (StatefulSet), false uses emptyDir (Deployment).

@@ -18,6 +18,18 @@ service:
   port: 3002
   portName: health
 
+# NetworkPolicy: egress to meta; nothing connects to nursery
+networkPolicy:
+  allowExternal: false
+  allowExternalEgress: true
+
+  ingressFrom: []
+  egressTo:
+    - app: meta
+      ports: [{port: 9500}]
+  additionalIngress: []
+  additionalEgress: []
+
 resources:
   requests:
     memory: "256Mi"

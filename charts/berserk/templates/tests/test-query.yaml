@@ -1,9 +1,10 @@
+{{- if .Values.query.enabled }}
 apiVersion: v1
 kind: Pod
 metadata:
-  name: {{ include "berserk-common.fullname" . }}-test-query
+  name: {{ include "berserk.fullname" . }}-test-query
   labels:
-    {{- include "berserk-common.labels" . | nindent 4 }}
+    {{- include "berserk.labels" . | nindent 4 }}
   annotations:
     helm.sh/hook: test
     helm.sh/hook-weight: "0"
@@ -23,7 +24,7 @@ spec:
       args:
         - |
           set -e
-          QUERY_ENDPOINT="http://query:{{ .Values.service.port }}"
+          QUERY_ENDPOINT="http://query:{{ .Values.query.service.port }}"
 
           echo "Waiting for query service to be ready..."
           until wget -q --spider "${QUERY_ENDPOINT}/health/ready" 2>/dev/null; do
@@ -42,3 +43,4 @@ spec:
           # Verify we got a Tables array back (successful query response)
           echo "${RESPONSE}" | grep -q '"Tables"'
           echo "PASSED: query returned a valid response with Tables"
+{{- end }}

@@ -17,6 +17,18 @@ service:
     loki: 3100
     telemetry: 8888
 
+# NetworkPolicy: external telemetry sources; egress to meta and k8s API
+networkPolicy:
+  allowExternal: true
+  allowExternalEgress: true
+
+  ingressFrom: []
+  egressTo:
+    - app: meta
+      ports: [{port: 9500}]
+  additionalIngress: []
+  additionalEgress: []
+
 resources:
   requests:
     memory: "512Mi"

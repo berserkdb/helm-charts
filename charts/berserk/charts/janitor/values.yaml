@@ -7,6 +7,20 @@ image:
   pullPolicy: Always
   tag: ""
 
+# NetworkPolicy: egress to meta and query; nothing connects to janitor
+networkPolicy:
+  allowExternal: false
+  allowExternalEgress: true
+
+  ingressFrom: []
+  egressTo:
+    - app: meta
+      ports: [{port: 9500}]
+    - app: query
+      ports: [{port: 9510}]
+  additionalIngress: []
+  additionalEgress: []
+
 resources:
   requests:
     memory: "256Mi"

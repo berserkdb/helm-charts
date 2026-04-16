@@ -1,0 +1,91 @@
+{{- if .Values.global.networkPolicy.enabled }}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "berserk.fullname" . }}-test-netpol
+  labels:
+    {{- include "berserk.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-weight: "10"
+    helm.sh/hook-delete-policy: before-hook-creation
+spec:
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+  restartPolicy: Never
+  containers:
+    - name: test-netpol
+      image: busybox:1.37
+      securityContext:
+        allowPrivilegeEscalation: false
+      command: ["/bin/sh", "-c"]
+      args:
+        - |
+          set -e
+          PASS=0
+          FAIL=0
+
+          # expect_blocked <service> <url>
+          #   Verify that the connection times out (blocked by NetworkPolicy).
+          expect_blocked() {
+            SVC="$1"; URL="$2"
+            echo -n "  $SVC (expect blocked)... "
+            if wget -qO- --timeout=5 "$URL" >/dev/null 2>&1; then
+              echo "FAIL - connection succeeded (should be blocked)"
+              FAIL=$((FAIL + 1))
+            else
+              echo "OK - blocked"
+              PASS=$((PASS + 1))
+            fi
+          }
+
+          # expect_allowed <service> <url>
+          #   Verify that the connection succeeds.
+          expect_allowed() {
+            SVC="$1"; URL="$2"
+            echo -n "  $SVC (expect allowed)... "
+            if wget -qO- --timeout=5 "$URL" >/dev/null 2>&1; then
+              echo "OK - allowed"
+              PASS=$((PASS + 1))
+            else
+              echo "FAIL - connection failed (should be allowed)"
+              FAIL=$((FAIL + 1))
+            fi
+          }
+
+          echo "=== NetworkPolicy test: ingress from unauthorized pod ==="
+          echo ""
+          echo "This pod has no Berserk labels, so it should be blocked"
+          echo "from internal services and allowed to external services."
+          echo ""
+
+          {{- if .Values.meta.enabled }}
+          expect_blocked "meta:{{ .Values.meta.service.port }}" "http://meta:{{ .Values.meta.service.port }}/health/live"
+          {{- end }}
+          {{- if .Values.janitor.enabled }}
+          expect_blocked "janitor" "http://janitor:9502/health/live"
+          {{- end }}
+          {{- if .Values.nursery.enabled }}
+          expect_blocked "nursery:{{ .Values.nursery.service.port }}" "http://nursery:{{ .Values.nursery.service.port }}/health/live"
+          {{- end }}
+          {{- if .Values.query.enabled }}
+          expect_allowed "query:{{ .Values.query.service.port }}" "http://query:{{ .Values.query.service.port }}/health/live"
+          {{- end }}
+          {{- if .Values.ui.enabled }}
+          expect_allowed "ui:{{ .Values.ui.service.port }}" "http://ui:{{ .Values.ui.service.port }}/health/live"
+          {{- end }}
+
+          echo ""
+          echo "Results: ${PASS} passed, ${FAIL} failed"
+
+          if [ "$FAIL" -gt 0 ]; then
+            echo "FAILED: NetworkPolicy enforcement is not working."
+            echo "Ensure your CNI supports NetworkPolicy (EKS VPC CNI with"
+            echo "enableNetworkPolicy, Calico, or Cilium)."
+            exit 1
+          fi
+
+          echo "PASSED: NetworkPolicy enforcement is working correctly."
+{{- end }}

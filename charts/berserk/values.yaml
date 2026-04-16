@@ -46,6 +46,33 @@ global:
     otlpEndpoint: "ingest:4317"
   # Default dataset name for Berserk
   defaultDataset: "default"
+  # NetworkPolicy configuration
+  # Requires a CNI plugin that supports NetworkPolicy (Calico, Cilium, or
+  # EKS VPC CNI v1.14+ with ENABLE_NETWORK_POLICY).
+  networkPolicy:
+    enabled: false
+    # Additional ingress rules applied to ALL services
+    additionalIngress: []
+    # External egress destinations (S3, PostgreSQL, etc.)
+    # Each entry: {cidr: "0.0.0.0/0", ports: [{port: 443, protocol: TCP}]}
+    # Default allows HTTPS to anywhere -- tighten to your S3/DB CIDRs in production.
+    externalEgress:
+      - cidr: 0.0.0.0/0
+        ports:
+          - port: 443
+            protocol: TCP
+      - cidr: 0.0.0.0/0
+        ports:
+          - port: 5432
+            protocol: TCP
+    # OTLP egress rules for external collectors.
+    # Only needed when global.observability.otlpEndpoint points outside the namespace.
+    # When using the default (ingest:4317), egress is handled automatically.
+    otlpEgress: []
+    #  - cidr: 10.0.0.0/8
+    #    ports:
+    #      - port: 4317
+    #        protocol: TCP
   # Node scheduling constraints (applied to all services unless overridden)
   nodeSelector: {}
   tolerations: []

@@ -20,6 +20,26 @@ resources:
     memory: "256Mi"
     cpu: "500m"
 
+# NetworkPolicy: all other Berserk services connect to meta
+networkPolicy:
+  allowExternal: false
+  allowExternalEgress: true
+
+  ingressFrom:
+    - app: query
+      ports: [{port: 9500}]
+    - app: ingest
+      ports: [{port: 9500}]
+    - app: janitor
+      ports: [{port: 9500}]
+    - app: ui
+      ports: [{port: 9500}]
+    - app: nursery
+      ports: [{port: 9500}]
+  egressTo: []
+  additionalIngress: []
+  additionalEgress: []
+
 config:
   # storageEndpoint: ""
   # storageBucket: ""
