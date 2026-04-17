@@ -125,9 +125,16 @@ spec:
         - port: {{ $otlpPort | int }}
           protocol: TCP
     {{- else }}
-    {{- /* External: use otlpEgress rules if configured */ -}}
-    {{- with .Values.global.networkPolicy.otlpEgress }}
-    {{- toYaml . | nindent 4 }}
+    {{- /* External: render otlpEgress {cidr, ports} entries as ipBlock rules */ -}}
+    {{- range .Values.global.networkPolicy.otlpEgress }}
+    - to:
+        - ipBlock:
+            cidr: {{ .cidr }}
+      ports:
+        {{- range .ports }}
+        - port: {{ .port }}
+          protocol: {{ .protocol | default "TCP" }}
+        {{- end }}
     {{- end }}
     {{- end }}
     {{- end }}

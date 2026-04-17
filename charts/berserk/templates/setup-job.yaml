@@ -28,6 +28,7 @@ spec:
     metadata:
       labels:
         {{- include "berserk.selectorLabels" . | nindent 8 }}
+        app: setup
         app.kubernetes.io/component: setup
     spec:
       {{- with .Values.global.imagePullSecrets }}
