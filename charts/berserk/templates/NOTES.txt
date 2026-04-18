@@ -42,6 +42,15 @@ To create an ingest token for the "{{ .Values.global.defaultDataset }}" dataset:
 Check pod status:
   kubectl get pods -n {{ .Release.Namespace }}
 
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Berserk is pre-release (beta) software, provided AS IS with no warranty.
+By installing and using these charts you agree to the Berserk Terms of Use:
+
+  https://www.bzrk.dev/legal/beta-terms
+
+A copy is also shipped inside each image at /usr/share/doc/berserk/NOTICE.md.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 {{- if .Values.global.networkPolicy.enabled }}
 
 NetworkPolicy is ENABLED. Ensure your cluster has a CNI plugin that supports
