@@ -12,6 +12,12 @@ global:
   serviceAccountName: ""
   # Labels applied to all resources
   labels: {}
+  # Name of this Berserk cluster (a Helm install / logical tenant). Stamped on
+  # every telemetry record as `bzrk.cluster.name` so alerts and dashboards can
+  # scope queries to one install when multiple installs share a k8s cluster
+  # or share a Grafana backend. When empty, defaults to "default".
+  # Override in per-env values files: "dev", "valhalla", etc.
+  clusterName: ""
   # S3 storage configuration
   storage:
     endpoint: ""

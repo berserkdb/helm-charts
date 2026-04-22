@@ -60,6 +60,7 @@ spec:
               value: "1"
             - name: _RJEM_MALLOC_CONF
               value: "prof:true,prof_active:true,lg_prof_sample:19"
+            {{- include "berserk-common.env.cluster-name" . | nindent 12 }}
             {{- include "berserk-common.env.s3-credentials" (dict "accessKeyEnv" "AWS_ACCESS_KEY_ID" "secretKeyEnv" "AWS_SECRET_ACCESS_KEY" "Values" .Values) | nindent 12 }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}

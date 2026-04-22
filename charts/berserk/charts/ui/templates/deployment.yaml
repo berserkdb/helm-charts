@@ -60,6 +60,7 @@
               value: "1"
             - name: ENVIRONMENT
               value: "demo"
+            {{- include "berserk-common.env.cluster-name" . | nindent 12 }}
             - name: UI_LIBRARY_DIR
               value: "/library"
             {{- if .Values.library.gitRepo }}

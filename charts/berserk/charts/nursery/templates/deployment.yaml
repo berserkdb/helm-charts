@@ -20,6 +20,7 @@
                   fieldPath: status.podIP
             - name: RUST_BACKTRACE
               value: "1"
+            {{- include "berserk-common.env.cluster-name" . | nindent 12 }}
             {{- include "berserk-common.env.s3-credentials" (dict "accessKeyEnv" "NURSERY_STORAGE_ACCESS_KEY" "secretKeyEnv" "NURSERY_STORAGE_SECRET_KEY" "Values" .Values) | nindent 12 }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}

@@ -91,6 +91,24 @@ Usage: {{ include "berserk-common.env.s3-credentials" (dict "accessKeyEnv" "AWS_
 {{- end }}
 
 {{/*
+Cluster name env var — stamps `bzrk.cluster.name` resource attribute via
+OTEL_RESOURCE_ATTRIBUTES, which the Rust SDK merges into every exported record.
+This is a Berserk-specific attribute (not an OTel semantic convention) because
+a "Berserk cluster" is a Helm install / logical tenant, not a Kubernetes
+cluster — multiple Berserk clusters can share one k8s cluster.
+
+Used to distinguish Berserk installs in alerts/queries, especially when
+services ship telemetry across cluster boundaries and bypass the collector's
+k8sattributes enrichment.
+
+Usage: {{ include "berserk-common.env.cluster-name" . | nindent 12 }}
+*/}}
+{{- define "berserk-common.env.cluster-name" -}}
+- name: OTEL_RESOURCE_ATTRIBUTES
+  value: "bzrk.cluster.name={{ .Values.global.clusterName | default "default" }}"
+{{- end }}
+
+{{/*
 Config volume definition.
 */}}
 {{- define "berserk-common.volume.config" -}}

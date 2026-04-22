@@ -26,6 +26,7 @@
                   key: {{ .Values.global.postgresCredentials.databaseUrlKey }}
             - name: RUST_BACKTRACE
               value: "1"
+            {{- include "berserk-common.env.cluster-name" . | nindent 12 }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           livenessProbe:
