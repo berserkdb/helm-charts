@@ -8,8 +8,8 @@ data:
     max_concurrent_queries: {{ .Values.config.maxConcurrentQueries }}
 
     {{- if .Values.cache.enabled }}
-    segment_cache:
-      path: "/segment_cache"
-      size_limit: "{{ .Values.cache.size }}"
+    cache:
+      dir: "/segment_cache"
+      total_size_limit: "{{ .Values.cache.size }}"
     {{- end }}
     {{- include "berserk-common.observability-config" . | nindent 4 }}

@@ -26,6 +26,10 @@ spec:
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
     spec:
+      # k8s injects service-link env vars like QUERY_SERVICE_HOST / QUERY_PORT
+      # into every pod in the namespace. Figment's Env::prefixed("QUERY_") would
+      # pick these up as config keys and the deny_unknown_fields guard would fail.
+      enableServiceLinks: false
       {{- with .Values.global.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}

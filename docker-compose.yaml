@@ -43,9 +43,9 @@ configs:
       meta_endpoint: "http://meta:9500"
       cloud_storage_access_key: $${AWS_ACCESS_KEY_ID:}
       cloud_storage_secret_key: $${AWS_SECRET_ACCESS_KEY:}
-      segment_cache:
-        path: "/segment_cache"
-        size_limit: "10Gi"
+      cache:
+        dir: "/segment_cache"
+        total_size_limit: "10Gi"
       observability:
         service_name: "query"
         log_level: "info"
