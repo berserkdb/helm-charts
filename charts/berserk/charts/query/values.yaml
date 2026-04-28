@@ -48,6 +48,10 @@ resources:
 config:
   metaEndpoint: "http://meta:9500"
   maxConcurrentQueries: 16
+  # workersPerQuery: per-query concurrent worker cap. Bumping from the engine
+  # default of 2 to 4 measurably reduces wall-clock for trace-find / streaming
+  # joins on multi-day windows. See #2466 for benchmark notes.
+  workersPerQuery: 4
   observability:
     serviceName: "query"
     logLevel: "info"

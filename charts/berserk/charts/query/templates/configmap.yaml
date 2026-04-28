@@ -6,6 +6,9 @@ data:
     cloud_storage_access_key: ${AWS_ACCESS_KEY_ID:}
     cloud_storage_secret_key: ${AWS_SECRET_ACCESS_KEY:}
     max_concurrent_queries: {{ .Values.config.maxConcurrentQueries }}
+    {{- if hasKey .Values.config "workersPerQuery" }}
+    workers_per_query: {{ .Values.config.workersPerQuery }}
+    {{- end }}
 
     {{- if .Values.cache.enabled }}
     cache:
