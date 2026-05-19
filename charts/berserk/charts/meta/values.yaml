@@ -39,6 +39,10 @@ networkPolicy:
     # post-install setup job creates the default dataset via meta
     - app: setup
       ports: [{port: 9500}]
+    # ad-hoc operator-run admin pods (e.g. `kubectl run bzrk-cli`) creating
+    # tokens / tables; the label is documented in the chart NOTES.
+    - app: admin
+      ports: [{port: 9500}]
   egressTo: []
   additionalIngress: []
   additionalEgress: []

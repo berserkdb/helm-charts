@@ -33,11 +33,31 @@ To access the UI:
 {{- $cliRepo := .Values.setup.image.repository | default "cli" }}
 {{- $cliTag := .Values.setup.image.tag | default .Values.global.imageTag | default (printf "v%s" .Chart.AppVersion) }}
 
+{{- if .Values.global.ingestToken.managed }}
+
+Your ingest token for the "{{ .Values.global.defaultTable }}" table was created
+automatically by the ingest service init container, alongside the default table
+itself. Retrieve it from the "{{ .Values.global.ingestToken.secretName }}" Secret:
+
+  kubectl get secret {{ .Values.global.ingestToken.secretName }} -n {{ .Release.Namespace }} \
+    -o jsonpath='{.data.{{ .Values.global.ingestToken.key }}}' | base64 -d ; echo
+
+Use it as a Bearer token when pushing OTLP:
+
+  Authorization: Bearer <token>
+
+For production deployments that integrate with an external secret store, set
+`global.ingestToken.managed=false`, provision the "{{ .Values.global.ingestToken.secretName }}"
+Secret yourself, and mint tokens with the CLI flow below.
+{{- else }}
+
 To create an ingest token for the "{{ .Values.global.defaultTable }}" table:
-  kubectl run bzrk-cli -n {{ .Release.Namespace }} --image={{ $registry }}/{{ $cliRepo }}:{{ $cliTag }} --command -- sleep 3600
+  kubectl run bzrk-cli -n {{ .Release.Namespace }} --image={{ $registry }}/{{ $cliRepo }}:{{ $cliTag }} --labels=app=admin,app.kubernetes.io/instance={{ .Release.Name }} --command -- sleep 3600
   kubectl wait --for=condition=Ready pod/bzrk-cli -n {{ .Release.Namespace }}
-  kubectl exec -it bzrk-cli -n {{ .Release.Namespace }} -- /cli --endpoint meta:{{ .Values.meta.service.port }} ingest-token create --table {{ .Values.global.defaultTable }} my-ingest-token
+  kubectl exec -it bzrk-cli -n {{ .Release.Namespace }} -- /cli --meta-endpoint meta:{{ .Values.meta.service.port }} table create --if-not-exists {{ .Values.global.defaultTable }}
+  kubectl exec -it bzrk-cli -n {{ .Release.Namespace }} -- /cli --meta-endpoint meta:{{ .Values.meta.service.port }} ingest-token create --table {{ .Values.global.defaultTable }} my-ingest-token
   kubectl delete pod bzrk-cli -n {{ .Release.Namespace }}
+{{- end }}
 
 Check pod status:
   kubectl get pods -n {{ .Release.Namespace }}

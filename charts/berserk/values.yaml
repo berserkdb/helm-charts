@@ -39,10 +39,19 @@ global:
     secretName: "postgres-credentials"
     databaseUrl: ""
     databaseUrlKey: "database_url"
-  # Ingest token configuration
-  # Set managed: true to auto-create the token via an init container on the ingest service
+  # Ingest token configuration.
+  # `managed: true` (default) makes the ingest service's init container create
+  # the default table and a default ingest token on first install, storing the
+  # plaintext token in the `ingestToken.secretName` Secret. The quickstart in
+  # NOTES.txt assumes this mode.
+  #
+  # Set `managed: false` for production deployments that integrate with an
+  # external secret store (Vault, External Secrets Operator, SealedSecrets,
+  # etc.); in that case you must provision `ingestToken.secretName` yourself
+  # and use the `bzrk ingest-token create` CLI flow shown in NOTES.txt to
+  # mint tokens.
   ingestToken:
-    managed: false
+    managed: true
     secretName: "ingest-token"
     key: "default_ingest_token"
     tokenName: "default_ingest_token"
