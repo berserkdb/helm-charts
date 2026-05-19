@@ -18,12 +18,17 @@ service:
   port: 3002
   portName: health
 
-# NetworkPolicy: egress to meta; nothing connects to nursery
+# NetworkPolicy: egress to meta; query pods connect to NurseryQueryService.
+# The embedded qws child binds 127.0.0.1, so no cross-pod ingress is
+# needed for it — only the front-door `query_grpc_bind` port (9531)
+# is exposed.
 networkPolicy:
   allowExternal: false
   allowExternalEgress: true
 
-  ingressFrom: []
+  ingressFrom:
+    - app: query
+      ports: [{port: 9531}]
   egressTo:
     - app: meta
       ports: [{port: 9500}]
@@ -48,6 +53,19 @@ config:
   metaPollIntervalSecs: 5
   # Stream inactivity timeout in seconds
   streamTimeoutSecs: 300
+  # How long the brain waits before force-merging an idle/stopped
+  # stream's remaining baby segments (seconds). Raising this keeps
+  # `.ttseg` files local longer so the query-in-nursery lane has
+  # something fresh to serve before the cloud-lane round-trip
+  # completes. 60s matches the "~1 minute retention" that pairs with
+  # `query.config.queryViaNursery=true`.
+  forceMergeStaleThresholdSecs: 60
+  # gRPC bind for the per-nursery `NurseryQueryService` that
+  # apps/query's coordinator fans out to when `queryViaNursery` is on.
+  # Empty disables (legacy HTTP-only nursery). `qws_bin` is bundled at
+  # /qws_bin inside the nursery image whenever this is set; the
+  # nursery spawns it as a child wired to NurseryLocalCache.
+  queryGrpcBind: "0.0.0.0:9531"
   observability:
     serviceName: "nursery"
     logLevel: "info"

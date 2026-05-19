@@ -8,4 +8,11 @@ data:
     working_dir: "/var/cache/nursery"
     meta_default_poll_interval_secs: {{ .Values.config.metaPollIntervalSecs }}
     stream_timeout_secs: {{ .Values.config.streamTimeoutSecs }}
+    {{- if hasKey .Values.config "forceMergeStaleThresholdSecs" }}
+    force_merge_stale_threshold_secs: {{ .Values.config.forceMergeStaleThresholdSecs }}
+    {{- end }}
+    {{- if .Values.config.queryGrpcBind }}
+    query_grpc_bind: {{ .Values.config.queryGrpcBind | quote }}
+    qws_bin: "/qws_bin"
+    {{- end }}
     {{- include "berserk-common.observability-config" . | nindent 4 }}

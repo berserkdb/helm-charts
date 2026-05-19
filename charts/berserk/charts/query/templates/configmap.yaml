@@ -10,9 +10,26 @@ data:
     workers_per_query: {{ .Values.config.workersPerQuery }}
     {{- end }}
 
+    {{- if hasKey .Values.cache "mode" }}
+    cache_mode: {{ .Values.cache.mode | quote }}
+    {{- end }}
+    {{- if hasKey .Values.config "transport" }}
+    transport: {{ .Values.config.transport | quote }}
+    {{- end }}
+    {{- if hasKey .Values.config "queryViaNursery" }}
+    query_via_nursery: {{ .Values.config.queryViaNursery }}
+    {{- end }}
     {{- if .Values.cache.enabled }}
     cache:
       dir: "/segment_cache"
+      {{- /* sizeBytes (fixed bytes) is the cache_server eviction
+            ceiling for remote mode; falls back to `size` (which can
+            be a percent / size string accepted by the in-process
+            cache) when not set. */ -}}
+      {{- if .Values.cache.sizeBytes }}
+      total_size_limit: "{{ .Values.cache.sizeBytes }}"
+      {{- else }}
       total_size_limit: "{{ .Values.cache.size }}"
+      {{- end }}
     {{- end }}
     {{- include "berserk-common.observability-config" . | nindent 4 }}

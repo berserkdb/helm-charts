@@ -1,21 +1,66 @@
-# Default values for ingest service (tjalfe)
+# Default values for ingest service
 replicaCount: 1
 component: collector
 
 logLevel: "info"
 
 image:
-  repository: tjalfe
+  repository: ingest
   pullPolicy: Always
   tag: ""
 
 service:
   type: ClusterIP
+  # Tell Traefik the OTLP gRPC backend speaks HTTP/2 cleartext (h2c).
+  # Without this, Traefik forwards the request as HTTP/1.1 and tonic's
+  # h2 server rejects it with `read_preface: invalid preface` — every
+  # external (Traefik-routed) OTLP request returns HTTP 500 with no
+  # gRPC content-type, while in-cluster traffic (which hits the Service
+  # IP directly, bypassing Traefik) works fine. See #2909.
+  # NB: the annotation MUST be on the Service, not on the Ingress —
+  # Traefik's K8s Ingress provider only reads it from the Service.
+  annotations:
+    traefik.ingress.kubernetes.io/service.serversscheme: h2c
   ports:
     otlpGrpc: 4317
     otlpHttp: 4318
+    # Loki push API port. Standard Grafana Loki port for Promtail / Alloy /
+    # Grafana Agent compatibility. Receiver code lives in apps/ingest;
+    # gated by `config.lokiEnabled` below.
     loki: 3100
-    telemetry: 8888
+    # Health endpoint port. Lives on the Service alongside the OTLP ports
+    # so allowExternal covers it (no additionalIngress hack needed) and
+    # in-cluster monitoring tooling can reach `ingest:9550/health/live`.
+    # Aligns with the rest of the Berserk 95XX port convention.
+    health: 9550
+
+# Ingress (optional). Disabled by default. When enabled, exposes the
+# ingest Service via an Ingress controller of the cluster's choice. For
+# OTLP gRPC on port 4317 the controller must speak HTTP/2 to the backend
+# — set the appropriate annotation:
+#   nginx:    add `nginx.ingress.kubernetes.io/backend-protocol: "GRPC"`
+#             as an Ingress annotation.
+#   traefik:  the chart already sets
+#             `traefik.ingress.kubernetes.io/service.serversscheme: h2c`
+#             on the *Service* (see `service.annotations` above). Traefik
+#             ignores the same annotation if placed on the Ingress —
+#             setting it there caused #2909 (every external request
+#             returned HTTP 500 from tonic's h2 preface check).
+# A single Ingress can fan out to gRPC (4317) and HTTP (4318) using
+# per-path `portName: otlp-grpc | otlp-http`.
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts: []
+  # - host: ingest.example.com
+  #   paths:
+  #     - path: /
+  #       pathType: Prefix
+  #       portName: otlp-http   # or portNumber: 4318
+  tls: []
+  # - hosts: [ingest.example.com]
+  #   secretName: ingest-tls
 
 # NetworkPolicy: external telemetry sources; egress to meta and k8s API
 networkPolicy:
@@ -39,22 +84,42 @@ resources:
 
 config:
   metaEndpoint: "http://meta:9500"
+
+  # Batching knobs (see apps/ingest/src/config.rs for the full surface and
+  # the ack_timeout > max_batch_age + MAX_RETRY_AGE invariant).
   batch:
-    sendBatchSize: 10240
-    timeout: "10s"
-    sendBatchMaxSize: 20480
-  k8sAttributes:
-    passthrough: true
+    maxBatchBytes: 16777216         # 16 MiB
+    maxBatchAgeSecs: 2
+    keepAliveIntervalSecs: 120
+
+  # Authentication
+  requireAuth: false                # Reject requests without Bearer token
+  laxUtf8: true                     # Replace invalid UTF-8 with U+FFFD instead of rejecting
+
+  # Loki push API receiver. When enabled, ingest binds an additional listener
+  # on `service.ports.loki` that accepts `POST /loki/api/v1/push` from
+  # Promtail / Alloy / Grafana Agent — same protocol contract as the legacy
+  # tjalfe deployment. Gated by `loki_enabled` in the binary's config.
+  lokiEnabled: true
+
   ingestToken:
-    # Set managed: true to auto-create the token via an init container (requires Meta)
+    # Set managed: true to auto-create the token via an init container (requires Meta).
     managed: false
-    # If secretName set to "", then no ingest token will be used.
+    # Name of the Kubernetes Secret holding the ingest token. If unset, the
+    # ingest.tokenSecretName helper falls back to global.ingestToken.secretName
+    # and then to "ingest-token".
     secretName: "ingest-token"
     key: "default_ingest_token"
-    # Name of the ingest token in Meta (used when managed: true)
+    # Name of the ingest token in Meta (used when managed: true).
     tokenName: "default_ingest_token"
+
   observability:
     serviceName: "ingest"
     logLevel: "info"
-    otlpEnabled: false
-    otlpEndpoint: ""
+    # otlpEnabled / otlpEndpoint intentionally omitted here — they fall
+    # through to global.observability.* via Helm's `default` semantics in
+    # `berserk-common.observability-config`. Setting `otlpEnabled: false`
+    # locally would NOT override a global `true` (Helm `default` treats
+    # `false` as empty), so leaving them unset keeps the values model
+    # honest. To explicitly opt in/out for ingest, override at the
+    # per-environment values file level.

@@ -91,21 +91,41 @@ Usage: {{ include "berserk-common.env.s3-credentials" (dict "accessKeyEnv" "AWS_
 {{- end }}
 
 {{/*
-Cluster name env var — stamps `bzrk.cluster.name` resource attribute via
-OTEL_RESOURCE_ATTRIBUTES, which the Rust SDK merges into every exported record.
-This is a Berserk-specific attribute (not an OTel semantic convention) because
-a "Berserk cluster" is a Helm install / logical tenant, not a Kubernetes
-cluster — multiple Berserk clusters can share one k8s cluster.
+Telemetry resource attributes — stamps `bzrk.cluster.name` plus the standard
+k8s.{pod,namespace,node}.name via OTEL_RESOURCE_ATTRIBUTES, which the Rust
+SDK merges into every exported record.
 
+`bzrk.cluster.name` is Berserk-specific (not an OTel semantic convention)
+because a "Berserk cluster" is a Helm install / logical tenant, not a
+Kubernetes cluster — multiple Berserk clusters can share one k8s cluster.
 Used to distinguish Berserk installs in alerts/queries, especially when
-services ship telemetry across cluster boundaries and bypass the collector's
-k8sattributes enrichment.
+services ship telemetry across cluster boundaries and bypass any
+k8sattributes-enriching collector.
+
+The k8s.* attrs come from the downward API. Kubelet expands $(POD_NAME) /
+$(POD_NAMESPACE) / $(NODE_NAME) inside subsequent env values, so apps don't
+need any SDK-side k8s detector. This lets services preserve k8s.pod.name /
+k8s.namespace.name / k8s.node.name on self-telemetry that goes straight to
+the ingest service without traversing an upstream k8sattributes processor
+(notably the EKS deployment, which has no in-cluster otel-collector).
 
 Usage: {{ include "berserk-common.env.cluster-name" . | nindent 12 }}
 */}}
 {{- define "berserk-common.env.cluster-name" -}}
+- name: POD_NAME
+  valueFrom:
+    fieldRef:
+      fieldPath: metadata.name
+- name: POD_NAMESPACE
+  valueFrom:
+    fieldRef:
+      fieldPath: metadata.namespace
+- name: NODE_NAME
+  valueFrom:
+    fieldRef:
+      fieldPath: spec.nodeName
 - name: OTEL_RESOURCE_ATTRIBUTES
-  value: "bzrk.cluster.name={{ .Values.global.clusterName | default "default" }}"
+  value: "bzrk.cluster.name={{ .Values.global.clusterName | default "default" }},k8s.pod.name=$(POD_NAME),k8s.namespace.name=$(POD_NAMESPACE),k8s.node.name=$(NODE_NAME)"
 {{- end }}
 
 {{/*

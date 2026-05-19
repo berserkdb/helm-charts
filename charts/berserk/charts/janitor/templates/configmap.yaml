@@ -17,9 +17,9 @@ data:
     target_datasets: []
     {{- end }}
     {{- include "berserk-common.observability-config" . | nindent 4 }}
-    {{- $defaultDataset := .Values.global.defaultDataset | default "default" }}
+    {{- $defaultTable := .Values.global.defaultTable | default "default" }}
     probe_jobs:
       - name: "default_take_one"
-        query: "{{ $defaultDataset }} | take 1"
+        query: "{{ $defaultTable }} | take 1"
         interval_seconds: 60
         since: "1h ago"

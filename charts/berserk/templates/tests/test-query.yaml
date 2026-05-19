@@ -33,9 +33,13 @@ spec:
           done
 
           echo "Running: default | take 1"
+          # `database` is the gRPC-style `DatabaseRef` oneof, accepted
+          # as `{"name": "..."}` or `{"id": "<uuid>"}`. The setup-job
+          # creates the `default` table under the `default` database,
+          # which is what we resolve against here.
           RESPONSE=$(wget -qO- \
             --header="Content-Type: application/json" \
-            --post-data='{"query": "default | take 1", "since": "1h ago"}' \
+            --post-data='{"query": "default | take 1", "since": "1h ago", "database": {"name": "default"}}' \
             "${QUERY_ENDPOINT}/query")
 
           echo "Response: ${RESPONSE}"

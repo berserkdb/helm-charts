@@ -51,7 +51,7 @@ global:
     otlpEnabled: false
     otlpEndpoint: "ingest:4317"
   # Default dataset name for Berserk
-  defaultDataset: "default"
+  defaultTable: "default"
   # NetworkPolicy configuration
   # Requires a CNI plugin that supports NetworkPolicy (Calico, Cilium, or
   # EKS VPC CNI v1.14+ with ENABLE_NETWORK_POLICY).
@@ -71,11 +71,21 @@ global:
         ports:
           - port: 5432
             protocol: TCP
-    # OTLP egress rules for external collectors.
-    # Only needed when global.observability.otlpEndpoint points outside the namespace.
-    # When using the default (ingest:4317), egress is handled automatically.
+    # OTLP egress rules used when global.observability.otlpEndpoint points
+    # outside this Helm release's namespace. Each entry must specify either
+    # `cidr` (external ipBlock) OR `namespace` + `podLabels` (cross-namespace
+    # in-cluster peer). When using the default (ingest:4317), egress is
+    # handled automatically and otlpEgress is ignored.
     otlpEgress: []
+    # External collector via ipBlock:
     #  - cidr: 10.0.0.0/8
+    #    ports:
+    #      - port: 4317
+    #        protocol: TCP
+    # Cross-namespace in-cluster collector via namespace + pod selector:
+    #  - namespace: observability
+    #    podLabels:
+    #      app: otel-collector
     #    ports:
     #      - port: 4317
     #        protocol: TCP
@@ -161,7 +171,7 @@ query:
       otlpEnabled: false
       otlpEndpoint: ""
 
-# Ingest (Tjalfe) configuration
+# Ingest service configuration
 ingest:
   enabled: true
   replicaCount: 1
@@ -174,7 +184,16 @@ ingest:
     ports:
       otlpGrpc: 4317
       otlpHttp: 4318
-      telemetry: 8888
+      loki: 3100
+      health: 9550
+
+  # Disabled by default. Enable to expose ingest via a Kubernetes
+  # Ingress controller. For OTLP gRPC on 4317, set the appropriate
+  # backend-protocol annotation (nginx: "GRPC", traefik: "h2c"). A single
+  # Ingress can fan out to gRPC and HTTP using per-path `portName`.
+  # Full schema in charts/ingest/values.yaml.
+  ingress:
+    enabled: false
 
   resources:
     requests:
@@ -185,11 +204,19 @@ ingest:
       cpu: "4000m"
 
   config:
+    metaEndpoint: "http://meta:9500"
+    batch:
+      maxBatchBytes: 16777216
+      maxBatchAgeSecs: 2
+      keepAliveIntervalSecs: 120
+    requireAuth: false
+    laxUtf8: true
+    lokiEnabled: true
     observability:
       serviceName: "ingest"
       logLevel: "info"
-      otlpEnabled: false
-      otlpEndpoint: ""
+      # otlpEnabled / otlpEndpoint omitted — fall through to global.observability.*
+      # via Helm `default` semantics. Override per-environment in the values-*.yaml.
 
 # Janitor service configuration
 janitor:
@@ -234,6 +261,12 @@ ui:
     port: 80
     targetPort: 3000
 
+  # Disabled by default. Enable to expose the UI via a Kubernetes
+  # Ingress controller. Pair with cert-manager annotations for TLS.
+  # Full schema in charts/ui/values.yaml.
+  ingress:
+    enabled: false
+
   resources:
     requests:
       memory: "128Mi"
@@ -244,6 +277,7 @@ ui:
 
   config:
     queryEndpoint: "http://query:9510"
+    metaEndpoint: "http://meta:9500"
 
 # Nursery service configuration
 nursery:

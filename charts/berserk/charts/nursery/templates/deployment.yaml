@@ -13,6 +13,16 @@
           ports:
             - containerPort: {{ .Values.service.port }}
               name: health
+            {{- /* NurseryQueryService gRPC port — exposed only when
+                  `query_grpc_bind` is configured. The bind value is
+                  parsed for its port number; declaring it on the
+                  pod is informational (kubelet doesn't require it),
+                  but pairs naturally with the NetworkPolicy rule. */ -}}
+            {{- if .Values.config.queryGrpcBind }}
+            - containerPort: {{ regexReplaceAll ".*:" .Values.config.queryGrpcBind "" | int }}
+              name: query-grpc
+              protocol: TCP
+            {{- end }}
           env:
             - name: POD_IP
               valueFrom:
@@ -20,6 +30,15 @@
                   fieldPath: status.podIP
             - name: RUST_BACKTRACE
               value: "1"
+            {{- /* `NurseryQueryService` binds 0.0.0.0:<port> but the
+                  cluster registry needs a routable URL — the pod IP.
+                  Plumbed via the downward API so each nursery
+                  advertises its own pod's IP, not the bind wildcard.
+                  Only emitted when query_grpc_bind is configured. */ -}}
+            {{- if .Values.config.queryGrpcBind }}
+            - name: NURSERY_QUERY_GRPC_MEMBER_ENDPOINT
+              value: "http://$(POD_IP):{{ regexReplaceAll ".*:" .Values.config.queryGrpcBind "" | int }}"
+            {{- end }}
             {{- include "berserk-common.env.cluster-name" . | nindent 12 }}
             {{- include "berserk-common.env.s3-credentials" (dict "accessKeyEnv" "NURSERY_STORAGE_ACCESS_KEY" "secretKeyEnv" "NURSERY_STORAGE_SECRET_KEY" "Values" .Values) | nindent 12 }}
           resources:

@@ -59,7 +59,7 @@ spec:
     {{- end }}
     {{- /* Rule: OTLP ingress -- when this service is the OTLP target, allow namespace-wide ingress */ -}}
     {{- if .Values.global.observability.otlpEnabled }}
-    {{- $otlpIngressEndpoint := .Values.global.observability.otlpEndpoint | default "ingest:4317" }}
+    {{- $otlpIngressEndpoint := .Values.global.observability.otlpEndpoint | default "ingest:4317" | trimPrefix "https://" | trimPrefix "http://" }}
     {{- $otlpIngressHost := index (splitList ":" $otlpIngressEndpoint) 0 }}
     {{- $otlpIngressPort := index (splitList ":" $otlpIngressEndpoint) 1 | default "4317" }}
     {{- if eq $otlpIngressHost .Chart.Name }}
@@ -112,7 +112,7 @@ spec:
     {{- end }}
     {{- end }}
     {{- if .Values.global.observability.otlpEnabled }}
-    {{- $otlpEndpoint := .Values.global.observability.otlpEndpoint | default "ingest:4317" }}
+    {{- $otlpEndpoint := .Values.global.observability.otlpEndpoint | default "ingest:4317" | trimPrefix "https://" | trimPrefix "http://" }}
     {{- $otlpHost := index (splitList ":" $otlpEndpoint) 0 }}
     {{- $otlpPort := index (splitList ":" $otlpEndpoint) 1 | default "4317" }}
     {{- if eq $otlpHost "ingest" }}
@@ -125,11 +125,26 @@ spec:
         - port: {{ $otlpPort | int }}
           protocol: TCP
     {{- else }}
-    {{- /* External: render otlpEgress {cidr, ports} entries as ipBlock rules */ -}}
+    {{- /* External: each otlpEgress entry must specify either {cidr} for an
+           ipBlock rule, or {namespace, podLabels} for a cross-namespace
+           in-cluster peer. */ -}}
     {{- range .Values.global.networkPolicy.otlpEgress }}
     - to:
+        {{- if .cidr }}
         - ipBlock:
             cidr: {{ .cidr }}
+        {{- else if .namespace }}
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .namespace }}
+          podSelector:
+            matchLabels:
+              {{- range $k, $v := .podLabels }}
+              {{ $k }}: {{ $v | quote }}
+              {{- end }}
+        {{- else }}
+        {{- fail "otlpEgress entry must set either 'cidr' or 'namespace' + 'podLabels'" }}
+        {{- end }}
       ports:
         {{- range .ports }}
         - port: {{ .port }}

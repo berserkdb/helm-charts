@@ -1,5 +1,9 @@
 # Default values for query service
-replicaCount: 1
+# 2 replicas so the cluster registry has 2 QwsCloud members and the QC
+# fans queries out across both — exercises the multi-QWS path even
+# while we run on a single physical node. See
+# docs/dev/qws-spawns-qw-process.md (Phase 0).
+replicaCount: 2
 component: backend
 
 image:
@@ -11,7 +15,31 @@ service:
   type: ClusterIP
   port: 9510
 
-# NetworkPolicy: UI and janitor connect; external clients query directly
+# QWS sibling — cloud-lane query worker that runs in every query pod
+# and self-registers in the cluster registry as `MemberKind::QwsCloud`.
+# Enabled whenever `config.transport == "grpc"` (the production
+# transport). Each QC discovers all QwsCloud instances via the
+# registry and fans queries out to them; co-locating one in every
+# query pod keeps the pool elastic without a separate deployment.
+#
+# The cache size budget reuses `.Values.cache.sizeBytes` — there is
+# one cache PVC per pod, one cache_server child, one qws forked
+# inside the query container.
+qws:
+  # Inbound gRPC port for QC↔QWS traffic. Co-located QC forks qws and
+  # dials it via loopback by id; cross-pod QCs dial the pod IP via
+  # the cluster-registry endpoint. The port is exposed on the query
+  # container itself — qws is no longer a separate container, so
+  # `qws.resources` is intentionally absent (the forked qws shares
+  # the query container's cgroup, no separate cap to misconfigure).
+  port: 9520
+
+# NetworkPolicy: UI and janitor connect; external clients query directly.
+# `additionalIngress` adds cross-pod ingress on the QWS sibling port so
+# QCs in one pod can dial QWS siblings in other pods after discovering
+# them through the cluster registry. `additionalEgress` mirrors the
+# rule for the egress direction and adds query→nursery for the
+# `NurseryQueryService` fan-out.
 networkPolicy:
   allowExternal: true
   allowExternalEgress: true
@@ -24,8 +52,24 @@ networkPolicy:
   egressTo:
     - app: meta
       ports: [{port: 9500}]
-  additionalIngress: []
-  additionalEgress: []
+    - app: nursery
+      ports: [{port: 9531}]
+  additionalIngress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: query
+      ports:
+        - port: 9520
+          protocol: TCP
+  additionalEgress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: query
+      ports:
+        - port: 9520
+          protocol: TCP
 
 cache:
   enabled: true
@@ -36,6 +80,23 @@ cache:
   # hostPath: set to a path (e.g. /mnt/nvme) to use a local NVMe mount instead of emptyDir.
   # Only used when persistent is false.
   hostPath: ""
+
+  # Cache backend selection.
+  #   "local"  — in-process cache inside apps/query. Only valid when
+  #              `config.transport == in_process`; apps/query rejects
+  #              `local` + `grpc_spawn` at startup because the QWS
+  #              child reads segments through the cache_server UDS and
+  #              must never talk to S3 directly.
+  #   "remote" — fork+exec the cache_server binary, talk to it over
+  #              a UDS in the cache directory. Required pairing with
+  #              `config.transport == grpc_spawn` (the default).
+  mode: "remote"
+  # Cache size budget, fixed bytes (e.g. "10GiB"). Used in remote
+  # mode as the cache_server's eviction ceiling. Empty string =
+  # eviction off (the conservative default; production overlays
+  # should set this explicitly). Only honored as a Size variant —
+  # percent-of-disk forms are in-process-only.
+  sizeBytes: ""
 
 resources:
   requests:
@@ -52,8 +113,37 @@ config:
   # default of 2 to 4 measurably reduces wall-clock for trace-find / streaming
   # joins on multi-day windows. See #2466 for benchmark notes.
   workersPerQuery: 4
+  # QC↔QW transport selection. Matches `TransportMode` in
+  # apps/query/src/config.rs. Possible values:
+  #   "in_process" — workers run in-process via channels. No wire codec.
+  #   "grpc"       — production. QC discovers QWS instances via the
+  #                  cluster registry and fans queries out over gRPC.
+  #                  The chart's QWS sibling (`qws:` block above)
+  #                  is the cloud-lane registrant for this pod.
+  # Legacy: `"grpc_spawn"` is accepted by apps/query for one release
+  # and treated as `in_process` (the bundled-sibling spawn path was
+  # removed when QWS got its own deployment slot).
+  transport: "grpc"
+  # Phase 5 of docs/dev/query-exec-in-nursery.md. When true, the QC
+  # also fans out a `NurseryQueryService` stream to each
+  # `MemberKind::QwsNursery` registered in the cluster registry —
+  # picking up locally-staged baby segments before they merge to S3.
+  # Paired with `nursery.config.queryGrpcBind` on the nursery side
+  # and a bumped `nursery.config.forceMergeStaleThresholdSecs` so the
+  # files linger long enough for the QC fan-out to catch them.
+  queryViaNursery: true
   observability:
     serviceName: "query"
     logLevel: "info"
     otlpEnabled: false
     otlpEndpoint: ""
+    # When true, sets `BZRK_WAIT_PROFILER=1` on the query pod env.
+    # `bzrk_bootstrap` honours that on every binary that uses the
+    # shared bootstrap (query, qws children, cache_server child —
+    # qws and cache_server inherit the parent env on fork+exec), so
+    # all three start emitting off-CPU `wait_profile:` samples
+    # alongside the always-on `cpu_profile:` ones. Wait profiling has
+    # non-zero signal-handling overhead and a ~10s sweep cadence —
+    # default off; flip on per-cluster when chasing a contention
+    # regression.
+    waitProfilerEnabled: false

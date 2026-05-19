@@ -33,10 +33,10 @@ To access the UI:
 {{- $cliRepo := .Values.setup.image.repository | default "cli" }}
 {{- $cliTag := .Values.setup.image.tag | default .Values.global.imageTag | default (printf "v%s" .Chart.AppVersion) }}
 
-To create an ingest token for the "{{ .Values.global.defaultDataset }}" dataset:
+To create an ingest token for the "{{ .Values.global.defaultTable }}" table:
   kubectl run bzrk-cli -n {{ .Release.Namespace }} --image={{ $registry }}/{{ $cliRepo }}:{{ $cliTag }} --command -- sleep 3600
   kubectl wait --for=condition=Ready pod/bzrk-cli -n {{ .Release.Namespace }}
-  kubectl exec -it bzrk-cli -n {{ .Release.Namespace }} -- /cli --endpoint meta:{{ .Values.meta.service.port }} ingest-token create --dataset {{ .Values.global.defaultDataset }} my-ingest-token
+  kubectl exec -it bzrk-cli -n {{ .Release.Namespace }} -- /cli --endpoint meta:{{ .Values.meta.service.port }} ingest-token create --table {{ .Values.global.defaultTable }} my-ingest-token
   kubectl delete pod bzrk-cli -n {{ .Release.Namespace }}
 
 Check pod status:

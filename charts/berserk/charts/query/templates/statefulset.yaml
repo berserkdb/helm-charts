@@ -55,6 +55,16 @@ spec:
             - containerPort: {{ .Values.service.port }}
               name: http
               protocol: TCP
+            {{- /* When transport=grpc, apps/query forks a qws child
+                  at startup. The forked qws binds its inbound gRPC
+                  on this pod's network namespace, so the inbound
+                  port lives on the query container (formerly on a
+                  separate qws sidecar container). */ -}}
+            {{- if and (hasKey .Values.config "transport") (eq .Values.config.transport "grpc") }}
+            - containerPort: {{ .Values.qws.port | default 9520 }}
+              name: qws-grpc
+              protocol: TCP
+            {{- end }}
           env:
             - name: POD_IP
               valueFrom:
@@ -64,8 +74,46 @@ spec:
               value: "1"
             - name: _RJEM_MALLOC_CONF
               value: "prof:true,prof_active:true,lg_prof_sample:19"
+            {{- /* The cache_server / qws / query binaries are bundled
+                  side-by-side under `/` by `apps/query`'s `pkg_tar`
+                  (see apps/query/BUILD.bazel:query_binary_tar). Any
+                  child-spawn resolver in this codebase first checks
+                  `BZRK_*_BIN` for an explicit override, then looks for
+                  a sibling next to `current_exe()`, then falls back to
+                  `$PATH`. Production hits the sibling lookup — no env
+                  wiring needed. The override stays available for tests
+                  that point at an out-of-tree build. */}}
+            {{- /* Wait/off-CPU profiler toggle. `bzrk_bootstrap`
+                  honours BZRK_WAIT_PROFILER on every binary it
+                  inits — the env propagates through fork+exec so
+                  qws and cache_server children inherit it
+                  unchanged from the query parent. Used for
+                  diagnosing contention regressions; off by default
+                  because wait sampling has signal-handling
+                  overhead. */ -}}
+            {{- if and (hasKey .Values.config.observability "waitProfilerEnabled") .Values.config.observability.waitProfilerEnabled }}
+            - name: BZRK_WAIT_PROFILER
+              value: "1"
+            {{- end }}
             {{- include "berserk-common.env.cluster-name" . | nindent 12 }}
             {{- include "berserk-common.env.s3-credentials" (dict "accessKeyEnv" "AWS_ACCESS_KEY_ID" "secretKeyEnv" "AWS_SECRET_ACCESS_KEY" "Values" .Values) | nindent 12 }}
+            {{- /* When transport=grpc, apps/query forks a qws child
+                  at startup. The qws inherits this container's env,
+                  so the qws-only knobs (cache size, S3 creds for
+                  cache_server, etc.) live here on the parent now —
+                  no separate qws container, no separate cgroup. */ -}}
+            {{- if and (hasKey .Values.config "transport") (eq .Values.config.transport "grpc") }}
+            - name: BZRK_CACHE_SIZE_BYTES
+              value: {{ .Values.cache.sizeBytes | default "0" | quote }}
+            - name: BZRK_QWS_EMBEDDED_BIND
+              value: "0.0.0.0:{{ .Values.qws.port | default 9520 }}"
+            - name: BZRK_QWS_CLOUD_STORAGE_ENDPOINT
+              value: {{ .Values.global.storage.endpoint | quote }}
+            {{- $isHttps := hasPrefix "https://" (.Values.global.storage.endpoint | default "") }}
+            - name: BZRK_QWS_CLOUD_STORAGE_USE_SSL
+              value: {{ $isHttps | quote }}
+            {{- include "berserk-common.env.s3-credentials" (dict "accessKeyEnv" "BZRK_QWS_CLOUD_STORAGE_ACCESS_KEY" "secretKeyEnv" "BZRK_QWS_CLOUD_STORAGE_SECRET_KEY" "Values" .Values) | nindent 12 }}
+            {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           livenessProbe:
@@ -92,6 +140,17 @@ spec:
             - name: segment-cache
               mountPath: /segment_cache
             {{- end }}
+        {{- /* The qws (query-worker supervisor) used to live here as
+              a separate sidecar container with its own cgroup, env
+              block, and resources budget. That separation was an
+              implementation detail leaking to k8s — and the wrong
+              `qws.resources.limits.cpu` default (8 vCPU) silently
+              capped the actual worker at far below the pod's budget.
+              Now apps/query forks qws as a child of this container
+              when transport=grpc (see apps/query/src/lib.rs::
+              spawn_embedded_qws). Same process tree, same cgroup,
+              same env, single inbound listener exposed via the
+              `qws-grpc` port on this container. */}}
       volumes:
         {{- include "berserk-common.volume.config" . | nindent 8 }}
         {{- if and .Values.cache.enabled (not .Values.cache.persistent) }}

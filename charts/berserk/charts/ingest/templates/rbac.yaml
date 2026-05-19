@@ -1,8 +1,7 @@
-{{/* ServiceAccount: needed when k8sAttributes is not passthrough OR when token is managed (and no global SA) */}}
-{{- $needsK8sAttrs := ne (.Values.config.k8sAttributes.passthrough | toString) "true" }}
+{{/* ServiceAccount: needed when token is managed (and no global SA) */}}
 {{- $managed := include "ingest.tokenManaged" . | trim | eq "true" }}
 {{- $hasGlobalSA := .Values.global.serviceAccountName }}
-{{- $needsSA := and (or $needsK8sAttrs $managed) (not $hasGlobalSA) }}
+{{- $needsSA := and $managed (not $hasGlobalSA) }}
 {{- if $needsSA }}
 apiVersion: v1
 kind: ServiceAccount
@@ -10,50 +9,6 @@ metadata:
   name: {{ include "berserk-common.fullname" . }}
   labels:
     {{- include "berserk-common.labels" . | nindent 4 }}
-{{- end }}
-{{- if $needsK8sAttrs }}
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: {{ include "berserk-common.fullname" . }}-{{ .Release.Namespace }}
-  labels:
-    {{- include "berserk-common.labels" . | nindent 4 }}
-rules:
-  # For k8sattributes processor
-  - apiGroups: [""]
-    resources:
-      - pods
-      - namespaces
-      - nodes
-    verbs: ["get", "list", "watch"]
-  - apiGroups: ["apps"]
-    resources:
-      - replicasets
-      - deployments
-      - daemonsets
-      - statefulsets
-    verbs: ["get", "list", "watch"]
-  - apiGroups: ["batch"]
-    resources:
-      - jobs
-      - cronjobs
-    verbs: ["get", "list", "watch"]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: {{ include "berserk-common.fullname" . }}-{{ .Release.Namespace }}
-  labels:
-    {{- include "berserk-common.labels" . | nindent 4 }}
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: {{ include "berserk-common.fullname" . }}-{{ .Release.Namespace }}
-subjects:
-  - kind: ServiceAccount
-    name: {{ $hasGlobalSA | default (include "berserk-common.fullname" .) }}
-    namespace: {{ .Release.Namespace }}
 {{- end }}
 {{- if $managed }}
 ---

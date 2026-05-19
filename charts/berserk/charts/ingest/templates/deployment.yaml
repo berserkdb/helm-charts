@@ -2,9 +2,11 @@
 {{- $managed := include "ingest.tokenManaged" . | trim | eq "true" }}
 {{- $secretName := include "ingest.tokenSecretName" . | trim }}
 {{- $secretKey := include "ingest.tokenKey" . | trim }}
-      {{- if ne (.Values.config.k8sAttributes.passthrough | toString) "true" }}
-      serviceAccountName: {{ include "berserk-common.fullname" . }}
-      {{- else if .Values.global.serviceAccountName }}
+      # k8s injects service-link env vars like INGEST_SERVICE_HOST / INGEST_PORT
+      # into every pod in the namespace. Figment's Env::prefixed("INGEST_") would
+      # pick these up as config keys and the deny_unknown_fields guard would fail.
+      enableServiceLinks: false
+      {{- if .Values.global.serviceAccountName }}
       serviceAccountName: {{ .Values.global.serviceAccountName }}
       {{- else if $managed }}
       serviceAccountName: {{ include "berserk-common.fullname" . }}
@@ -25,8 +27,8 @@
             - "ingest-token"
             - "init"
             - {{ include "ingest.tokenName" . | trim | quote }}
-            - "--dataset"
-            - {{ .Values.global.defaultDataset | default "default" | quote }}
+            - "--table"
+            - {{ .Values.global.defaultTable | default "default" | quote }}
             - "--secret-name"
             - {{ $secretName | quote }}
             - "--secret-key"
@@ -40,12 +42,14 @@
               value: "info"
       {{- end }}
       containers:
-        - name: tjalfe
+        - name: ingest
           image: {{ include "berserk-common.image" . }}
           imagePullPolicy: {{ .Values.image.pullPolicy | default .Values.global.imagePullPolicy | default "Always" }}
           securityContext:
             allowPrivilegeEscalation: false
+          command: ["/ingest_bin"]
           args:
+            - "--config"
             - "/config/config.yaml"
           ports:
             - containerPort: {{ .Values.service.ports.otlpGrpc }}
@@ -54,35 +58,23 @@
             - containerPort: {{ .Values.service.ports.otlpHttp }}
               name: otlp-http
               protocol: TCP
+            {{- if .Values.config.lokiEnabled }}
             - containerPort: {{ .Values.service.ports.loki }}
               name: loki
               protocol: TCP
-            - containerPort: {{ .Values.service.ports.telemetry }}
-              name: telemetry
+            {{- end }}
+            - containerPort: {{ .Values.service.ports.health }}
+              name: health
               protocol: TCP
           env:
             - name: RUST_LOG
               value: {{ .Values.logLevel | quote }}
-            - name: K8S_NODE_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: spec.nodeName
-            - name: K8S_POD_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
-            - name: K8S_POD_NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
-            - name: K8S_POD_IP
+            - name: RUST_BACKTRACE
+              value: "1"
+            - name: POD_IP
               valueFrom:
                 fieldRef:
                   fieldPath: status.podIP
-            - name: K8S_POD_UID
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.uid
             {{- include "berserk-common.env.cluster-name" . | nindent 12 }}
             {{- include "berserk-common.env.s3-credentials" (dict "accessKeyEnv" "AWS_ACCESS_KEY_ID" "secretKeyEnv" "AWS_SECRET_ACCESS_KEY" "Values" .Values) | nindent 12 }}
             {{- if $secretName }}
@@ -97,23 +89,25 @@
             {{- toYaml .Values.resources | nindent 12 }}
           livenessProbe:
             httpGet:
-              path: /health
-              port: telemetry
+              path: /health/live
+              port: health
             initialDelaySeconds: 30
             periodSeconds: 10
             failureThreshold: 3
           readinessProbe:
             httpGet:
-              path: /health
-              port: telemetry
+              path: /health/ready
+              port: health
             initialDelaySeconds: 5
             periodSeconds: 5
             failureThreshold: 3
+          startupProbe:
+            httpGet:
+              path: /health/started
+              port: health
+            failureThreshold: 30
+            periodSeconds: 3
           volumeMounts:
             {{- include "berserk-common.volumeMount.config" . | nindent 12 }}
-            - name: state
-              mountPath: /var/lib/tjalfe
       volumes:
         {{- include "berserk-common.volume.config" . | nindent 8 }}
-        - name: state
-          emptyDir: {}

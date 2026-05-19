@@ -28,7 +28,19 @@ meta:
 
 query:
   cache:
-    enabled: false
+    # Keep the CI smoke install in the in-process shape: emptyDir
+    # cache, in-process workers, no child processes spawned. The
+    # production-shape combination (`mode: remote` +
+    # `config.transport: grpc_spawn`, with apps/query forking
+    # cache_server and a qws pool) requires a writable cache_dir,
+    # which `enabled: false` skipped. Per-cluster overlays
+    # (`charts/values-dev.yaml`, `charts/values-valhalla.yaml`)
+    # exercise the production shape.
+    enabled: true
+    mode: "local"
+    size: "1Gi"
+  config:
+    transport: "in_process"
   resources:
     requests:
       memory: "128Mi"

@@ -54,90 +54,26 @@ configs:
 
   ingest-config:
     content: |
-      extensions:
-        file_storage:
-          directory: /var/lib/tjalfe
+      meta_endpoint: "http://meta:9500"
 
-      receivers:
-        otlp:
-          protocols:
-            grpc:
-              endpoint: "0.0.0.0:4317"
-              lax_utf8: true
-            http:
-              endpoint: "0.0.0.0:4318"
-              lax_utf8: true
+      http_bind: "0.0.0.0:4318"
+      grpc_bind: "0.0.0.0:4317"
+      health_bind: "0.0.0.0:9550"
 
-      processors:
-        batch:
-          send_batch_size: 10240
-          timeout: "10s"
-          send_batch_max_size: 20480
+      require_auth: false
+      lax_utf8: true
 
-      exporters:
-        berserk:
-          meta_endpoint: "http://meta:9500"
-          s3_access_key: "$${env:AWS_ACCESS_KEY_ID}"
-          s3_secret_key: "$${env:AWS_SECRET_ACCESS_KEY}"
-          max_batch_bytes: 4194304
-          max_batch_age_secs: 2
-          keep_alive_interval_secs: 120
-          default_ingest_token: "$${env:DEFAULT_INGEST_TOKEN}"
+      loki_enabled: false
 
-        debug:
-          verbosity: basic
-          sampling_initial: 5
-          sampling_thereafter: 200
+      max_batch_bytes: 16777216
+      max_batch_age_secs: 2
+      keep_alive_interval_secs: 120
 
-      service:
-        extensions: [file_storage]
-
-        pipelines:
-          logs:
-            receivers: [otlp]
-            processors: [batch]
-            exporters: [berserk]
-
-          metrics:
-            receivers: [otlp]
-            processors: [batch]
-            exporters: [berserk]
-
-          traces:
-            receivers: [otlp]
-            processors: [batch]
-            exporters: [berserk]
-
-        telemetry:
-          resource:
-            service.name: "ingest"
-          logs:
-            level: "info"
-            processors:
-              - batch:
-                  exporter:
-                    otlp:
-                      protocol: grpc
-                      endpoint: "ingest:4317"
-                      insecure: true
-          metrics:
-            level: basic
-            address: "0.0.0.0:8888"
-            readers:
-              - periodic:
-                  exporter:
-                    otlp:
-                      protocol: grpc
-                      endpoint: "ingest:4317"
-                      insecure: true
-          traces:
-            processors:
-              - batch:
-                  exporter:
-                    otlp:
-                      protocol: grpc
-                      endpoint: "ingest:4317"
-                      insecure: true
+      observability:
+        service_name: "ingest"
+        log_level: "info"
+        otlp_enabled: true
+        otlp_endpoint: "ingest:4317"
 
   janitor-config:
     content: |
@@ -196,16 +132,16 @@ configs:
       fi
       BZRK="/bzrk --meta-endpoint meta:9500"
       TOKEN_NAME="default_ingest_token"
-      # Meta no longer auto-creates the "default" dataset on startup; create it
+      # Meta no longer auto-creates the "default" table on startup; create it
       # explicitly here (idempotent — ignore "already exists" errors).
-      echo "Ensuring 'default' dataset exists in meta..."
-      $$BZRK dataset create default 2>/dev/null || true
+      echo "Ensuring 'default' table exists in meta..."
+      $$BZRK table create default 2>/dev/null || true
       echo "Creating default ingest token..."
-      if ! TOKEN=$$($$BZRK ingest-token create $$TOKEN_NAME --dataset default --simple 2>&1); then
+      if ! TOKEN=$$($$BZRK ingest-token create $$TOKEN_NAME --table default --simple 2>&1); then
         echo "Token '$$TOKEN_NAME' already exists in meta, replacing..."
         $$BZRK ingest-token revoke "$$TOKEN_NAME" || true
         $$BZRK ingest-token delete "$$TOKEN_NAME" || true
-        TOKEN=$$($$BZRK ingest-token create $$TOKEN_NAME --dataset default --simple)
+        TOKEN=$$($$BZRK ingest-token create $$TOKEN_NAME --table default --simple)
       fi
       echo "$$TOKEN" > "$$TOKEN_FILE"
       echo "Ingest token written to $$TOKEN_FILE"
@@ -219,12 +155,16 @@ configs:
         export DEFAULT_INGEST_TOKEN=$$(cat "$$TOKEN_FILE")
         echo "Loaded ingest token from $$TOKEN_FILE"
       fi
-      exec /tjalfe_bin "$$@"
+      exec /ingest_bin "$$@"
 
 services:
   # --- Infrastructure ---
 
   postgres:
+    # Stays on postgres:18 until the release tag pinned below (v1.0.100)
+    # rolls to a build that includes #2971 Phase 2's PG17 floor. Once
+    # the next release is published, follow-up to bump this to
+    # postgres:17.
     image: postgres:18
     networks:
       - berserk
@@ -285,7 +225,6 @@ services:
     entrypoint: /bin/sh -c "chown -R 1000:1000 /mnt/*"
     volumes:
       - query-cache:/mnt/query-cache
-      - ingest-state:/mnt/ingest-state
       - ingest-token:/mnt/ingest-token
       - janitor-cache:/mnt/janitor-cache
       - nursery-workdir:/mnt/nursery-workdir
@@ -295,7 +234,7 @@ services:
 
   meta:
     <<: *common
-    image: ghcr.io/berserkdb/meta:v1.0.87
+    image: ghcr.io/berserkdb/meta:v1.0.100
     depends_on:
       postgres:
         condition: service_healthy
@@ -318,7 +257,7 @@ services:
 
   query:
     <<: *common
-    image: ghcr.io/berserkdb/query:v1.0.87
+    image: ghcr.io/berserkdb/query:v1.0.100
     depends_on:
       meta:
         condition: service_healthy
@@ -349,7 +288,7 @@ services:
   # Create a default ingest token in meta and write it to a shared volume.
   # Mirrors the managed ingest token init container from the helm chart.
   ingest-token-init:
-    image: ghcr.io/berserkdb/cli:v1.0.87
+    image: ghcr.io/berserkdb/cli:v1.0.100
     networks:
       - berserk
     depends_on:
@@ -368,7 +307,7 @@ services:
 
   ingest:
     <<: *common
-    image: ghcr.io/berserkdb/ingest:v1.0.87
+    image: ghcr.io/berserkdb/ingest:v1.0.100
     depends_on:
       meta:
         condition: service_healthy
@@ -379,7 +318,7 @@ services:
       volume-init:
         condition: service_completed_successfully
     entrypoint: ["/bin/sh", "/scripts/ingest-entrypoint.sh"]
-    command: ["/config/config.yaml"]
+    command: ["-c", "/config/config.yaml"]
     environment:
       RUST_LOG: info
       AWS_ACCESS_KEY_ID: minioadmin
@@ -387,7 +326,7 @@ services:
     ports:
       - "14317:4317"   # OTLP gRPC
       - "14318:4318"   # OTLP HTTP
-      - "18888:8888"   # Telemetry
+      - "19550:9550"   # Health
     configs:
       - source: ingest-config
         target: /config/config.yaml
@@ -396,10 +335,9 @@ services:
         target: /scripts/ingest-entrypoint.sh
         mode: 0555
     volumes:
-      - ingest-state:/var/lib/tjalfe
       - ingest-token:/token:ro
     healthcheck:
-      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/8888'"]
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/9550'"]
       interval: 5s
       timeout: 3s
       start_period: 10s
@@ -407,7 +345,7 @@ services:
 
   janitor:
     <<: *common
-    image: ghcr.io/berserkdb/janitor:v1.0.87
+    image: ghcr.io/berserkdb/janitor:v1.0.100
     depends_on:
       meta:
         condition: service_healthy
@@ -437,7 +375,7 @@ services:
 
   nursery:
     <<: *common
-    image: ghcr.io/berserkdb/nursery:v1.0.87
+    image: ghcr.io/berserkdb/nursery:v1.0.100
     depends_on:
       meta:
         condition: service_healthy
@@ -465,7 +403,7 @@ services:
 
   ui:
     <<: *common
-    image: ghcr.io/berserkdb/ui:v1.0.87
+    image: ghcr.io/berserkdb/ui:v1.0.100
     depends_on:
       query:
         condition: service_healthy
@@ -501,7 +439,6 @@ volumes:
   postgres-data:
   minio-data:
   query-cache:
-  ingest-state:
   ingest-token:
   janitor-cache:
   nursery-workdir:

@@ -1,10 +1,10 @@
 {{- if .Values.setup.enabled }}
 {{- /*
-Post-install hook that creates the `global.defaultDataset` dataset by calling
-the `bzrk dataset create` CLI against meta once its /health/ready endpoint is
+Post-install hook that creates the `global.defaultTable` table by calling
+the `bzrk table create` CLI against meta once its /health/ready endpoint is
 up. This is the only code path that creates the default dataset — meta does
 NOT auto-create it on startup. Operators creating ingest tokens that route to
-`global.defaultDataset` must wait for this job to succeed before tokens will
+`global.defaultTable` must wait for this job to succeed before tokens will
 resolve. On `helm upgrade` this hook does not re-run, so the dataset is
 expected to still exist from the original install.
 */ -}}
@@ -57,7 +57,7 @@ spec:
                 echo "Meta not ready yet, retrying in 5s..."
                 sleep 5
               done
-              echo "Meta is ready. Creating default dataset '{{ .Values.global.defaultDataset }}'..."
-              bzrk --endpoint "${META_ENDPOINT}" dataset create "{{ .Values.global.defaultDataset }}"
+              echo "Meta is ready. Creating default table '{{ .Values.global.defaultTable }}'..."
+              bzrk --endpoint "${META_ENDPOINT}" table create --database default "{{ .Values.global.defaultTable }}"
               echo "Setup complete."
 {{- end }}
