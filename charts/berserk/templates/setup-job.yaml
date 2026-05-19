@@ -58,6 +58,6 @@ spec:
                 sleep 5
               done
               echo "Meta is ready. Creating default table '{{ .Values.global.defaultTable }}'..."
-              bzrk --endpoint "${META_ENDPOINT}" table create --database default "{{ .Values.global.defaultTable }}"
+              bzrk --endpoint "${META_ENDPOINT}" --database "{{ .Values.global.defaultDatabase | default "default" }}" table create "{{ .Values.global.defaultTable }}"
               echo "Setup complete."
 {{- end }}

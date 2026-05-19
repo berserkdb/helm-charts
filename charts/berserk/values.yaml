@@ -50,6 +50,10 @@ global:
   observability:
     otlpEnabled: false
     otlpEndpoint: "ingest:4317"
+  # Default database that the init-ingest-token container routes its
+  # table + token into. Mirrors `defaultTable` — both default to the
+  # `default` database/table that meta's migration 026 seeds.
+  defaultDatabase: "default"
   # Default dataset name for Berserk
   defaultTable: "default"
   # NetworkPolicy configuration

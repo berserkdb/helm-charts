@@ -24,6 +24,8 @@
           args:
             - "--meta-endpoint"
             - {{ printf "meta.%s.svc.cluster.local:9500" .Release.Namespace | quote }}
+            - "--database"
+            - {{ .Values.global.defaultDatabase | default "default" | quote }}
             - "ingest-token"
             - "init"
             - {{ include "ingest.tokenName" . | trim | quote }}
