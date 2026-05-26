@@ -6,10 +6,27 @@
 #   docker compose logs -f
 #   docker compose down -v  # removes volumes too
 #
-#   open http://localhost:9540
-#   bzrk --endpoint localhost:9510 query "default | count"
+#   # 1) Grab the one-time admin setup URL from the gateway logs:
+#   docker compose logs gateway | grep -A1 "Initial admin setup"
 #
-# Requires Docker Compose v2.23.1+ (for inline configs)
+#   # 2) Open it in a browser (the URL points at 127.0.0.1:3001 — the
+#   # auth-edge gateway is the single public entry point):
+#   open http://localhost:3001
+#
+#   # 3) Authenticate the CLI through the gateway:
+#   bzrk profile add local --endpoint http://localhost:3001
+#   bzrk profile use local
+#   bzrk login
+#   bzrk search "default | take 10" --since "1h ago"
+#
+# Requires Docker Compose v2.23.1+ (for inline configs).
+#
+# Image tags below are pinned to the upcoming chart release that
+# carries the unified gateway + ui + admin-ui + permissions topology.
+# If your local Docker daemon can't reach those tags yet, build the
+# images from source via `bazel run //apps/<svc>:<svc>_tarball` for
+# each service — they tag as `berserk/<svc>-dev:dev`, and an
+# operator-side `image:` override switches compose onto them.
 #
 # Berserk is pre-release (beta) software, provided AS IS with no warranty.
 # By running this stack you agree to the Berserk Terms of Use:
@@ -121,6 +138,60 @@ configs:
         otlp_enabled: true
         otlp_endpoint: "ingest:4317"
 
+  admin-ui-config:
+    content: |
+      bind: "0.0.0.0:3000"
+      public_base_url: "http://localhost:3001"
+      permissions_base_url: "http://permissions:3002"
+      deployment_mode: self_hosted
+      observability:
+        service_name: "admin-ui"
+        log_level: "info"
+        otlp_enabled: true
+        otlp_endpoint: "ingest:4317"
+
+  gateway-config:
+    content: |
+      bind: "0.0.0.0:3001"
+      public_base_url: "http://localhost:3001"
+      cookie_secure: false
+      upstream_base_url: "http://ui:9540"
+      admin_upstream_base_url: "http://admin-ui:3000"
+      permissions_base_url: "http://permissions:3002"
+      deployment_mode: self_hosted
+      grpc_routes: '[{"package_prefix":"meta","upstream":"http://meta:9500"},{"package_prefix":"query","upstream":"http://query:9510"},{"package_prefix":"opentelemetry","upstream":"http://ingest:4317"}]'
+      session_ttl_secs: 1209600
+      invite_ttl_secs: 604800
+      reset_ttl_secs: 3600
+      oidc_challenge_ttl_secs: 600
+      grant_outbox_tick_secs: 5
+      grant_outbox_retry_delay_secs: 5
+      grant_outbox_batch_size: 50
+      session_cleanup_interval_secs: 3600
+      observability:
+        service_name: "gateway"
+        log_level: "info"
+        otlp_enabled: true
+        otlp_endpoint: "ingest:4317"
+
+  # Bootstrap-time SQL: gateway and meta share the same Postgres
+  # cluster but need separate logical databases — they both run
+  # `sqlx::migrate!` against `public._sqlx_migrations`, which
+  # collides if they share one. `berserk` belongs to meta; the
+  # auth-edge stack (gateway / admin-ui / permissions) lives in
+  # `berserk_auth`.
+  postgres-init-auth-db:
+    content: |
+      CREATE DATABASE berserk_auth;
+      GRANT ALL ON DATABASE berserk_auth TO berserk;
+
+  # Idempotent bootstrap: create the `default` table and an ingest
+  # token routed to it, then write the plaintext token to a shared
+  # volume the ingest container reads at startup. The token is what
+  # tells ingest which table to route OTLP to — without it, ingest
+  # drops every incoming push regardless of `require_auth`. Mirrors
+  # the `init-ingest-token` init container in the helm chart, minus
+  # the K8s Secret API.
   init-ingest-token-script:
     content: |
       #!/bin/sh
@@ -130,10 +201,8 @@ configs:
         echo "Ingest token already exists at $$TOKEN_FILE, skipping creation."
         exit 0
       fi
-      BZRK="/bzrk --meta-endpoint meta:9500"
+      BZRK="/bzrk --endpoint meta:9500 --database default"
       TOKEN_NAME="default_ingest_token"
-      # Meta no longer auto-creates the "default" table on startup; create it
-      # explicitly here (idempotent — ignore "already exists" errors).
       echo "Ensuring 'default' table exists in meta..."
       $$BZRK table create default 2>/dev/null || true
       echo "Creating default ingest token..."
@@ -161,10 +230,6 @@ services:
   # --- Infrastructure ---
 
   postgres:
-    # Stays on postgres:18 until the release tag pinned below (v1.0.100)
-    # rolls to a build that includes #2971 Phase 2's PG17 floor. Once
-    # the next release is published, follow-up to bump this to
-    # postgres:17.
     image: postgres:18
     networks:
       - berserk
@@ -176,6 +241,14 @@ services:
       - "15432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql
+    # Postgres runs every `*.sql` in `/docker-entrypoint-initdb.d`
+    # exactly once, on first bring-up against an empty data dir.
+    # We use it to carve out `berserk_auth` so gateway + meta don't
+    # collide on `public._sqlx_migrations`.
+    configs:
+      - source: postgres-init-auth-db
+        target: /docker-entrypoint-initdb.d/10-berserk-auth.sql
+        mode: 0444
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U berserk"]
       interval: 5s
@@ -234,7 +307,7 @@ services:
 
   meta:
     <<: *common
-    image: ghcr.io/berserkdb/meta:v1.0.103
+    image: ghcr.io/berserkdb/meta:v1.0.109
     depends_on:
       postgres:
         condition: service_healthy
@@ -257,7 +330,7 @@ services:
 
   query:
     <<: *common
-    image: ghcr.io/berserkdb/query:v1.0.103
+    image: ghcr.io/berserkdb/query:v1.0.109
     depends_on:
       meta:
         condition: service_healthy
@@ -285,10 +358,12 @@ services:
       start_period: 10s
       retries: 10
 
-  # Create a default ingest token in meta and write it to a shared volume.
-  # Mirrors the managed ingest token init container from the helm chart.
+  # Create the `default` table + an ingest token routed to it, then
+  # write the plaintext token to a shared volume the ingest container
+  # reads at startup. Talks to meta over gRPC directly (no bearer
+  # token → ClientChannel::direct, see apps/cli/src/network/meta_client.rs).
   ingest-token-init:
-    image: ghcr.io/berserkdb/cli:v1.0.103
+    image: ghcr.io/berserkdb/cli:v1.0.109
     networks:
       - berserk
     depends_on:
@@ -307,7 +382,7 @@ services:
 
   ingest:
     <<: *common
-    image: ghcr.io/berserkdb/ingest:v1.0.103
+    image: ghcr.io/berserkdb/ingest:v1.0.109
     depends_on:
       meta:
         condition: service_healthy
@@ -345,7 +420,7 @@ services:
 
   janitor:
     <<: *common
-    image: ghcr.io/berserkdb/janitor:v1.0.103
+    image: ghcr.io/berserkdb/janitor:v1.0.109
     depends_on:
       meta:
         condition: service_healthy
@@ -375,7 +450,7 @@ services:
 
   nursery:
     <<: *common
-    image: ghcr.io/berserkdb/nursery:v1.0.103
+    image: ghcr.io/berserkdb/nursery:v1.0.109
     depends_on:
       meta:
         condition: service_healthy
@@ -403,7 +478,7 @@ services:
 
   ui:
     <<: *common
-    image: ghcr.io/berserkdb/ui:v1.0.103
+    image: ghcr.io/berserkdb/ui:v1.0.109
     depends_on:
       query:
         condition: service_healthy
@@ -411,21 +486,112 @@ services:
         condition: service_healthy
     environment:
       <<: *common-env
-      UI_COOKIE_SECRET: "local-dev-cookie-secret-change-me"
+      # Constant-time-compared by the trusted-identity extractor in
+      # `apps/ui` against the `X-Bzrk-Service-Token` header gateway
+      # injects on every proxied request. Production stacks generate
+      # a high-entropy value; the localhost dev stack hard-codes a
+      # short shared secret so the three services agree out of the
+      # box.
+      UI_GATEWAY_SERVICE_TOKEN: "local-dev-gateway-service-token"
       LEPTOS_OUTPUT_NAME: ui
       LEPTOS_SITE_ROOT: /
       LEPTOS_SITE_PKG_DIR: pkg
       LEPTOS_SITE_ADDR: "0.0.0.0:9540"
       ENVIRONMENT: local
     command: ["-c", "/config/config.yaml"]
-    ports:
-      - "9540:9540"
+    # ui is no longer the public entry point — gateway (port 3001)
+    # fronts it. Leave the internal port unmapped; debugging is via
+    # `docker compose exec ui` or `docker compose port ui 9540`.
     configs:
       - source: ui-config
         target: /config/config.yaml
         mode: 0444
     healthcheck:
       test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/9540'"]
+      interval: 5s
+      timeout: 3s
+      start_period: 10s
+      retries: 10
+
+  # --- Auth-edge stack ---
+
+  permissions:
+    <<: *common
+    image: ghcr.io/berserkdb/permissions:v1.0.109
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      <<: *common-env
+      PERMISSIONS_BIND: "0.0.0.0:3002"
+      PERMISSIONS_DATABASE_URL: "postgres://berserk:berserk@postgres:5432/berserk_auth"
+      PERMISSIONS_SERVICE_TOKEN: "local-dev-permissions-service-token"
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/3002'"]
+      interval: 5s
+      timeout: 3s
+      start_period: 10s
+      retries: 10
+
+  admin-ui:
+    <<: *common
+    image: ghcr.io/berserkdb/admin-ui:v1.0.109
+    depends_on:
+      postgres:
+        condition: service_healthy
+      permissions:
+        condition: service_healthy
+    environment:
+      <<: *common-env
+      UI_DATABASE_URL: "postgres://berserk:berserk@postgres:5432/berserk_auth"
+      UI_PERMISSIONS_SERVICE_TOKEN: "local-dev-permissions-service-token"
+      UI_GATEWAY_SERVICE_TOKEN: "local-dev-gateway-service-token"
+      LEPTOS_OUTPUT_NAME: admin_ui
+      LEPTOS_SITE_ROOT: /
+      LEPTOS_SITE_PKG_DIR: pkg
+      LEPTOS_SITE_ADDR: "0.0.0.0:3000"
+    command: ["-c", "/config/config.yaml"]
+    configs:
+      - source: admin-ui-config
+        target: /config/config.yaml
+        mode: 0444
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/3000'"]
+      interval: 5s
+      timeout: 3s
+      start_period: 10s
+      retries: 10
+
+  gateway:
+    <<: *common
+    image: ghcr.io/berserkdb/gateway:v1.0.109
+    depends_on:
+      postgres:
+        condition: service_healthy
+      permissions:
+        condition: service_healthy
+      admin-ui:
+        condition: service_healthy
+      ui:
+        condition: service_healthy
+    environment:
+      <<: *common-env
+      GATEWAY_DATABASE_URL: "postgres://berserk:berserk@postgres:5432/berserk_auth"
+      GATEWAY_PERMISSIONS_SERVICE_TOKEN: "local-dev-permissions-service-token"
+      GATEWAY_SERVICE_TOKEN: "local-dev-gateway-service-token"
+      # 64-byte placeholder for localhost dev. In production set
+      # this to a high-entropy random string and treat as a secret —
+      # rotating it invalidates every active session.
+      GATEWAY_COOKIE_SIGNING_KEY: "local-dev-gateway-cookie-signing-key-must-be-at-least-64-bytes-long!!"
+    command: ["-c", "/config/config.yaml"]
+    ports:
+      - "3001:3001"
+    configs:
+      - source: gateway-config
+        target: /config/config.yaml
+        mode: 0444
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/3001'"]
       interval: 5s
       timeout: 3s
       start_period: 10s

@@ -1,6 +1,6 @@
 apiVersion: v2
-name: query
-description: Berserk Query Service - Query engine for observability data
+name: gateway
+description: Berserk authenticating reverse proxy (OIDC + bearer-token edge)
 type: application
 version: 1.0.109
 appVersion: 1.0.109

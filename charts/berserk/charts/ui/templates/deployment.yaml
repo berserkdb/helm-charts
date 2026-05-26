@@ -43,11 +43,16 @@
               valueFrom:
                 fieldRef:
                   fieldPath: status.podIP
-            - name: UI_COOKIE_SECRET
+            # Gateway-side trusted-identity service token. apps/ui
+            # constant-time compares this against the
+            # `X-Bzrk-Service-Token` header on incoming requests; only
+            # gateway should have the value (defence in depth on top
+            # of the NetworkPolicy that already restricts ingress).
+            - name: UI_GATEWAY_SERVICE_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: {{ printf "%s-cookie-secret" (include "berserk-common.fullname" .) }}
-                  key: UI_COOKIE_SECRET
+                  name: {{ .Values.secrets.secretName | quote }}
+                  key: {{ .Values.secrets.gatewayServiceTokenKey | quote }}
             - name: LEPTOS_OUTPUT_NAME
               value: "ui"
             - name: LEPTOS_SITE_ROOT

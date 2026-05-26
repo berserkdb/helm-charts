@@ -16,7 +16,7 @@ service:
   # h2 server rejects it with `read_preface: invalid preface` — every
   # external (Traefik-routed) OTLP request returns HTTP 500 with no
   # gRPC content-type, while in-cluster traffic (which hits the Service
-  # IP directly, bypassing Traefik) works fine. See #2909.
+  # IP directly, bypassing Traefik) works fine.
   # NB: the annotation MUST be on the Service, not on the Ingress —
   # Traefik's K8s Ingress provider only reads it from the Service.
   annotations:
@@ -44,8 +44,8 @@ service:
 #             `traefik.ingress.kubernetes.io/service.serversscheme: h2c`
 #             on the *Service* (see `service.annotations` above). Traefik
 #             ignores the same annotation if placed on the Ingress —
-#             setting it there caused #2909 (every external request
-#             returned HTTP 500 from tonic's h2 preface check).
+#             setting it there causes every external request to return
+#             HTTP 500 from tonic's h2 preface check.
 # A single Ingress can fan out to gRPC (4317) and HTTP (4318) using
 # per-path `portName: otlp-grpc | otlp-http`.
 ingress:
@@ -98,8 +98,8 @@ config:
 
   # Loki push API receiver. When enabled, ingest binds an additional listener
   # on `service.ports.loki` that accepts `POST /loki/api/v1/push` from
-  # Promtail / Alloy / Grafana Agent — same protocol contract as the legacy
-  # tjalfe deployment. Gated by `loki_enabled` in the binary's config.
+  # Promtail / Alloy / Grafana Agent. Gated by `loki_enabled` in the
+  # binary's config.
   lokiEnabled: true
 
   ingestToken:

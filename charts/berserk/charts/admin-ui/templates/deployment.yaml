@@ -1,0 +1,81 @@
+{{- include "berserk-common.deployment.header" . }}
+{{- include "berserk-common.serviceAccountName" . }}
+      containers:
+        - name: admin-ui
+          image: {{ include "berserk-common.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | default .Values.global.imagePullPolicy | default "Always" }}
+          securityContext:
+            allowPrivilegeEscalation: false
+          args:
+            - "-c"
+            - "/config/config.yaml"
+          ports:
+            - containerPort: {{ .Values.service.port }}
+              name: http
+              protocol: TCP
+          env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: UI_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.global.authPostgresCredentials.secretName }}
+                  key: {{ .Values.global.authPostgresCredentials.databaseUrlKey }}
+            - name: UI_PERMISSIONS_SERVICE_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.secretName }}
+                  key: {{ .Values.secrets.permissionsServiceTokenKey }}
+            - name: UI_GATEWAY_SERVICE_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.secretName }}
+                  key: {{ .Values.secrets.gatewayServiceTokenKey }}
+            {{- if .Values.config.oidc.enabled }}
+            # OIDC client_secret mirror — same Secret+key gateway
+            # references, so the value stays single-source. Required
+            # because admin_ui's own config validation enforces the
+            # ≥32-char floor at startup.
+            - name: UI_OIDC_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "admin_ui secrets.oidcClientSecret.existingSecret.name is required when config.oidc.enabled" .Values.secrets.oidcClientSecret.existingSecret.name }}
+                  key: {{ required "admin_ui secrets.oidcClientSecret.existingSecret.key is required when config.oidc.enabled" .Values.secrets.oidcClientSecret.existingSecret.key }}
+            {{- end }}
+            - name: LEPTOS_OUTPUT_NAME
+              value: "admin_ui"
+            - name: LEPTOS_SITE_ROOT
+              value: "/"
+            - name: LEPTOS_SITE_PKG_DIR
+              value: "pkg"
+            - name: LEPTOS_SITE_ADDR
+              value: "0.0.0.0:{{ .Values.service.port }}"
+            - name: RUST_BACKTRACE
+              value: "1"
+            {{- include "berserk-common.env.cluster-name" . | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          startupProbe:
+            httpGet:
+              path: /health/started
+              port: http
+            failureThreshold: 30
+            periodSeconds: 3
+          volumeMounts:
+            {{- include "berserk-common.volumeMount.config" . | nindent 12 }}
+      volumes:
+        {{- include "berserk-common.volume.config" . | nindent 8 }}

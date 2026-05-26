@@ -19,9 +19,14 @@
 {{- .Values.config.ingestToken.tokenName | default .Values.global.ingestToken.tokenName | default "default_ingest_token" -}}
 {{- end -}}
 
-{{/* CLI image for init containers (matching setup-job.yaml pattern) */}}
+{{/*
+CLI image for init containers (matching setup-job.yaml pattern).
+Repository defaults to "cli"; override via `ingest.cliImage.repository`
+(e.g. local kind installs that load `berserk/cli-dev:dev` from Bazel).
+*/}}
 {{- define "ingest.cliImage" -}}
 {{- $registry := .Values.global.imageRegistry | default "ghcr.io/berserkdb" -}}
-{{- $tag := .Values.global.imageTag | default (printf "v%s" .Chart.AppVersion) -}}
-{{- printf "%s/cli:%s" $registry $tag -}}
+{{- $repository := (.Values.cliImage).repository | default "cli" -}}
+{{- $tag := (.Values.cliImage).tag | default .Values.global.imageTag | default (printf "v%s" .Chart.AppVersion) -}}
+{{- printf "%s/%s:%s" $registry $repository $tag -}}
 {{- end -}}

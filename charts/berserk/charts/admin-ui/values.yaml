@@ -1,0 +1,95 @@
+# Default values for admin_ui service.
+#
+# admin_ui is internal-only — the public edge is `gateway` (port 3001),
+# which proxies to admin_ui (port 3000) carrying `X-Bzrk-*` identity
+# headers and an `X-Bzrk-Service-Token` that admin_ui verifies.
+# NetworkPolicy reflects this: only gateway is allowed to reach
+# admin_ui.
+replicaCount: 1
+component: frontend
+
+image:
+  repository: admin-ui
+  pullPolicy: Always
+  tag: ""
+
+service:
+  type: ClusterIP
+  port: 3000
+  externalIPs: []
+
+# Ingress disabled by default — gateway is the public edge. Operators
+# who deliberately want to expose admin_ui directly (e.g. for
+# debugging) can enable this, but in normal operation traffic should
+# enter through the gateway Ingress instead.
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts: []
+  tls: []
+
+networkPolicy:
+  allowExternal: false
+  allowExternalEgress: true
+
+  ingressFrom:
+    - app: gateway
+      ports: [{port: 3000}]
+  egressTo:
+    - app: permissions
+      ports: [{port: 3002}]
+  additionalIngress: []
+  additionalEgress: []
+
+resources:
+  requests:
+    memory: "128Mi"
+    cpu: "100m"
+  limits:
+    memory: "512Mi"
+    cpu: "500m"
+
+config:
+  # Public-facing base URL of the install (gateway URL). Used by SSR
+  # HTML for absolute links. Required.
+  publicBaseUrl: ""
+  # Deployment mode mirrors gateway. admin_ui only reads it to suppress
+  # password-login affordances in SaaS mode; gateway enforces the rule.
+  deploymentMode: "self_hosted"
+  permissions:
+    baseUrl: "http://permissions:3002"
+    requestTimeoutSecs: 10
+    connectTimeoutSecs: 2
+  # OIDC config — mirrored from gateway so `/admin/config` renders
+  # the operator-facing snapshot without an HTTP hop back to gateway.
+  # admin_ui doesn't run OIDC; it only renders against the values.
+  # Keep these in lock-step with `gateway.config.oidc.*` in the same
+  # environment overlay. The client_secret is wired the same way as
+  # gateway's — via `secrets.oidcClientSecret.existingSecret.*` —
+  # so the value never enters admin_ui's own ConfigMap.
+  oidc:
+    enabled: false
+    issuer: ""
+    clientId: ""
+    scopes: []
+    requireEmailVerified: true
+    bootstrapAdminEmails: []
+  observability:
+    serviceName: "admin_ui"
+    logLevel: "info,admin_ui=debug"
+    # otlpEnabled / otlpEndpoint fall through to global.observability.*
+
+# Service tokens. Same Secret gateway owns — admin_ui presents the
+# permissions token on outbound calls, and verifies the gateway
+# service token on inbound requests.
+secrets:
+  secretName: "gateway-secrets"
+  permissionsServiceTokenKey: "permissions_service_token"
+  gatewayServiceTokenKey: "service_token"
+  # OIDC client_secret — same Secret + key gateway references, so
+  # the mirror stays in sync from a single source of truth.
+  oidcClientSecret:
+    existingSecret:
+      name: ""
+      key: ""

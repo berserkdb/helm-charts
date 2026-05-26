@@ -39,7 +39,7 @@ config:
   maxSegmentsPerBatch: 50
   minSegments: 3
   maxSegmentAgeDays: 7
-  targetDatasets: []
+  targetTables: []
   cacheDir: "/tmp"
   observability:
     serviceName: "janitor"

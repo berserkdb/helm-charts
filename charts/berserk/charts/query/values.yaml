@@ -111,7 +111,7 @@ config:
   maxConcurrentQueries: 16
   # workersPerQuery: per-query concurrent worker cap. Bumping from the engine
   # default of 2 to 4 measurably reduces wall-clock for trace-find / streaming
-  # joins on multi-day windows. See #2466 for benchmark notes.
+  # joins on multi-day windows.
   workersPerQuery: 4
   # QC↔QW transport selection. Matches `TransportMode` in
   # apps/query/src/config.rs. Possible values:

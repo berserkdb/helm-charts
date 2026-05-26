@@ -21,8 +21,15 @@
           securityContext:
             allowPrivilegeEscalation: false
           command: ["/bzrk"]
+          # `--endpoint` replaced `--meta-endpoint` in v1.0.105. The flag
+          # is described as "gateway endpoint" in `bzrk --help`, but the
+          # `ingest-token init` subcommand specifically forwards
+          # `config.endpoint` to `init_ingest_token`'s `meta_endpoint`
+          # parameter (apps/cli/src/main.rs:1955), so passing the in-cluster
+          # meta gRPC URL here is the supported shape for this k8s init
+          # container — gateway is not on the path.
           args:
-            - "--meta-endpoint"
+            - "--endpoint"
             - {{ printf "meta.%s.svc.cluster.local:9500" .Release.Namespace | quote }}
             - "--database"
             - {{ .Values.global.defaultDatabase | default "default" | quote }}

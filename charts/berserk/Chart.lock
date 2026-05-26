@@ -17,5 +17,14 @@ dependencies:
 - name: nursery
   repository: ""
   version: '*'
-digest: sha256:167200baa88881dad464de435fc6fccc26ec1985ccdf31c73f4d069fbc312314
-generated: "2026-05-12T08:16:15.429453374+02:00"
+- name: gateway
+  repository: ""
+  version: '*'
+- name: admin-ui
+  repository: ""
+  version: '*'
+- name: permissions
+  repository: ""
+  version: '*'
+digest: sha256:8563d9b9629a732c9c14644e6a84e1f8274f8837107603b859fab6990e943948
+generated: "2026-05-20T09:59:49.491095558+02:00"

@@ -1,0 +1,48 @@
+{{- include "berserk-common.deployment.header" . }}
+{{- include "berserk-common.serviceAccountName" . }}
+      containers:
+        - name: permissions
+          image: {{ include "berserk-common.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | default .Values.global.imagePullPolicy | default "Always" }}
+          securityContext:
+            allowPrivilegeEscalation: false
+          ports:
+            - containerPort: {{ .Values.service.port }}
+              name: http
+              protocol: TCP
+          env:
+            - name: PERMISSIONS_BIND
+              value: "0.0.0.0:{{ .Values.service.port }}"
+            - name: PERMISSIONS_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.global.authPostgresCredentials.secretName }}
+                  key: {{ .Values.global.authPostgresCredentials.databaseUrlKey }}
+            - name: PERMISSIONS_SERVICE_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.secretName }}
+                  key: {{ .Values.secrets.serviceTokenKey }}
+            - name: RUST_BACKTRACE
+              value: "1"
+            {{- include "berserk-common.env.cluster-name" . | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          startupProbe:
+            httpGet:
+              path: /health/started
+              port: http
+            failureThreshold: 30
+            periodSeconds: 3

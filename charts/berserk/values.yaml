@@ -39,6 +39,18 @@ global:
     secretName: "postgres-credentials"
     databaseUrl: ""
     databaseUrlKey: "database_url"
+  # PostgreSQL credentials for the auth-side stack (gateway / admin-ui /
+  # permissions). They run `sqlx::migrate!()` against a `_sqlx_migrations`
+  # table at `public._sqlx_migrations`, which collides with meta's
+  # equally-named table when they share a database. Default-points at
+  # the same secret as `postgresCredentials` because most installs run
+  # only one half of the system; the kind smoke install (where both
+  # halves coexist) overrides this with a separate DB.
+  authPostgresCredentials:
+    managed: false
+    secretName: "postgres-credentials"
+    databaseUrl: ""
+    databaseUrlKey: "database_url"
   # Ingest token configuration.
   # `managed: true` (default) makes the ingest service's init container create
   # the default table and a default ingest token on first install, storing the
@@ -63,7 +75,7 @@ global:
   # table + token into. Mirrors `defaultTable` — both default to the
   # `default` database/table that meta's migration 026 seeds.
   defaultDatabase: "default"
-  # Default dataset name for Berserk
+  # Default table name for Berserk
   defaultTable: "default"
   # NetworkPolicy configuration
   # Requires a CNI plugin that supports NetworkPolicy (Calico, Cilium, or
@@ -109,7 +121,7 @@ global:
 
 # Post-install setup job configuration
 setup:
-  # The init-ingest-token init container now ensures the dataset exists before
+  # The init-ingest-token init container now ensures the table exists before
   # creating the token, so this job is only needed for installs without managed
   # ingest tokens.
   enabled: false
@@ -291,6 +303,103 @@ ui:
   config:
     queryEndpoint: "http://query:9510"
     metaEndpoint: "http://meta:9500"
+
+# Gateway service configuration (authenticating reverse proxy /
+# public edge for the new auth + admin_ui stack).
+gateway:
+  # Disabled by default — operators opt in once they're ready to run
+  # the OIDC/CLI-auth flow. Old `ui` keeps working in parallel.
+  enabled: false
+  replicaCount: 1
+
+  image:
+    repository: gateway
+
+  service:
+    type: ClusterIP
+    port: 3001
+
+  ingress:
+    enabled: false
+
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+  config:
+    # Public-facing URL of this gateway. MUST be set when the chart
+    # is enabled — gateway uses it to mint OIDC redirect URIs.
+    publicBaseUrl: ""
+    # `upstreamBaseUrl` (data plane) and `adminUpstreamBaseUrl`
+    # (admin plane) are inherited from the gateway subchart's
+    # defaults (`http://ui` and `http://admin-ui:3000`). The
+    # umbrella chart's Service layout makes those always work; no
+    # override needed in normal installs.
+    permissions:
+      baseUrl: "http://permissions:3002"
+    deploymentMode: "self_hosted"
+    cookieSecure: true
+    observability:
+      serviceName: "gateway"
+      logLevel: "info,gateway=debug"
+
+# admin-ui service configuration (new internal-only Leptos SSR app
+# proxied by the gateway). Runs alongside the legacy `ui` chart for
+# now; flip both to suit which surface is active. The YAML key uses
+# a dash (matching the chart's k8s-DNS-safe name) — pair `--set`
+# overrides as `admin-ui.enabled=true`.
+admin-ui:
+  enabled: false
+  replicaCount: 1
+
+  image:
+    repository: admin-ui
+
+  service:
+    type: ClusterIP
+    port: 3000
+
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+  config:
+    publicBaseUrl: ""
+    deploymentMode: "self_hosted"
+    permissions:
+      baseUrl: "http://permissions:3002"
+    observability:
+      serviceName: "admin_ui"
+      logLevel: "info,admin_ui=debug"
+
+# Permissions service (authorization tuples + /v1/check). Shared by
+# gateway and admin_ui.
+permissions:
+  enabled: false
+  replicaCount: 1
+
+  image:
+    repository: permissions
+
+  service:
+    type: ClusterIP
+    port: 3002
+
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "50m"
+    limits:
+      memory: "256Mi"
+      cpu: "500m"
 
 # Nursery service configuration
 nursery:

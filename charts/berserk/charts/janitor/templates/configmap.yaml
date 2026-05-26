@@ -11,10 +11,10 @@ data:
     max_segments_per_batch: {{ .Values.config.maxSegmentsPerBatch }}
     min_segments: {{ .Values.config.minSegments }}
     max_segment_age_days: {{ .Values.config.maxSegmentAgeDays }}
-    {{- if .Values.config.targetDatasets }}
-    target_datasets: {{ .Values.config.targetDatasets | toJson }}
+    {{- if .Values.config.targetTables }}
+    target_tables: {{ .Values.config.targetTables | toJson }}
     {{- else }}
-    target_datasets: []
+    target_tables: []
     {{- end }}
     {{- include "berserk-common.observability-config" . | nindent 4 }}
     {{- $defaultTable := .Values.global.defaultTable | default "default" }}

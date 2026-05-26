@@ -36,7 +36,7 @@ networkPolicy:
       ports: [{port: 9500}]
     - app: nursery
       ports: [{port: 9500}]
-    # post-install setup job creates the default dataset via meta
+    # post-install setup job creates the default table via meta
     - app: setup
       ports: [{port: 9500}]
     # ad-hoc operator-run admin pods (e.g. `kubectl run bzrk-cli`) creating

@@ -1,0 +1,46 @@
+# Default values for permissions service
+replicaCount: 1
+component: permissions
+
+image:
+  repository: permissions
+  pullPolicy: Always
+  tag: ""
+
+service:
+  type: ClusterIP
+  port: 3002
+  externalIPs: []
+
+# NetworkPolicy: only gateway + admin_ui should reach permissions in
+# normal operation. allowExternal is off — there's no reason to
+# expose this externally.
+networkPolicy:
+  allowExternal: false
+  allowExternalEgress: true
+
+  ingressFrom:
+    - app: gateway
+      ports: [{port: 3002}]
+    - app: admin-ui
+      ports: [{port: 3002}]
+  egressTo: []
+  additionalIngress: []
+  additionalEgress: []
+
+resources:
+  requests:
+    memory: "64Mi"
+    cpu: "50m"
+  limits:
+    memory: "256Mi"
+    cpu: "500m"
+
+# Service token shared with gateway + admin_ui. By default the
+# permissions chart does NOT manage its own secret — the gateway
+# subchart already produces and rotates `permissions_service_token`,
+# and admin_ui references the same value. Set `secretName` to the
+# gateway-provided secret so the three services agree.
+secrets:
+  secretName: "gateway-secrets"
+  serviceTokenKey: "permissions_service_token"

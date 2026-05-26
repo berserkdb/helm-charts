@@ -32,12 +32,17 @@ ingress:
   # - hosts: [ui.example.com]
   #   secretName: ui-tls
 
-# NetworkPolicy: egress to query and meta; external ingress (ingress controller)
+# NetworkPolicy: ui sits behind gateway after Stage-4. Only the
+# gateway pod should reach it on port 3000; external ingress flows
+# through the gateway's public surface, not directly into ui.
+# Egress goes to query/meta as before.
 networkPolicy:
-  allowExternal: true
+  allowExternal: false
   allowExternalEgress: true
 
-  ingressFrom: []
+  ingressFrom:
+    - app: gateway
+      ports: [{port: 3000}]
   egressTo:
     - app: query
       ports: [{port: 9510}]
@@ -89,6 +94,13 @@ library:
   storageSize: "1Gi"
   storageClass: ""
 
-# Cookie secret for session signing (auto-generated if not set)
-cookieSecret:
-  value: ""
+# Service tokens. Gateway sits in front of `ui` post Stage-4 and
+# injects `X-Bzrk-*` identity headers; `ui` verifies the proxy hop
+# via the pre-shared service token. Default-points at the same
+# `gateway-secrets` Secret that the gateway subchart provisions —
+# install with the umbrella chart and both halves agree out of the
+# box. Override `secrets.secretName` when running `ui` against a
+# pre-existing token.
+secrets:
+  secretName: "gateway-secrets"
+  gatewayServiceTokenKey: "service_token"

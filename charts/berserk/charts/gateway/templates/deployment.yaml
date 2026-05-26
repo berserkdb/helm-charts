@@ -1,0 +1,116 @@
+{{- include "berserk-common.deployment.header" . }}
+{{- include "berserk-common.serviceAccountName" . }}
+      containers:
+        - name: gateway
+          image: {{ include "berserk-common.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | default .Values.global.imagePullPolicy | default "Always" }}
+          securityContext:
+            allowPrivilegeEscalation: false
+          args:
+            - "-c"
+            - "/config/config.yaml"
+          ports:
+            - containerPort: {{ .Values.service.port }}
+              name: http
+              protocol: TCP
+          env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: GATEWAY_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.global.authPostgresCredentials.secretName }}
+                  key: {{ .Values.global.authPostgresCredentials.databaseUrlKey }}
+            - name: GATEWAY_COOKIE_SIGNING_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.secretName }}
+                  key: cookie_signing_key
+            - name: GATEWAY_SERVICE_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.secretName }}
+                  key: service_token
+            - name: GATEWAY_PERMISSIONS_SERVICE_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.secretName }}
+                  key: permissions_service_token
+            {{- if .Values.config.oidc.enabled }}
+            # OIDC client_secret — referenced from an externally-
+            # managed (Sealed)Secret per `secrets.oidcClientSecret`.
+            # Gateway's config validator rejects values shorter than
+            # 32 chars to bound the leak surface of `/admin/config`.
+            - name: GATEWAY_OIDC_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "secrets.oidcClientSecret.existingSecret.name is required when config.oidc.enabled" .Values.secrets.oidcClientSecret.existingSecret.name }}
+                  key: {{ required "secrets.oidcClientSecret.existingSecret.key is required when config.oidc.enabled" .Values.secrets.oidcClientSecret.existingSecret.key }}
+            {{- end }}
+            # gRPC route table — gateway reads `grpc_routes` from a
+            # JSON-encoded env var (figment matches the
+            # GATEWAY_GRPC_ROUTES → grpc_routes field name).
+            - name: GATEWAY_GRPC_ROUTES
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "berserk-common.fullname" . }}-config
+                  key: grpc_routes.json
+            {{- if .Values.bootstrap.disabled }}
+            - name: GATEWAY_BOOTSTRAP_DISABLED
+              value: "true"
+            {{- end }}
+            {{- with .Values.bootstrap.adminEmail }}
+            - name: GATEWAY_BOOTSTRAP_ADMIN_EMAIL
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.bootstrap.adminGivenName }}
+            - name: GATEWAY_BOOTSTRAP_ADMIN_GIVEN_NAME
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.bootstrap.adminFamilyName }}
+            - name: GATEWAY_BOOTSTRAP_ADMIN_FAMILY_NAME
+              value: {{ . | quote }}
+            {{- end }}
+            {{- if .Values.bootstrap.adminPassword }}
+            - name: GATEWAY_BOOTSTRAP_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.secretName }}
+                  key: bootstrap_admin_password
+            {{- end }}
+            - name: RUST_BACKTRACE
+              value: "1"
+            {{- include "berserk-common.env.cluster-name" . | nindent 12 }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- with .Values.extraEnvFrom }}
+          envFrom:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          startupProbe:
+            httpGet:
+              path: /health/started
+              port: http
+            failureThreshold: 30
+            periodSeconds: 3
+          volumeMounts:
+            {{- include "berserk-common.volumeMount.config" . | nindent 12 }}
+      volumes:
+        {{- include "berserk-common.volume.config" . | nindent 8 }}

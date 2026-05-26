@@ -1,0 +1,183 @@
+# Default values for gateway service
+replicaCount: 1
+component: gateway
+
+image:
+  repository: gateway
+  pullPolicy: Always
+  tag: ""
+
+service:
+  type: ClusterIP
+  port: 3001
+  # externalIPs: optional list of node-bound VIPs.
+  externalIPs: []
+
+# Ingress (optional). The gateway is the public edge — once exposed it
+# terminates user-facing HTTPS and proxies to admin_ui (HTTP) plus gRPC
+# routes to meta/query/ingest.
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts: []
+  # - host: gateway.example.com
+  #   paths:
+  #     - path: /
+  #       pathType: Prefix
+  tls: []
+  # - hosts: [gateway.example.com]
+  #   secretName: gateway-tls
+
+# NetworkPolicy: ingress from anywhere (it IS the edge); egress to
+# permissions, admin_ui, meta, query, ingest, plus external for OIDC
+# discovery + the shared Postgres.
+networkPolicy:
+  allowExternal: true
+  allowExternalEgress: true
+
+  ingressFrom: []
+  egressTo:
+    - app: permissions
+      ports: [{port: 3002}]
+    - app: admin-ui
+      ports: [{port: 3000}]
+    - app: meta
+      ports: [{port: 9500}]
+    - app: query
+      ports: [{port: 9510}]
+    - app: ingest
+      ports: [{port: 4317}]
+  additionalIngress: []
+  additionalEgress: []
+
+resources:
+  requests:
+    memory: "128Mi"
+    cpu: "100m"
+  limits:
+    memory: "512Mi"
+    cpu: "500m"
+
+config:
+  # Public-facing base URL of the gateway (absolute OIDC redirect URIs
+  # are minted from this). Required at deploy time.
+  publicBaseUrl: ""
+  # Data-plane upstream — the catch-all the identity-injecting
+  # proxy forwards every unmatched request to. Default matches the
+  # `ui` subchart's in-namespace Service: the unified-UI install
+  # always has gateway in front of both `ui` (data plane) and
+  # `admin-ui` (admin plane). Operators don't normally touch this
+  # — it follows directly from the umbrella chart's layout.
+  upstreamBaseUrl: "http://ui"
+  # gRPC routing table — JSON array of {package_prefix, upstream}.
+  # The default fans out gRPC traffic to meta + query + ingest inside
+  # the same namespace. Override to add routes or point at different
+  # backends.
+  grpcRoutes: |
+    [
+      {"package_prefix": "meta", "upstream": "http://meta:9500"},
+      {"package_prefix": "query", "upstream": "http://query:9510"},
+      {"package_prefix": "opentelemetry", "upstream": "http://ingest:4317"}
+    ]
+  # Admin-plane upstream — gateway internally forwards the
+  # surfaces it owns (/admin/*, /login, the admin-ui `pkg/*`
+  # assets) here. The exact path list lives in
+  # `apps/gateway/src/proxy.rs`; this knob only controls *where*
+  # the admin plane runs. Default matches the `admin-ui` subchart's
+  # in-namespace Service so the umbrella chart just works out of
+  # the box. Leave empty to disable the split (every request goes
+  # to `upstreamBaseUrl`).
+  adminUpstreamBaseUrl: "http://admin-ui:3000"
+  permissions:
+    baseUrl: "http://permissions:3002"
+    requestTimeoutSecs: 10
+    connectTimeoutSecs: 2
+  # Deployment mode: "self_hosted" (default) or "saas".
+  deploymentMode: "self_hosted"
+  # Set the `Secure` flag on session/auth cookies. Default true; flip
+  # to false only for plain-HTTP localhost development.
+  cookieSecure: true
+  # Session / TTL knobs (seconds). Defaults mirror gateway's own
+  # ConfigDraft::default.
+  sessionTtlSecs: 1209600       # 14 d
+  inviteTtlSecs: 604800         # 7 d
+  resetTtlSecs: 3600            # 1 h
+  oidcChallengeTtlSecs: 600     # 10 min
+  grantOutboxTickSecs: 5
+  grantOutboxRetryDelaySecs: 5
+  grantOutboxBatchSize: 50
+  sessionCleanupIntervalSecs: 3600
+
+  observability:
+    serviceName: "gateway"
+    logLevel: "info,gateway=debug"
+    # otlpEnabled / otlpEndpoint fall through to global.observability.*
+
+  # OIDC IdP — single operator-configured provider. Leave the block
+  # `enabled: false` (default) for password-only deployments. When
+  # enabled, the chart emits the `oidc_*` keys into config.yaml AND
+  # wires `GATEWAY_OIDC_CLIENT_SECRET` from
+  # `secrets.oidcClientSecret.existingSecret.{name,key}`.
+  #
+  # `bootstrapAdminEmails` is required for OIDC-only deployments
+  # (`deployment_mode: saas`, or `bootstrap.disabled: true`): without
+  # at least one entry the first user can sign in but no one has the
+  # `AdminManageInvites` permission, leaving the admin surfaces
+  # locked. See docs/operations/admin/ui-setup → Path C.
+  oidc:
+    enabled: false
+    issuer: ""
+    clientId: ""
+    # YAML list. Required scopes (openid email profile) are unioned
+    # in by gateway regardless of what you set here; safe to add
+    # extras like `offline_access` or `groups`.
+    scopes: []
+    requireEmailVerified: true
+    # YAML list of email addresses to auto-promote to cluster admin
+    # on first OIDC sign-in. Lower-cased + validated at gateway
+    # startup. Empty (default) = nobody gets auto-admin; existing
+    # admins keep whatever was granted via `permission_tuples`.
+    bootstrapAdminEmails: []
+
+# Secrets — gateway needs three: cookie signing key, its own service
+# token (X-Bzrk-Service-Token to admin_ui), and the permissions
+# service token. By default the chart manages a Secret with random
+# values; set `managed: false` to reference an existing Secret.
+secrets:
+  managed: true
+  secretName: "gateway-secrets"
+  # Set these to non-empty strings to override the auto-generated
+  # random values. `lookup` preserves existing data across upgrades.
+  cookieSigningKey: ""
+  serviceToken: ""
+  permissionsServiceToken: ""
+
+  # OIDC client_secret — referenced from a separate, externally-
+  # managed Secret (SealedSecret in dev/valhalla). When
+  # `config.oidc.enabled: true`, the deployment template wires
+  # `GATEWAY_OIDC_CLIENT_SECRET` from the named key on the named
+  # Secret. Must be at least 32 chars (gateway's config validator
+  # rejects shorter values to bound the leak surface of the
+  # `/admin/config` operator-view page).
+  oidcClientSecret:
+    existingSecret:
+      name: ""
+      key: ""
+
+# Bootstrap admin (optional). When email + password are set, gateway
+# creates the first admin user at startup instead of printing a
+# one-time setup link. Mutually exclusive with `bootstrapDisabled`.
+bootstrap:
+  disabled: false
+  adminEmail: ""
+  adminGivenName: ""
+  adminFamilyName: ""
+  adminPassword: ""
+
+# Extra env vars / envFrom — escape hatch for one-off env we don't
+# (yet) have first-class chart support for. The `oidc.*` block above
+# is the right shape for OIDC client_secret wiring; reach for
+# `extraEnvFrom` only when first-class support is genuinely missing.
+extraEnv: []
+extraEnvFrom: []

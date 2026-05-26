@@ -1,0 +1,50 @@
+{{ include "berserk-common.configmap.metadata" . }}
+data:
+  config.yaml: |
+    bind: "0.0.0.0:{{ .Values.service.port }}"
+    public_base_url: {{ required "gateway.config.publicBaseUrl is required" .Values.config.publicBaseUrl | quote }}
+    {{- with .Values.config.upstreamBaseUrl }}
+    upstream_base_url: {{ . | quote }}
+    {{- end }}
+    {{- with .Values.config.adminUpstreamBaseUrl }}
+    admin_upstream_base_url: {{ . | quote }}
+    {{- end }}
+    permissions_base_url: {{ .Values.config.permissions.baseUrl | quote }}
+    permissions_request_timeout_secs: {{ .Values.config.permissions.requestTimeoutSecs }}
+    permissions_connect_timeout_secs: {{ .Values.config.permissions.connectTimeoutSecs }}
+    deployment_mode: {{ .Values.config.deploymentMode | quote }}
+    cookie_secure: {{ .Values.config.cookieSecure }}
+    # `int` forces decimal rendering — without it Go's YAML emitter
+    # rewrites large ints (e.g. 1_209_600) as scientific notation,
+    # which gateway's strict YAML→i64 parse rejects.
+    session_ttl_secs: {{ int .Values.config.sessionTtlSecs }}
+    invite_ttl_secs: {{ int .Values.config.inviteTtlSecs }}
+    reset_ttl_secs: {{ int .Values.config.resetTtlSecs }}
+    oidc_challenge_ttl_secs: {{ int .Values.config.oidcChallengeTtlSecs }}
+    grant_outbox_tick_secs: {{ int .Values.config.grantOutboxTickSecs }}
+    grant_outbox_retry_delay_secs: {{ int .Values.config.grantOutboxRetryDelaySecs }}
+    grant_outbox_batch_size: {{ int .Values.config.grantOutboxBatchSize }}
+    session_cleanup_interval_secs: {{ int .Values.config.sessionCleanupIntervalSecs }}
+    {{- if .Values.config.oidc.enabled }}
+    # OIDC IdP — single operator-configured provider. `client_secret`
+    # itself does NOT come from this file; it's wired as the
+    # `GATEWAY_OIDC_CLIENT_SECRET` env var from
+    # `secrets.oidcClientSecret.existingSecret.{name,key}` so the
+    # value never lands in a checked-in YAML.
+    oidc_issuer: {{ required "config.oidc.issuer is required when config.oidc.enabled" .Values.config.oidc.issuer | quote }}
+    oidc_client_id: {{ required "config.oidc.clientId is required when config.oidc.enabled" .Values.config.oidc.clientId | quote }}
+    oidc_require_email_verified: {{ .Values.config.oidc.requireEmailVerified }}
+    {{- with .Values.config.oidc.scopes }}
+    oidc_scopes:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.config.oidc.bootstrapAdminEmails }}
+    oidc_bootstrap_admin_emails:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- end }}
+    {{- include "berserk-common.observability-config" . | nindent 4 }}
+  # The gRPC route table is JSON, kept as a separate file so operators
+  # can `kubectl edit configmap` without re-flowing the YAML above.
+  grpc_routes.json: |-
+    {{- .Values.config.grpcRoutes | nindent 4 }}

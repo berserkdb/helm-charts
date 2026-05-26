@@ -14,6 +14,18 @@ global:
   postgresCredentials:
     managed: true
     databaseUrl: "postgres://postgres:testpassword@postgres-postgresql:5432/berserk?sslmode=disable"
+  # Gateway's sqlx migration stream lives at `public._sqlx_migrations`
+  # in whatever DB it's pointed at; meta uses the same table name. They
+  # share a postgres instance here but need separate logical databases
+  # so the migration tables don't collide. `berserk_auth` is created
+  # via the bitnami postgres chart's initdb scripts in the
+  # `Install PostgreSQL` step of release.yml. `secretName` is overridden
+  # too because the chart default `"postgres-credentials"` collides with
+  # `global.postgresCredentials.secretName` when both are managed.
+  authPostgresCredentials:
+    managed: true
+    secretName: "auth-postgres-credentials"
+    databaseUrl: "postgres://postgres:testpassword@postgres-postgresql:5432/berserk_auth?sslmode=disable"
   ingestToken:
     managed: true
 
@@ -80,6 +92,47 @@ nursery:
       cpu: "500m"
 
 ui:
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "50m"
+    limits:
+      memory: "256Mi"
+      cpu: "250m"
+
+# Auth stack — gateway + admin-ui + permissions. Enabled here so the
+# helm-integration smoke install exercises the production shape (ui
+# behind gateway, OIDC-disabled / password-only). The chart synths
+# random values into `gateway-secrets` itself via `secrets.managed:
+# true`; OIDC stays off so we don't need a real IdP, and the bootstrap
+# admin block stays empty (the smoke install never actually authenticates
+# — it just checks the pods come up Ready).
+gateway:
+  enabled: true
+  config:
+    publicBaseUrl: "http://localhost"
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "50m"
+    limits:
+      memory: "256Mi"
+      cpu: "250m"
+
+admin-ui:
+  enabled: true
+  config:
+    publicBaseUrl: "http://localhost"
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "50m"
+    limits:
+      memory: "256Mi"
+      cpu: "250m"
+
+permissions:
+  enabled: true
   resources:
     requests:
       memory: "64Mi"
