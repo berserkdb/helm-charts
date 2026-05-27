@@ -1,28 +1,5 @@
 Berserk has been installed!
 
-Services deployed:
-{{- if .Values.meta.enabled }}
-- Meta Service: http://meta.{{ .Release.Namespace }}:{{ .Values.meta.service.port }}
-{{- end }}
-{{- if .Values.query.enabled }}
-- Query Service: http://query.{{ .Release.Namespace }}:{{ .Values.query.service.port }}
-{{- end }}
-{{- if .Values.ingest.enabled }}
-- Ingest (OTLP):
-  - gRPC: ingest.{{ .Release.Namespace }}:{{ .Values.ingest.service.ports.otlpGrpc }}
-  - HTTP: ingest.{{ .Release.Namespace }}:{{ .Values.ingest.service.ports.otlpHttp }}
-{{- end }}
-{{- if .Values.janitor.enabled }}
-- Janitor Service: Running background maintenance
-{{- end }}
-{{- if .Values.ui.enabled }}
-- UI: http://ui.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.ui.service.port }}
-{{- end }}
-
-To access the query service:
-  kubectl port-forward -n {{ .Release.Namespace }} svc/query {{ .Values.query.service.port }}:{{ .Values.query.service.port }}
-  bzrk --endpoint localhost:{{ .Values.query.service.port }} search "default | take 10"
-
 {{- if .Values.ui.enabled }}
 To access the UI:
   kubectl port-forward -n {{ .Release.Namespace }} svc/ui {{ .Values.ui.service.port }}:{{ .Values.ui.service.port }}
@@ -57,6 +34,14 @@ To create an ingest token for the "{{ .Values.global.defaultTable }}" table:
   kubectl exec -it bzrk-cli -n {{ .Release.Namespace }} -- /cli --meta-endpoint meta:{{ .Values.meta.service.port }} table create --if-not-exists {{ .Values.global.defaultTable }}
   kubectl exec -it bzrk-cli -n {{ .Release.Namespace }} -- /cli --meta-endpoint meta:{{ .Values.meta.service.port }} ingest-token create --table {{ .Values.global.defaultTable }} my-ingest-token
   kubectl delete pod bzrk-cli -n {{ .Release.Namespace }}
+{{- end }}
+
+{{- if .Values.gateway.enabled }}
+
+To set up the initial admin user, grab the one-time bootstrap URL from
+the gateway logs and open it in a browser:
+
+  kubectl -n {{ .Release.Namespace }} logs deploy/gateway | grep -A2 "Initial admin setup"
 {{- end }}
 
 Check pod status:

@@ -9,7 +9,7 @@ image:
 
 service:
   type: ClusterIP
-  port: 3002
+  port: 9580
   externalIPs: []
 
 # NetworkPolicy: only gateway + admin_ui should reach permissions in
@@ -21,9 +21,9 @@ networkPolicy:
 
   ingressFrom:
     - app: gateway
-      ports: [{port: 3002}]
+      ports: [{port: 9580}]
     - app: admin-ui
-      ports: [{port: 3002}]
+      ports: [{port: 9580}]
   egressTo: []
   additionalIngress: []
   additionalEgress: []

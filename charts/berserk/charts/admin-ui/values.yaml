@@ -1,7 +1,7 @@
 # Default values for admin_ui service.
 #
-# admin_ui is internal-only — the public edge is `gateway` (port 3001),
-# which proxies to admin_ui (port 3000) carrying `X-Bzrk-*` identity
+# admin_ui is internal-only — the public edge is `gateway` (port 9500),
+# which proxies to admin_ui (port 9570) carrying `X-Bzrk-*` identity
 # headers and an `X-Bzrk-Service-Token` that admin_ui verifies.
 # NetworkPolicy reflects this: only gateway is allowed to reach
 # admin_ui.
@@ -15,7 +15,7 @@ image:
 
 service:
   type: ClusterIP
-  port: 3000
+  port: 9570
   externalIPs: []
 
 # Ingress disabled by default — gateway is the public edge. Operators
@@ -35,10 +35,10 @@ networkPolicy:
 
   ingressFrom:
     - app: gateway
-      ports: [{port: 3000}]
+      ports: [{ port: 9570 }]
   egressTo:
     - app: permissions
-      ports: [{port: 3002}]
+      ports: [{ port: 9580 }]
   additionalIngress: []
   additionalEgress: []
 
@@ -58,7 +58,7 @@ config:
   # password-login affordances in SaaS mode; gateway enforces the rule.
   deploymentMode: "self_hosted"
   permissions:
-    baseUrl: "http://permissions:3002"
+    baseUrl: "http://permissions:9580"
     requestTimeoutSecs: 10
     connectTimeoutSecs: 2
   # OIDC config — mirrored from gateway so `/admin/config` renders

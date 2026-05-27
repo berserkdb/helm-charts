@@ -70,7 +70,7 @@ networkPolicy:
   ingressFrom: []
   egressTo:
     - app: meta
-      ports: [{port: 9500}]
+      ports: [{port: 9560}]
   additionalIngress: []
   additionalEgress: []
 
@@ -83,7 +83,7 @@ resources:
     cpu: "2000m"
 
 config:
-  metaEndpoint: "http://meta:9500"
+  metaEndpoint: "http://meta:9560"
 
   # Batching knobs (see apps/ingest/src/config.rs for the full surface and
   # the ack_timeout > max_batch_age + MAX_RETRY_AGE invariant).

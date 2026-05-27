@@ -140,7 +140,7 @@ meta:
 
   service:
     type: ClusterIP
-    port: 9500
+    port: 9560
 
   resources:
     requests:
@@ -189,7 +189,7 @@ query:
       cpu: "4000m"
 
   config:
-    metaEndpoint: "http://meta:9500"
+    metaEndpoint: "http://meta:9560"
     observability:
       serviceName: "query"
       logLevel: "info"
@@ -229,7 +229,7 @@ ingest:
       cpu: "4000m"
 
   config:
-    metaEndpoint: "http://meta:9500"
+    metaEndpoint: "http://meta:9560"
     batch:
       maxBatchBytes: 16777216
       maxBatchAgeSecs: 2
@@ -263,7 +263,7 @@ janitor:
     size: "20Gi"
 
   config:
-    metaEndpoint: "http://meta:9500"
+    metaEndpoint: "http://meta:9560"
     queryEndpoint: "http://query:9510"
     # Merge settings
     mergerIntervalSeconds: 300
@@ -302,7 +302,7 @@ ui:
 
   config:
     queryEndpoint: "http://query:9510"
-    metaEndpoint: "http://meta:9500"
+    metaEndpoint: "http://meta:9560"
 
 # Gateway service configuration (authenticating reverse proxy /
 # public edge for the new auth + admin_ui stack).
@@ -317,7 +317,7 @@ gateway:
 
   service:
     type: ClusterIP
-    port: 3001
+    port: 9500
 
   ingress:
     enabled: false
@@ -336,11 +336,11 @@ gateway:
     publicBaseUrl: ""
     # `upstreamBaseUrl` (data plane) and `adminUpstreamBaseUrl`
     # (admin plane) are inherited from the gateway subchart's
-    # defaults (`http://ui` and `http://admin-ui:3000`). The
+    # defaults (`http://ui` and `http://admin-ui:9570`). The
     # umbrella chart's Service layout makes those always work; no
     # override needed in normal installs.
     permissions:
-      baseUrl: "http://permissions:3002"
+      baseUrl: "http://permissions:9580"
     deploymentMode: "self_hosted"
     cookieSecure: true
     observability:
@@ -361,7 +361,7 @@ admin-ui:
 
   service:
     type: ClusterIP
-    port: 3000
+    port: 9570
 
   resources:
     requests:
@@ -375,7 +375,7 @@ admin-ui:
     publicBaseUrl: ""
     deploymentMode: "self_hosted"
     permissions:
-      baseUrl: "http://permissions:3002"
+      baseUrl: "http://permissions:9580"
     observability:
       serviceName: "admin_ui"
       logLevel: "info,admin_ui=debug"
@@ -391,7 +391,7 @@ permissions:
 
   service:
     type: ClusterIP
-    port: 3002
+    port: 9580
 
   resources:
     requests:
@@ -426,7 +426,7 @@ nursery:
     sizeLimit: "50Gi"
 
   config:
-    metaEndpoint: "http://meta:9500"
+    metaEndpoint: "http://meta:9560"
     # Polling interval for meta service in seconds
     metaPollIntervalSecs: 5
     # Stream inactivity timeout in seconds

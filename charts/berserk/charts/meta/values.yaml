@@ -10,7 +10,7 @@ image:
 
 service:
   type: ClusterIP
-  port: 9500
+  port: 9560
 
 resources:
   requests:
@@ -27,22 +27,22 @@ networkPolicy:
 
   ingressFrom:
     - app: query
-      ports: [{port: 9500}]
+      ports: [{port: 9560}]
     - app: ingest
-      ports: [{port: 9500}]
+      ports: [{port: 9560}]
     - app: janitor
-      ports: [{port: 9500}]
+      ports: [{port: 9560}]
     - app: ui
-      ports: [{port: 9500}]
+      ports: [{port: 9560}]
     - app: nursery
-      ports: [{port: 9500}]
+      ports: [{port: 9560}]
     # post-install setup job creates the default table via meta
     - app: setup
-      ports: [{port: 9500}]
+      ports: [{port: 9560}]
     # ad-hoc operator-run admin pods (e.g. `kubectl run bzrk-cli`) creating
     # tokens / tables; the label is documented in the chart NOTES.
     - app: admin
-      ports: [{port: 9500}]
+      ports: [{port: 9560}]
   egressTo: []
   additionalIngress: []
   additionalEgress: []

@@ -9,12 +9,12 @@
 #   # 1) Grab the one-time admin setup URL from the gateway logs:
 #   docker compose logs gateway | grep -A1 "Initial admin setup"
 #
-#   # 2) Open it in a browser (the URL points at 127.0.0.1:3001 — the
+#   # 2) Open it in a browser (the URL points at 127.0.0.1:9500 — the
 #   # auth-edge gateway is the single public entry point):
-#   open http://localhost:3001
+#   open http://localhost:9500
 #
 #   # 3) Authenticate the CLI through the gateway:
-#   bzrk profile add local --endpoint http://localhost:3001
+#   bzrk profile add local --endpoint http://localhost:9500
 #   bzrk profile use local
 #   bzrk login
 #   bzrk search "default | take 10" --since "1h ago"
@@ -43,7 +43,7 @@ x-common: &common
 configs:
   meta-config:
     content: |
-      bind: "0.0.0.0:9500"
+      bind: "0.0.0.0:9560"
       database_url: $${META_DATABASE_URL}
       storage_endpoint: "http://minio:9000"
       storage_bucket: "berserk"
@@ -57,7 +57,7 @@ configs:
   query-config:
     content: |
       bind: "0.0.0.0:9510"
-      meta_endpoint: "http://meta:9500"
+      meta_endpoint: "http://meta:9560"
       cloud_storage_access_key: $${AWS_ACCESS_KEY_ID:}
       cloud_storage_secret_key: $${AWS_SECRET_ACCESS_KEY:}
       cache:
@@ -71,7 +71,7 @@ configs:
 
   ingest-config:
     content: |
-      meta_endpoint: "http://meta:9500"
+      meta_endpoint: "http://meta:9560"
 
       http_bind: "0.0.0.0:4318"
       grpc_bind: "0.0.0.0:4317"
@@ -95,7 +95,7 @@ configs:
   janitor-config:
     content: |
       bind: "0.0.0.0:9502"
-      meta_endpoint: "http://meta:9500"
+      meta_endpoint: "http://meta:9560"
       query_endpoint: "http://query:9510"
       cloud_storage_access_key: $${JANITOR_STORAGE_ACCESS_KEY:}
       cloud_storage_secret_key: $${JANITOR_STORAGE_SECRET_KEY:}
@@ -115,7 +115,7 @@ configs:
   nursery-config:
     content: |
       http_bind: "0.0.0.0:9530"
-      meta_endpoint: "http://meta:9500"
+      meta_endpoint: "http://meta:9560"
       cloud_storage_access_key: $${NURSERY_STORAGE_ACCESS_KEY:}
       cloud_storage_secret_key: $${NURSERY_STORAGE_SECRET_KEY:}
       working_dir: "/var/cache/nursery"
@@ -131,7 +131,7 @@ configs:
     content: |
       bind: "0.0.0.0:9540"
       query_endpoint: "http://query:9510"
-      meta_endpoint: "http://meta:9500"
+      meta_endpoint: "http://meta:9560"
       observability:
         service_name: "ui"
         log_level: "info"
@@ -140,9 +140,9 @@ configs:
 
   admin-ui-config:
     content: |
-      bind: "0.0.0.0:3000"
-      public_base_url: "http://localhost:3001"
-      permissions_base_url: "http://permissions:3002"
+      bind: "0.0.0.0:9570"
+      public_base_url: "http://localhost:9500"
+      permissions_base_url: "http://permissions:9580"
       deployment_mode: self_hosted
       observability:
         service_name: "admin-ui"
@@ -152,14 +152,14 @@ configs:
 
   gateway-config:
     content: |
-      bind: "0.0.0.0:3001"
-      public_base_url: "http://localhost:3001"
+      bind: "0.0.0.0:9500"
+      public_base_url: "http://localhost:9500"
       cookie_secure: false
       upstream_base_url: "http://ui:9540"
-      admin_upstream_base_url: "http://admin-ui:3000"
-      permissions_base_url: "http://permissions:3002"
+      admin_upstream_base_url: "http://admin-ui:9570"
+      permissions_base_url: "http://permissions:9580"
       deployment_mode: self_hosted
-      grpc_routes: '[{"package_prefix":"meta","upstream":"http://meta:9500"},{"package_prefix":"query","upstream":"http://query:9510"},{"package_prefix":"opentelemetry","upstream":"http://ingest:4317"}]'
+      grpc_routes: '[{"package_prefix":"meta","upstream":"http://meta:9560"},{"package_prefix":"query","upstream":"http://query:9510"},{"package_prefix":"opentelemetry","upstream":"http://ingest:4317"}]'
       session_ttl_secs: 1209600
       invite_ttl_secs: 604800
       reset_ttl_secs: 3600
@@ -201,7 +201,7 @@ configs:
         echo "Ingest token already exists at $$TOKEN_FILE, skipping creation."
         exit 0
       fi
-      BZRK="/bzrk --endpoint meta:9500 --database default"
+      BZRK="/bzrk --endpoint meta:9560 --database default"
       TOKEN_NAME="default_ingest_token"
       echo "Ensuring 'default' table exists in meta..."
       $$BZRK table create default 2>/dev/null || true
@@ -230,7 +230,7 @@ services:
   # --- Infrastructure ---
 
   postgres:
-    image: postgres:18
+    image: postgres:17
     networks:
       - berserk
     environment:
@@ -307,7 +307,7 @@ services:
 
   meta:
     <<: *common
-    image: ghcr.io/berserkdb/meta:v1.0.109
+    image: ghcr.io/berserkdb/meta:v1.0.111
     depends_on:
       postgres:
         condition: service_healthy
@@ -316,13 +316,13 @@ services:
       META_DATABASE_URL: "postgres://berserk:berserk@postgres:5432/berserk"
     command: ["-c", "/config/config.yaml"]
     ports:
-      - "9500:9500"
+      - "9560:9560"
     configs:
       - source: meta-config
         target: /config/config.yaml
         mode: 0444
     healthcheck:
-      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/9500'"]
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/9560'"]
       interval: 5s
       timeout: 3s
       start_period: 10s
@@ -330,7 +330,7 @@ services:
 
   query:
     <<: *common
-    image: ghcr.io/berserkdb/query:v1.0.109
+    image: ghcr.io/berserkdb/query:v1.0.111
     depends_on:
       meta:
         condition: service_healthy
@@ -363,7 +363,7 @@ services:
   # reads at startup. Talks to meta over gRPC directly (no bearer
   # token → ClientChannel::direct, see apps/cli/src/network/meta_client.rs).
   ingest-token-init:
-    image: ghcr.io/berserkdb/cli:v1.0.109
+    image: ghcr.io/berserkdb/cli:v1.0.111
     networks:
       - berserk
     depends_on:
@@ -382,7 +382,7 @@ services:
 
   ingest:
     <<: *common
-    image: ghcr.io/berserkdb/ingest:v1.0.109
+    image: ghcr.io/berserkdb/ingest:v1.0.111
     depends_on:
       meta:
         condition: service_healthy
@@ -420,7 +420,7 @@ services:
 
   janitor:
     <<: *common
-    image: ghcr.io/berserkdb/janitor:v1.0.109
+    image: ghcr.io/berserkdb/janitor:v1.0.111
     depends_on:
       meta:
         condition: service_healthy
@@ -450,7 +450,7 @@ services:
 
   nursery:
     <<: *common
-    image: ghcr.io/berserkdb/nursery:v1.0.109
+    image: ghcr.io/berserkdb/nursery:v1.0.111
     depends_on:
       meta:
         condition: service_healthy
@@ -478,7 +478,7 @@ services:
 
   ui:
     <<: *common
-    image: ghcr.io/berserkdb/ui:v1.0.109
+    image: ghcr.io/berserkdb/ui:v1.0.111
     depends_on:
       query:
         condition: service_healthy
@@ -499,7 +499,7 @@ services:
       LEPTOS_SITE_ADDR: "0.0.0.0:9540"
       ENVIRONMENT: local
     command: ["-c", "/config/config.yaml"]
-    # ui is no longer the public entry point — gateway (port 3001)
+    # ui is no longer the public entry point — gateway (port 9500)
     # fronts it. Leave the internal port unmapped; debugging is via
     # `docker compose exec ui` or `docker compose port ui 9540`.
     configs:
@@ -517,17 +517,17 @@ services:
 
   permissions:
     <<: *common
-    image: ghcr.io/berserkdb/permissions:v1.0.109
+    image: ghcr.io/berserkdb/permissions:v1.0.111
     depends_on:
       postgres:
         condition: service_healthy
     environment:
       <<: *common-env
-      PERMISSIONS_BIND: "0.0.0.0:3002"
+      PERMISSIONS_BIND: "0.0.0.0:9580"
       PERMISSIONS_DATABASE_URL: "postgres://berserk:berserk@postgres:5432/berserk_auth"
       PERMISSIONS_SERVICE_TOKEN: "local-dev-permissions-service-token"
     healthcheck:
-      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/3002'"]
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/9580'"]
       interval: 5s
       timeout: 3s
       start_period: 10s
@@ -535,7 +535,7 @@ services:
 
   admin-ui:
     <<: *common
-    image: ghcr.io/berserkdb/admin-ui:v1.0.109
+    image: ghcr.io/berserkdb/admin-ui:v1.0.111
     depends_on:
       postgres:
         condition: service_healthy
@@ -549,14 +549,14 @@ services:
       LEPTOS_OUTPUT_NAME: admin_ui
       LEPTOS_SITE_ROOT: /
       LEPTOS_SITE_PKG_DIR: pkg
-      LEPTOS_SITE_ADDR: "0.0.0.0:3000"
+      LEPTOS_SITE_ADDR: "0.0.0.0:9570"
     command: ["-c", "/config/config.yaml"]
     configs:
       - source: admin-ui-config
         target: /config/config.yaml
         mode: 0444
     healthcheck:
-      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/3000'"]
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/9570'"]
       interval: 5s
       timeout: 3s
       start_period: 10s
@@ -564,7 +564,7 @@ services:
 
   gateway:
     <<: *common
-    image: ghcr.io/berserkdb/gateway:v1.0.109
+    image: ghcr.io/berserkdb/gateway:v1.0.111
     depends_on:
       postgres:
         condition: service_healthy
@@ -585,13 +585,13 @@ services:
       GATEWAY_COOKIE_SIGNING_KEY: "local-dev-gateway-cookie-signing-key-must-be-at-least-64-bytes-long!!"
     command: ["-c", "/config/config.yaml"]
     ports:
-      - "3001:3001"
+      - "9500:9500"
     configs:
       - source: gateway-config
         target: /config/config.yaml
         mode: 0444
     healthcheck:
-      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/3001'"]
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/9500'"]
       interval: 5s
       timeout: 3s
       start_period: 10s

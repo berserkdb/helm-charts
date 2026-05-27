@@ -15,7 +15,7 @@ networkPolicy:
   ingressFrom: []
   egressTo:
     - app: meta
-      ports: [{port: 9500}]
+      ports: [{port: 9560}]
     - app: query
       ports: [{port: 9510}]
   additionalIngress: []
@@ -33,7 +33,7 @@ cache:
   size: "10Gi"
 
 config:
-  metaEndpoint: "http://meta:9500"
+  metaEndpoint: "http://meta:9560"
   queryEndpoint: "http://query:9510"
   mergerIntervalSeconds: 300
   maxSegmentsPerBatch: 50
