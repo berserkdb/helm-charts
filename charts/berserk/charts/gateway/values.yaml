@@ -144,6 +144,11 @@ config:
 # token (X-Bzrk-Service-Token to admin_ui), and the permissions
 # service token. By default the chart manages a Secret with random
 # values; set `managed: false` to reference an existing Secret.
+#
+# Flipping `managed: true → false` on an existing release: the
+# chart-created Secret survives and blocks any external pipeline from
+# adopting it. Annotate it with `sealedsecrets.bitnami.com/managed=true`,
+# or delete it, before the external pipeline reconciles.
 secrets:
   managed: true
   secretName: "gateway-secrets"
