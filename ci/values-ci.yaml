@@ -14,18 +14,21 @@ global:
   postgresCredentials:
     managed: true
     databaseUrl: "postgres://postgres:testpassword@postgres-postgresql:5432/berserk?sslmode=disable"
-  # Gateway's sqlx migration stream lives at `public._sqlx_migrations`
-  # in whatever DB it's pointed at; meta uses the same table name. They
-  # share a postgres instance here but need separate logical databases
-  # so the migration tables don't collide. `berserk_auth` is created
-  # via the bitnami postgres chart's initdb scripts in the
-  # `Install PostgreSQL` step of release.yml. `secretName` is overridden
-  # too because the chart default `"postgres-credentials"` collides with
-  # `global.postgresCredentials.secretName` when both are managed.
+  # Auth-side services share the meta DB and isolate themselves
+  # via the `auth` schema (gateway creates the schema on first
+  # boot and sets `search_path = auth`; admin_ui and permissions
+  # honour the same schema on every connection). `secretName` is
+  # overridden because the chart default `"postgres-credentials"`
+  # collides with `global.postgresCredentials.secretName` when both
+  # are managed.
   authPostgresCredentials:
     managed: true
     secretName: "auth-postgres-credentials"
-    databaseUrl: "postgres://postgres:testpassword@postgres-postgresql:5432/berserk_auth?sslmode=disable"
+    databaseUrl: "postgres://postgres:testpassword@postgres-postgresql:5432/berserk?sslmode=disable"
+  # authDatabaseSchema inherits the umbrella default of "auth"; the
+  # auth-side binaries also default to "auth" when the env var is
+  # unset, so this only needs to be overridden to "" for two-DB
+  # layouts (see charts/values-dev.yaml).
   ingestToken:
     managed: true
 

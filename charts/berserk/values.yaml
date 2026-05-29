@@ -40,17 +40,26 @@ global:
     databaseUrl: ""
     databaseUrlKey: "database_url"
   # PostgreSQL credentials for the auth-side stack (gateway / admin-ui /
-  # permissions). They run `sqlx::migrate!()` against a `_sqlx_migrations`
-  # table at `public._sqlx_migrations`, which collides with meta's
-  # equally-named table when they share a database. Default-points at
-  # the same secret as `postgresCredentials` because most installs run
-  # only one half of the system; the kind smoke install (where both
-  # halves coexist) overrides this with a separate DB.
+  # permissions). By default they share the meta database and isolate
+  # themselves via the `auth` schema (see `authDatabaseSchema` below);
+  # sqlx puts `_sqlx_migrations` in the first writable schema on the
+  # connection's search_path, so `auth._sqlx_migrations` and
+  # `public._sqlx_migrations` coexist without collision. Operators
+  # who prefer a separate logical database (the dev cluster does)
+  # override this secret to point at it and set `authDatabaseSchema`
+  # to the empty string.
   authPostgresCredentials:
     managed: false
     secretName: "postgres-credentials"
     databaseUrl: ""
     databaseUrlKey: "database_url"
+  # Postgres schema for the auth-side tables. `"auth"` is the
+  # default — gateway creates the schema on first boot and pins
+  # every pool connection's `search_path` to it; admin_ui and
+  # permissions honour the same schema on every connection. Set to
+  # the empty string to opt out (e.g. dev cluster, which keeps the
+  # historical two-DB layout with auth tables in `public`).
+  authDatabaseSchema: "auth"
   # Ingest token configuration.
   # `managed: true` (default) makes the ingest service's init container create
   # the default table and a default ingest token on first install, storing the

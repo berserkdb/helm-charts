@@ -23,6 +23,11 @@
                 secretKeyRef:
                   name: {{ .Values.global.authPostgresCredentials.secretName }}
                   key: {{ .Values.global.authPostgresCredentials.databaseUrlKey }}
+            # Render unconditionally so an explicit empty value
+            # (the dev cluster's opt-out signal) flows through;
+            # `with` would skip the block on empty.
+            - name: UI_DATABASE_SCHEMA
+              value: {{ .Values.global.authDatabaseSchema | quote }}
             - name: UI_PERMISSIONS_SERVICE_TOKEN
               valueFrom:
                 secretKeyRef:

@@ -174,16 +174,13 @@ configs:
         otlp_enabled: true
         otlp_endpoint: "ingest:4317"
 
-  # Bootstrap-time SQL: gateway and meta share the same Postgres
-  # cluster but need separate logical databases — they both run
-  # `sqlx::migrate!` against `public._sqlx_migrations`, which
-  # collides if they share one. `berserk` belongs to meta; the
-  # auth-edge stack (gateway / admin-ui / permissions) lives in
-  # `berserk_auth`.
-  postgres-init-auth-db:
-    content: |
-      CREATE DATABASE berserk_auth;
-      GRANT ALL ON DATABASE berserk_auth TO berserk;
+  # No bootstrap SQL needed: as of v1.0.112, gateway / admin-ui /
+  # permissions share the meta DB and isolate themselves via the
+  # `auth` schema (gateway creates the schema on first boot and
+  # pins every connection's `search_path` to it). sqlx puts
+  # `_sqlx_migrations` in the first writable schema on the
+  # connection's search_path, so `auth._sqlx_migrations` and
+  # `public._sqlx_migrations` coexist without collision.
 
   # Idempotent bootstrap: create the `default` table and an ingest
   # token routed to it, then write the plaintext token to a shared
@@ -241,14 +238,6 @@ services:
       - "15432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql
-    # Postgres runs every `*.sql` in `/docker-entrypoint-initdb.d`
-    # exactly once, on first bring-up against an empty data dir.
-    # We use it to carve out `berserk_auth` so gateway + meta don't
-    # collide on `public._sqlx_migrations`.
-    configs:
-      - source: postgres-init-auth-db
-        target: /docker-entrypoint-initdb.d/10-berserk-auth.sql
-        mode: 0444
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U berserk"]
       interval: 5s
@@ -307,7 +296,7 @@ services:
 
   meta:
     <<: *common
-    image: ghcr.io/berserkdb/meta:v1.0.111
+    image: ghcr.io/berserkdb/meta:v1.0.112
     depends_on:
       postgres:
         condition: service_healthy
@@ -330,7 +319,7 @@ services:
 
   query:
     <<: *common
-    image: ghcr.io/berserkdb/query:v1.0.111
+    image: ghcr.io/berserkdb/query:v1.0.112
     depends_on:
       meta:
         condition: service_healthy
@@ -363,7 +352,7 @@ services:
   # reads at startup. Talks to meta over gRPC directly (no bearer
   # token → ClientChannel::direct, see apps/cli/src/network/meta_client.rs).
   ingest-token-init:
-    image: ghcr.io/berserkdb/cli:v1.0.111
+    image: ghcr.io/berserkdb/cli:v1.0.112
     networks:
       - berserk
     depends_on:
@@ -382,7 +371,7 @@ services:
 
   ingest:
     <<: *common
-    image: ghcr.io/berserkdb/ingest:v1.0.111
+    image: ghcr.io/berserkdb/ingest:v1.0.112
     depends_on:
       meta:
         condition: service_healthy
@@ -420,7 +409,7 @@ services:
 
   janitor:
     <<: *common
-    image: ghcr.io/berserkdb/janitor:v1.0.111
+    image: ghcr.io/berserkdb/janitor:v1.0.112
     depends_on:
       meta:
         condition: service_healthy
@@ -450,7 +439,7 @@ services:
 
   nursery:
     <<: *common
-    image: ghcr.io/berserkdb/nursery:v1.0.111
+    image: ghcr.io/berserkdb/nursery:v1.0.112
     depends_on:
       meta:
         condition: service_healthy
@@ -478,7 +467,7 @@ services:
 
   ui:
     <<: *common
-    image: ghcr.io/berserkdb/ui:v1.0.111
+    image: ghcr.io/berserkdb/ui:v1.0.112
     depends_on:
       query:
         condition: service_healthy
@@ -517,14 +506,14 @@ services:
 
   permissions:
     <<: *common
-    image: ghcr.io/berserkdb/permissions:v1.0.111
+    image: ghcr.io/berserkdb/permissions:v1.0.112
     depends_on:
       postgres:
         condition: service_healthy
     environment:
       <<: *common-env
       PERMISSIONS_BIND: "0.0.0.0:9580"
-      PERMISSIONS_DATABASE_URL: "postgres://berserk:berserk@postgres:5432/berserk_auth"
+      PERMISSIONS_DATABASE_URL: "postgres://berserk:berserk@postgres:5432/berserk"
       PERMISSIONS_SERVICE_TOKEN: "local-dev-permissions-service-token"
     healthcheck:
       test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/9580'"]
@@ -535,7 +524,7 @@ services:
 
   admin-ui:
     <<: *common
-    image: ghcr.io/berserkdb/admin-ui:v1.0.111
+    image: ghcr.io/berserkdb/admin-ui:v1.0.112
     depends_on:
       postgres:
         condition: service_healthy
@@ -543,7 +532,7 @@ services:
         condition: service_healthy
     environment:
       <<: *common-env
-      UI_DATABASE_URL: "postgres://berserk:berserk@postgres:5432/berserk_auth"
+      UI_DATABASE_URL: "postgres://berserk:berserk@postgres:5432/berserk"
       UI_PERMISSIONS_SERVICE_TOKEN: "local-dev-permissions-service-token"
       UI_GATEWAY_SERVICE_TOKEN: "local-dev-gateway-service-token"
       LEPTOS_OUTPUT_NAME: admin_ui
@@ -564,7 +553,7 @@ services:
 
   gateway:
     <<: *common
-    image: ghcr.io/berserkdb/gateway:v1.0.111
+    image: ghcr.io/berserkdb/gateway:v1.0.112
     depends_on:
       postgres:
         condition: service_healthy
@@ -576,7 +565,7 @@ services:
         condition: service_healthy
     environment:
       <<: *common-env
-      GATEWAY_DATABASE_URL: "postgres://berserk:berserk@postgres:5432/berserk_auth"
+      GATEWAY_DATABASE_URL: "postgres://berserk:berserk@postgres:5432/berserk"
       GATEWAY_PERMISSIONS_SERVICE_TOKEN: "local-dev-permissions-service-token"
       GATEWAY_SERVICE_TOKEN: "local-dev-gateway-service-token"
       # 64-byte placeholder for localhost dev. In production set

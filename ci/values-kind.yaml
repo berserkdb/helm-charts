@@ -36,14 +36,15 @@ global:
   postgresCredentials:
     managed: true
     databaseUrl: "postgres://postgres:testpassword@postgres-postgresql:5432/berserk?sslmode=disable"
-  # Separate database for the auth-side stack so its
-  # `_sqlx_migrations` table doesn't collide with meta's. The
-  # kind bring-up script creates `berserk_auth` via psql before
-  # `helm install` runs.
+  # Auth-side services share the meta DB and isolate themselves
+  # via the `auth` schema (gateway creates the schema on first
+  # boot and sets `search_path = auth`; admin_ui and permissions
+  # honour the same schema on every connection).
   authPostgresCredentials:
     managed: true
     secretName: "auth-postgres-credentials"
-    databaseUrl: "postgres://postgres:testpassword@postgres-postgresql:5432/berserk_auth?sslmode=disable"
+    databaseUrl: "postgres://postgres:testpassword@postgres-postgresql:5432/berserk?sslmode=disable"
+  # authDatabaseSchema inherits the umbrella default of "auth".
   ingestToken:
     managed: true
   observability:
