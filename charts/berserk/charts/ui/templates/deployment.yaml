@@ -43,6 +43,17 @@
               valueFrom:
                 fieldRef:
                   fieldPath: status.podIP
+            # apps/ui shares the single workspace database (the same one
+            # meta uses) and isolates its tables in the `ui` schema.
+            - name: UI_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.global.postgresCredentials.secretName }}
+                  key: {{ .Values.global.postgresCredentials.databaseUrlKey }}
+            # Rendered unconditionally so an explicit empty value (the
+            # opt-out signal) flows through; `with` would skip on empty.
+            - name: UI_DATABASE_SCHEMA
+              value: {{ .Values.global.uiDatabaseSchema | quote }}
             # Gateway-side trusted-identity service token. apps/ui
             # constant-time compares this against the
             # `X-Bzrk-Service-Token` header on incoming requests; only

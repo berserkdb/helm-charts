@@ -60,6 +60,15 @@ global:
   # the empty string to opt out (e.g. dev cluster, which keeps the
   # historical two-DB layout with auth tables in `public`).
   authDatabaseSchema: "auth"
+  # Postgres schema for apps/ui's tables (per-user preferences, recent
+  # queries). `"ui"` is the default — apps/ui shares the single
+  # workspace database (`postgresCredentials`) and isolates itself in
+  # this schema, creating it on first boot and pinning every pool
+  # connection's `search_path` to it. Distinct from `authDatabaseSchema`
+  # because apps/ui owns its own migrations and can't co-tenant the auth
+  # stack's `_sqlx_migrations`. Set to "" to opt out (apps/ui then needs
+  # its own separate database to avoid colliding with meta in `public`).
+  uiDatabaseSchema: "ui"
   # Ingest token configuration.
   # `managed: true` (default) makes the ingest service's init container create
   # the default table and a default ingest token on first install, storing the
