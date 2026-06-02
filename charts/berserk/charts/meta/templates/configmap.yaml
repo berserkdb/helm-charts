@@ -6,9 +6,13 @@ data:
     {{- $storageEndpoint := .Values.config.storageEndpoint | default .Values.global.storage.endpoint }}
     {{- $storageBucket := .Values.config.storageBucket | default .Values.global.storage.bucket }}
     {{- $storageRegion := .Values.config.storageRegion | default .Values.global.storage.region }}
+    {{- $storagePath := .Values.config.storagePath | default .Values.global.storage.path }}
     {{- if $storageEndpoint }}
     storage_endpoint: {{ $storageEndpoint | quote }}
     storage_bucket: {{ $storageBucket | quote }}
     storage_region: {{ $storageRegion | quote }}
+    {{- if $storagePath }}
+    storage_path: {{ $storagePath | quote }}
+    {{- end }}
     {{- end }}
     {{- include "berserk-common.observability-config" . | nindent 4 }}

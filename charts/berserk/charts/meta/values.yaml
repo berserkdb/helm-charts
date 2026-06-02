@@ -26,6 +26,10 @@ networkPolicy:
   allowExternalEgress: true
 
   ingressFrom:
+    # gateway proxies meta gRPC (grpcRoutes: meta -> meta:9560), e.g.
+    # DatabaseService/ListDatabases issued from the UI and CLI.
+    - app: gateway
+      ports: [{port: 9560}]
     - app: query
       ports: [{port: 9560}]
     - app: ingest
@@ -51,6 +55,7 @@ config:
   # storageEndpoint: ""
   # storageBucket: ""
   # storageRegion: "auto"
+  # storagePath: ""  # object-key prefix within the bucket; empty = bucket root
   observability:
     serviceName: "meta"
     logLevel: "info"

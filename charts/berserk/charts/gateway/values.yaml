@@ -38,6 +38,11 @@ networkPolicy:
 
   ingressFrom: []
   egressTo:
+    # Catch-all data-plane upstream (config.upstreamBaseUrl: http://ui). ui's
+    # Service is port 80 -> targetPort 3000 and NetworkPolicy matches the pod
+    # port, so this is 3000 — mirrors ui's own ingressFrom rule.
+    - app: ui
+      ports: [{ port: 3000 }]
     - app: permissions
       ports: [{ port: 9580 }]
     - app: admin-ui

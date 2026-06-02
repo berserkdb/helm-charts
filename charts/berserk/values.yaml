@@ -23,6 +23,9 @@ global:
     endpoint: ""
     bucket: ""
     region: ""
+    # Object-key prefix within the bucket (empty = bucket root). Lets multiple
+    # installs share one bucket with isolated prefixes (e.g. "holion", "ethira").
+    path: ""
   # S3 credentials secret configuration
   s3Credentials:
     # Set managed: true and provide accessKeyId/secretAccessKey to have the chart manage the secret
