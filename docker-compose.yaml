@@ -30,7 +30,7 @@
 #
 # Berserk is pre-release (beta) software, provided AS IS with no warranty.
 # By running this stack you agree to the Berserk Terms of Use:
-#   https://www.bzrk.dev/legal/beta-terms
+#   https://www.bzrk.dev/legal/pre-release-license-terms/
 # Each service image also carries the terms at /usr/share/doc/berserk/NOTICE.md.
 
 x-common: &common

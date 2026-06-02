@@ -51,7 +51,7 @@ Check pod status:
 Berserk is pre-release (beta) software, provided AS IS with no warranty.
 By installing and using these charts you agree to the Berserk Terms of Use:
 
-  https://www.bzrk.dev/legal/beta-terms
+  https://www.bzrk.dev/legal/pre-release-license-terms/
 
 A copy is also shipped inside each image at /usr/share/doc/berserk/NOTICE.md.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
