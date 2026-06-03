@@ -1,9 +1,5 @@
-{{/*
-permissions is env-var driven (no YAML config). This ConfigMap exists
-so the shared `berserk-common.deployment.header` partial can compute a
-`checksum/config` annotation without choking on a missing template,
-and as a place to surface the resolved bind port for `kubectl describe`.
-*/}}
 {{ include "berserk-common.configmap.metadata" . }}
 data:
-  bind: {{ printf "0.0.0.0:%d" (int .Values.service.port) | quote }}
+  config.yaml: |
+    bind: "0.0.0.0:{{ .Values.service.port }}"
+    {{- include "berserk-common.observability-config" . | nindent 4 }}

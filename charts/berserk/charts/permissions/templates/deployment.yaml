@@ -6,6 +6,9 @@
           imagePullPolicy: {{ .Values.image.pullPolicy | default .Values.global.imagePullPolicy | default "Always" }}
           securityContext:
             allowPrivilegeEscalation: false
+          args:
+            - "-c"
+            - "/config/config.yaml"
           ports:
             - containerPort: {{ .Values.service.port }}
               name: http
@@ -51,3 +54,7 @@
               port: http
             failureThreshold: 30
             periodSeconds: 3
+          volumeMounts:
+            {{- include "berserk-common.volumeMount.config" . | nindent 12 }}
+      volumes:
+        {{- include "berserk-common.volume.config" . | nindent 8 }}

@@ -76,7 +76,7 @@ config:
     requireEmailVerified: true
     bootstrapAdminEmails: []
   observability:
-    serviceName: "admin_ui"
+    serviceName: "admin-ui"
     logLevel: "info,admin_ui=debug"
     # otlpEnabled / otlpEndpoint fall through to global.observability.*
 

@@ -36,6 +36,12 @@ resources:
     memory: "256Mi"
     cpu: "500m"
 
+config:
+  observability:
+    serviceName: "permissions"
+    logLevel: "info,permissions=debug"
+    # otlpEnabled / otlpEndpoint fall through to global.observability.*
+
 # Service token shared with gateway + admin_ui. By default the
 # permissions chart does NOT manage its own secret — the gateway
 # subchart already produces and rotates `permissions_service_token`,

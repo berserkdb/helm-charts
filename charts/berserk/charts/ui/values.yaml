@@ -62,6 +62,7 @@ resources:
 config:
   queryEndpoint: "http://query:9510"
   metaEndpoint: "http://meta:9560"
+  featureFlags: {}
   observability:
     serviceName: "ui"
     logLevel: "info"

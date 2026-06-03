@@ -398,7 +398,7 @@ admin-ui:
     permissions:
       baseUrl: "http://permissions:9580"
     observability:
-      serviceName: "admin_ui"
+      serviceName: "admin-ui"
       logLevel: "info,admin_ui=debug"
 
 # Permissions service (authorization tuples + /v1/check). Shared by
@@ -421,6 +421,11 @@ permissions:
     limits:
       memory: "256Mi"
       cpu: "500m"
+
+  config:
+    observability:
+      serviceName: "permissions"
+      logLevel: "info,permissions=debug"
 
 # Nursery service configuration
 nursery:
