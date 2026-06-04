@@ -13,6 +13,21 @@ spec:
   {{- if and .Values.cache.enabled .Values.cache.persistent }}
   serviceName: {{ include "berserk-common.fullname" . }}
   {{- end }}
+  {{- if and (not .Values.cache.persistent) .Values.cache.hostPath }}
+  # Deployment + node-local hostPath cache: the cache_server holds an exclusive
+  # UDS socket/lock in the cache dir, so the default RollingUpdate (which surges
+  # a second pod, possibly onto the same node, both bound to the same
+  # /mnt/nvme/<customer> dir) would conflict. maxSurge: 0 stops the new pod from
+  # coming up before the old one is gone. We stay on RollingUpdate rather than
+  # Recreate because k8s rejects an in-place switch to type=Recreate while a
+  # live Deployment still carries spec.strategy.rollingUpdate. (The StatefulSet
+  # form updates one-at-a-time and needs none of this.)
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+  {{- end }}
   replicas: {{ .Values.replicaCount }}
   revisionHistoryLimit: {{ .Values.revisionHistoryLimit | default 2 }}
   selector:
@@ -41,6 +56,26 @@ spec:
         fsGroup: 1000
 {{- include "berserk-common.scheduling" . }}
 {{- include "berserk-common.serviceAccountName" . }}
+      {{- if and .Values.cache.enabled .Values.cache.hostPath }}
+      # hostPath segment cache (e.g. /mnt/nvme/<customer> on the instance-store
+      # NVMe): the kubelet creates the dir as root:0755 and hostPath volumes
+      # ignore fsGroup, so the non-root query process (uid 1000) can't write to
+      # it. Chown it to the pod's uid/gid once, as root, before query starts.
+      initContainers:
+        - name: init-segment-cache
+          image: {{ include "berserk-common.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | default .Values.global.imagePullPolicy | default "Always" }}
+          securityContext:
+            runAsNonRoot: false
+            runAsUser: 0
+            allowPrivilegeEscalation: false
+          command: ["/bin/sh", "-c"]
+          args:
+            - "mkdir -p /segment_cache && chown 1000:1000 /segment_cache"
+          volumeMounts:
+            - name: segment-cache
+              mountPath: /segment_cache
+      {{- end }}
       containers:
         - name: query
           image: {{ include "berserk-common.image" . }}
