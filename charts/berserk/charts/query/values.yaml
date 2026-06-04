@@ -97,6 +97,15 @@ cache:
   # should set this explicitly). Only honored as a Size variant —
   # percent-of-disk forms are in-process-only.
   sizeBytes: ""
+  # Max concurrent S3 fetches per (endpoint,bucket) coordinator inside
+  # each cache_server. 0 = built-in default. Lower this to bound a query
+  # pod's outbound S3 connection burst when a large scan saturates the
+  # connection path (see #3197). Tunable per-deploy without a rebuild.
+  maxConcurrentS3Requests: 0
+  # Process-wide ceiling on concurrent S3 fetches across all coordinators
+  # in each cache_server (the aggregate connection-burst limit).
+  # 0 = built-in default (32). See #3197.
+  maxTotalConcurrentS3Requests: 0
 
 resources:
   requests:

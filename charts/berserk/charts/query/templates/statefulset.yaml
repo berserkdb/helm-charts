@@ -105,6 +105,10 @@ spec:
             {{- if and (hasKey .Values.config "transport") (eq .Values.config.transport "grpc") }}
             - name: BZRK_CACHE_SIZE_BYTES
               value: {{ .Values.cache.sizeBytes | default "0" | quote }}
+            - name: BZRK_SEGMENT_CACHE_MAX_CONCURRENT_S3
+              value: {{ .Values.cache.maxConcurrentS3Requests | default 0 | quote }}
+            - name: BZRK_SEGMENT_CACHE_MAX_TOTAL_S3
+              value: {{ .Values.cache.maxTotalConcurrentS3Requests | default 0 | quote }}
             - name: BZRK_QWS_EMBEDDED_BIND
               value: "0.0.0.0:{{ .Values.qws.port | default 9520 }}"
             - name: BZRK_QWS_CLOUD_STORAGE_ENDPOINT
