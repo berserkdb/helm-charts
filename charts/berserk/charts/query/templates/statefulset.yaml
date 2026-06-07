@@ -132,11 +132,11 @@ spec:
             {{- end }}
             {{- /* Cache otherwise-unbinned `summarize` queries by injecting an
                   invisible event-time bin (collapsed before output). Read by
-                  the query coordinator during plan lowering. Off by default;
-                  enabled on dev to dogfood before any public rollout. */ -}}
-            {{- if and (hasKey .Values.config "cacheUnbinned") .Values.config.cacheUnbinned }}
+                  the query coordinator during plan lowering. On by default in
+                  the binary; set cacheUnbinned: false to opt a deployment out. */ -}}
+            {{- if and (hasKey .Values.config "cacheUnbinned") (not .Values.config.cacheUnbinned) }}
             - name: BZRK_CACHE_UNBINNED
-              value: "1"
+              value: "0"
             {{- end }}
             {{- include "berserk-common.env.cluster-name" . | nindent 12 }}
             {{- include "berserk-common.env.s3-credentials" (dict "accessKeyEnv" "AWS_ACCESS_KEY_ID" "secretKeyEnv" "AWS_SECRET_ACCESS_KEY" "Values" .Values) | nindent 12 }}

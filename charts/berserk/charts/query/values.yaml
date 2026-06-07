@@ -141,12 +141,11 @@ config:
   # and a bumped `nursery.config.forceMergeStaleThresholdSecs` so the
   # files linger long enough for the QC fan-out to catch them.
   queryViaNursery: true
-  # When true, sets BZRK_CACHE_UNBINNED=1 on the query pod, making the
-  # coordinator inject an invisible event-time bin into otherwise-unbinned
-  # `summarize` queries so the map-reduce-state cache can reuse them. The bin
-  # is collapsed before output (result is unchanged). Off by default; enabled
-  # on dev to dogfood before any public/valhalla rollout.
-  cacheUnbinned: false
+  # The coordinator injects an invisible event-time bin into otherwise-unbinned
+  # `summarize` queries so the map-reduce-state cache can reuse them; the bin is
+  # collapsed before output (result is unchanged). On by default. Set to false
+  # to opt a deployment out (emits BZRK_CACHE_UNBINNED=0 on the query pod).
+  cacheUnbinned: true
   observability:
     serviceName: "query"
     logLevel: "info"
