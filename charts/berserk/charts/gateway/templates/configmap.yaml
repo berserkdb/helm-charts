@@ -2,7 +2,7 @@
 data:
   config.yaml: |
     bind: "0.0.0.0:{{ .Values.service.port }}"
-    public_base_url: {{ required "gateway.config.publicBaseUrl is required" .Values.config.publicBaseUrl | quote }}
+    public_base_url: {{ .Values.config.publicBaseUrl | default .Values.global.publicBaseUrl | required "publicBaseUrl is required — set global.publicBaseUrl (or gateway.config.publicBaseUrl)" | quote }}
     {{- with .Values.config.upstreamBaseUrl }}
     upstream_base_url: {{ . | quote }}
     {{- end }}

@@ -18,6 +18,14 @@ global:
   # or share a Grafana backend. When empty, defaults to "default".
   # Override in per-env values files: "dev", "valhalla", etc.
   clusterName: ""
+  # Public-facing base URL of this install — the gateway's externally
+  # reachable URL (scheme + host [+ port], no trailing path). `gateway`
+  # mints OIDC redirect URIs from it and `admin-ui` builds absolute SSR
+  # links against it; both inherit this value unless they set their own
+  # `config.publicBaseUrl`. The default targets a local gateway (port
+  # 9500) so `helm install` renders out of the box — override it with
+  # your real URL for any networked deployment.
+  publicBaseUrl: "http://localhost:9500"
   # S3 storage configuration
   storage:
     endpoint: ""
@@ -330,7 +338,7 @@ ui:
 gateway:
   # Disabled by default — operators opt in once they're ready to run
   # the OIDC/CLI-auth flow. Old `ui` keeps working in parallel.
-  enabled: false
+  enabled: true
   replicaCount: 1
 
   image:
@@ -352,8 +360,9 @@ gateway:
       cpu: "500m"
 
   config:
-    # Public-facing URL of this gateway. MUST be set when the chart
-    # is enabled — gateway uses it to mint OIDC redirect URIs.
+    # Public-facing URL of this gateway. Inherits `global.publicBaseUrl`
+    # when empty (set that once for the whole install); override here
+    # only if the gateway needs a different URL than admin-ui.
     publicBaseUrl: ""
     # `upstreamBaseUrl` (data plane) and `adminUpstreamBaseUrl`
     # (admin plane) are inherited from the gateway subchart's
@@ -374,7 +383,7 @@ gateway:
 # a dash (matching the chart's k8s-DNS-safe name) — pair `--set`
 # overrides as `admin-ui.enabled=true`.
 admin-ui:
-  enabled: false
+  enabled: true
   replicaCount: 1
 
   image:
@@ -393,6 +402,8 @@ admin-ui:
       cpu: "500m"
 
   config:
+    # Inherits `global.publicBaseUrl` (the gateway's URL) when empty;
+    # override here only to point admin-ui at a different URL.
     publicBaseUrl: ""
     deploymentMode: "self_hosted"
     permissions:
@@ -404,7 +415,7 @@ admin-ui:
 # Permissions service (authorization tuples + /v1/check). Shared by
 # gateway and admin_ui.
 permissions:
-  enabled: false
+  enabled: true
   replicaCount: 1
 
   image:
@@ -426,6 +437,21 @@ permissions:
     observability:
       serviceName: "permissions"
       logLevel: "info,permissions=debug"
+
+# Source MCP service: read-only git access for the in-UI agent. The
+# repo allow-list is the gateway-owned `source_repos` table (edited in
+# admin_ui), so it needs the auth Postgres. Off by default — opt in
+# per environment.
+source:
+  enabled: false
+  replicaCount: 1
+
+  image:
+    repository: source
+
+  service:
+    type: ClusterIP
+    port: 9585
 
 # Nursery service configuration
 nursery:

@@ -4,6 +4,9 @@ data:
     bind: "0.0.0.0:{{ .Values.service.targetPort }}"
     query_endpoint: {{ .Values.config.queryEndpoint | quote }}
     meta_endpoint: {{ .Values.config.metaEndpoint | quote }}
+    {{- with .Values.config.sourceEndpoint }}
+    source_endpoint: {{ . | quote }}
+    {{- end }}
     {{- with .Values.config.featureFlags }}
     feature_flags:
       {{- toYaml . | nindent 6 }}

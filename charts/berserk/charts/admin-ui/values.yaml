@@ -52,7 +52,8 @@ resources:
 
 config:
   # Public-facing base URL of the install (gateway URL). Used by SSR
-  # HTML for absolute links. Required.
+  # HTML for absolute links. Leave empty to inherit `global.publicBaseUrl`;
+  # set here only to override the install-wide URL for this service.
   publicBaseUrl: ""
   # Deployment mode mirrors gateway. admin_ui only reads it to suppress
   # password-login affordances in SaaS mode; gateway enforces the rule.

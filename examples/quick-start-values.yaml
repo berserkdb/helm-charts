@@ -17,10 +17,12 @@
 #   -f values.yaml
 
 global:
+  # Public URL of the install — inherited by gateway + admin-ui.
+  publicBaseUrl: "https://berserk.<your-domain>.com"
   storage:
-    endpoint: "https://s3.example.com". #!<-- Set to your S3 endpoint, e.g. https://s3.amazonaws.com for AWS.
-    bucket: "berserk-data".             #!<-- Set to your S3 bucket name.
-    region: "us-east-1"                 #!<-- Set to your S3 region, e.g. us-east-1 for AWS.
+    endpoint: "https://s3.example.com" #!<-- Set to your S3 endpoint, e.g. https://s3.amazonaws.com for AWS.
+    bucket: "berserk-data" #!<-- Set to your S3 bucket name.
+    region: "us-east-1" #!<-- Set to your S3 region, e.g. us-east-1 for AWS.
   s3Credentials:
     managed: true
   postgresCredentials:

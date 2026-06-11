@@ -58,6 +58,12 @@ configs:
     content: |
       bind: "0.0.0.0:9510"
       meta_endpoint: "http://meta:9560"
+      # Fan out to each nursery's NurseryQueryService for un-merged baby
+      # segments before they merge to S3 — without this, freshly ingested
+      # data isn't queryable until a merge lands (minutes, not seconds).
+      # Paired with the nursery's query_grpc_bind below; mirrors
+      # query.config.queryViaNursery in the helm chart.
+      query_via_nursery: true
       cloud_storage_access_key: $${AWS_ACCESS_KEY_ID:}
       cloud_storage_secret_key: $${AWS_SECRET_ACCESS_KEY:}
       cache:
@@ -121,6 +127,16 @@ configs:
       working_dir: "/var/cache/nursery"
       meta_default_poll_interval_secs: 5
       stream_timeout_secs: 300
+      # Query-in-nursery lane: serve un-merged baby segments to the query
+      # coordinator's fan-out (paired with query's query_via_nursery) so fresh
+      # data is queryable before it merges to S3. qws_bin is bundled at
+      # /qws_bin in the nursery image; the member endpoint advertises the
+      # compose service name where the chart uses the pod IP. force_merge keeps
+      # the un-merged tail short. Mirrors the nursery helm chart values.
+      query_grpc_bind: "0.0.0.0:9531"
+      qws_bin: "/qws_bin"
+      query_grpc_member_endpoint: "http://nursery:9531"
+      force_merge_stale_threshold_secs: 60
       observability:
         service_name: "nursery"
         log_level: "info"
@@ -296,7 +312,7 @@ services:
 
   meta:
     <<: *common
-    image: ghcr.io/berserkdb/meta:v1.0.115
+    image: ghcr.io/berserkdb/meta:v1.0.118
     depends_on:
       postgres:
         condition: service_healthy
@@ -319,7 +335,7 @@ services:
 
   query:
     <<: *common
-    image: ghcr.io/berserkdb/query:v1.0.115
+    image: ghcr.io/berserkdb/query:v1.0.118
     depends_on:
       meta:
         condition: service_healthy
@@ -352,7 +368,7 @@ services:
   # reads at startup. Talks to meta over gRPC directly (no bearer
   # token → ClientChannel::direct, see apps/cli/src/network/meta_client.rs).
   ingest-token-init:
-    image: ghcr.io/berserkdb/cli:v1.0.115
+    image: ghcr.io/berserkdb/cli:v1.0.118
     networks:
       - berserk
     depends_on:
@@ -371,7 +387,7 @@ services:
 
   ingest:
     <<: *common
-    image: ghcr.io/berserkdb/ingest:v1.0.115
+    image: ghcr.io/berserkdb/ingest:v1.0.118
     depends_on:
       meta:
         condition: service_healthy
@@ -409,7 +425,7 @@ services:
 
   janitor:
     <<: *common
-    image: ghcr.io/berserkdb/janitor:v1.0.115
+    image: ghcr.io/berserkdb/janitor:v1.0.118
     depends_on:
       meta:
         condition: service_healthy
@@ -439,7 +455,7 @@ services:
 
   nursery:
     <<: *common
-    image: ghcr.io/berserkdb/nursery:v1.0.115
+    image: ghcr.io/berserkdb/nursery:v1.0.118
     depends_on:
       meta:
         condition: service_healthy
@@ -467,7 +483,7 @@ services:
 
   ui:
     <<: *common
-    image: ghcr.io/berserkdb/ui:v1.0.115
+    image: ghcr.io/berserkdb/ui:v1.0.118
     depends_on:
       postgres:
         condition: service_healthy
@@ -513,7 +529,7 @@ services:
 
   permissions:
     <<: *common
-    image: ghcr.io/berserkdb/permissions:v1.0.115
+    image: ghcr.io/berserkdb/permissions:v1.0.118
     depends_on:
       postgres:
         condition: service_healthy
@@ -531,7 +547,7 @@ services:
 
   admin-ui:
     <<: *common
-    image: ghcr.io/berserkdb/admin-ui:v1.0.115
+    image: ghcr.io/berserkdb/admin-ui:v1.0.118
     depends_on:
       postgres:
         condition: service_healthy
@@ -560,7 +576,7 @@ services:
 
   gateway:
     <<: *common
-    image: ghcr.io/berserkdb/gateway:v1.0.115
+    image: ghcr.io/berserkdb/gateway:v1.0.118
     depends_on:
       postgres:
         condition: service_healthy

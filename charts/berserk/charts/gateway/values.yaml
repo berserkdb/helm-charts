@@ -66,7 +66,8 @@ resources:
 
 config:
   # Public-facing base URL of the gateway (absolute OIDC redirect URIs
-  # are minted from this). Required at deploy time.
+  # are minted from this). Leave empty to inherit `global.publicBaseUrl`;
+  # set here only to override the install-wide URL for this service.
   publicBaseUrl: ""
   # Data-plane upstream — the catch-all the identity-injecting
   # proxy forwards every unmatched request to. Default matches the

@@ -19,6 +19,12 @@
 #   //apps/cli:cli_tarball           → berserk/cli-dev:dev
 
 global:
+  # Browser reaches the gateway via `kubectl port-forward` → localhost.
+  # The in-cluster `gateway:9500` hostname isn't resolvable from a host
+  # browser, so all minted redirect URIs (OIDC `redirect_uri`, the
+  # bootstrap `/setup?token=…` link) must use the loopback host the
+  # operator actually hits. Inherited by gateway + admin-ui.
+  publicBaseUrl: "http://127.0.0.1:9500"
   imageRegistry: "berserk"
   imageTag: "dev"
   # `Never` so the kubelet uses the kind-loaded images instead of
@@ -106,12 +112,6 @@ gateway:
   enabled: true
   image: { pullPolicy: Never, repository: "gateway-dev" }
   config:
-    # Browser reaches the gateway via `kubectl port-forward` →
-    # localhost. The in-cluster `gateway:9500` hostname isn't
-    # resolvable from a host browser, so all minted redirect URIs
-    # (OIDC `redirect_uri`, the bootstrap `/setup?token=…` link)
-    # must use the loopback host the operator actually hits.
-    publicBaseUrl: "http://127.0.0.1:9500"
     # Plain HTTP in local kind — disable Secure-cookie flag so
     # browser-side flows work over the bring-up's port-forward.
     cookieSecure: false
@@ -125,8 +125,6 @@ gateway:
 admin-ui:
   enabled: true
   image: { pullPolicy: Never, repository: "admin-ui-dev" }
-  config:
-    publicBaseUrl: "http://127.0.0.1:9500"
   resources:
     requests: { memory: "64Mi", cpu: "50m" }
     limits: { memory: "256Mi", cpu: "250m" }

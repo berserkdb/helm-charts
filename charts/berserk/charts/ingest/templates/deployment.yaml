@@ -30,7 +30,7 @@
           # container — gateway is not on the path.
           args:
             - "--endpoint"
-            - {{ printf "meta.%s.svc.cluster.local:9560" .Release.Namespace | quote }}
+            - "meta:9560"
             - "--database"
             - {{ .Values.global.defaultDatabase | default "default" | quote }}
             - "ingest-token"

@@ -2,8 +2,8 @@ apiVersion: v2
 name: admin-ui
 description: Berserk UI
 type: application
-version: 1.0.115
-appVersion: 1.0.115
+version: 1.0.118
+appVersion: 1.0.118
 dependencies:
   - name: berserk-common
     version: "*"

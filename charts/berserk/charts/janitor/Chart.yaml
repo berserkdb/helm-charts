@@ -2,8 +2,8 @@ apiVersion: v2
 name: janitor
 description: Berserk Janitor Service - Background maintenance and segment merging
 type: application
-version: 1.0.115
-appVersion: 1.0.115
+version: 1.0.118
+appVersion: 1.0.118
 dependencies:
   - name: berserk-common
     version: "*"

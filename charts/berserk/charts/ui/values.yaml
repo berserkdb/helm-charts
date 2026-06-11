@@ -48,6 +48,8 @@ networkPolicy:
       ports: [{port: 9510}]
     - app: meta
       ports: [{port: 9560}]
+    - app: source
+      ports: [{port: 9585}]
   additionalIngress: []
   additionalEgress: []
 
@@ -62,6 +64,10 @@ resources:
 config:
   queryEndpoint: "http://query:9510"
   metaEndpoint: "http://meta:9560"
+  # MCP Streamable HTTP endpoint of the source service; empty disables
+  # the agent's source_* tools. Set when source.enabled is on, e.g.
+  # "http://source:9585/mcp".
+  sourceEndpoint: ""
   featureFlags: {}
   observability:
     serviceName: "ui"

@@ -2,6 +2,8 @@
 # Used by .github/workflows/ci.yml
 
 global:
+  # Public URL of the install — inherited by gateway + admin-ui.
+  publicBaseUrl: "http://localhost"
   storage:
     endpoint: "http://minio:9000"
     bucket: "berserk-test"
@@ -112,8 +114,6 @@ ui:
 # — it just checks the pods come up Ready).
 gateway:
   enabled: true
-  config:
-    publicBaseUrl: "http://localhost"
   resources:
     requests:
       memory: "64Mi"
@@ -124,8 +124,6 @@ gateway:
 
 admin-ui:
   enabled: true
-  config:
-    publicBaseUrl: "http://localhost"
   resources:
     requests:
       memory: "64Mi"
@@ -143,3 +141,9 @@ permissions:
     limits:
       memory: "256Mi"
       cpu: "250m"
+
+source:
+  enabled: true
+  # Exercise the StatefulSet + PVC variant in kubeconform.
+  cache:
+    persistent: true

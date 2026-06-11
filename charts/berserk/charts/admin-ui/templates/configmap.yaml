@@ -2,7 +2,7 @@
 data:
   config.yaml: |
     bind: "0.0.0.0:{{ .Values.service.port }}"
-    public_base_url: {{ required "admin_ui.config.publicBaseUrl is required" .Values.config.publicBaseUrl | quote }}
+    public_base_url: {{ .Values.config.publicBaseUrl | default .Values.global.publicBaseUrl | required "publicBaseUrl is required — set global.publicBaseUrl (or admin-ui.config.publicBaseUrl)" | quote }}
     deployment_mode: {{ .Values.config.deploymentMode | quote }}
     permissions_base_url: {{ .Values.config.permissions.baseUrl | quote }}
     permissions_request_timeout_secs: {{ .Values.config.permissions.requestTimeoutSecs }}

@@ -51,7 +51,7 @@ spec:
           args:
             - |
               set -e
-              META_ENDPOINT="meta.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.meta.service.port }}"
+              META_ENDPOINT="meta:{{ .Values.meta.service.port }}"
               echo "Waiting for meta to be ready at ${META_ENDPOINT}..."
               until wget -q --spider "http://${META_ENDPOINT}/health/ready" 2>/dev/null; do
                 echo "Meta not ready yet, retrying in 5s..."

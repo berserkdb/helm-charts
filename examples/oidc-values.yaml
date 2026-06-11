@@ -1,0 +1,66 @@
+# An example, where have enabled OIDC and Traefik-based ingress
+global:
+  clusterName: "prod-cluster" # Used in telemetry
+  # Public URL of the install — inherited by gateway + admin-ui.
+  publicBaseUrl: "https://berserk.<your-domain>.com"
+  storage:
+    endpoint: "https://s3.example.com"
+    bucket: "berserk-data"
+    region: "us-east-1"
+    # Add this path, if you want a prefix in the bucket.
+    path: "path_prefix"
+  s3Credentials:
+    managed: true # S3 access via IRSA (serviceAccountName below)
+  postgresCredentials:
+    managed: true
+  ingestToken:
+    managed: false
+  observability:
+    # Ship the Berserk services' own telemetry (logs/traces/metrics) to the
+    # and OTLP-enabled endpoint
+    otlpEnabled: true
+  networkPolicy:
+    enabled: true
+  # This is the default table, where the telemetry ends up.
+  defaultTable: "default"
+
+# ─── Data plane ───────────────────────────────────────────────────────
+ingest:
+  # OTLP gRPC (4317). With this, you can
+  # enable ingress to the ingest service via e.g., Traefik
+  ingress:
+    enabled: true
+    className: traefik
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+      traefik.ingress.kubernetes.io/router.entrypoints: otlp
+    hosts:
+      - host: "ingest.berserk.<your-domain>.com"
+        paths:
+          # Only forward the OTLP collector methods (trace/metrics/logs Export all share
+          - path: /opentelemetry.proto.collector.
+            pathType: ImplementationSpecific
+            portName: otlp-grpc
+    tls:
+      - hosts: ["ingest.berserk.<your-domain>.com"]
+        secretName: ingest-berserk-<your-domain>-tls
+
+# ─── Auth edge ────────────────────────────────────────────────────────
+# The gateway is the service that handles User authn.
+gateway:
+  config:
+    deploymentMode: "self-hosted"
+    oidc:
+      enabled: true
+      issuer: "<IDP-provier-URL>"
+      clientId: "Your-client-id"
+      requireEmailVerified: false
+      bootstrapAdminEmails:
+        - user1@<your-domain>.com
+        - user2@<your-domain>.com
+        - user3@<your-domain>.com
+  secrets:
+    oidcClientSecret:
+      existingSecret:
+        name: gateway-oidc-secrets
+        key: client_secret
