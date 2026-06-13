@@ -146,6 +146,35 @@ config:
     # admins keep whatever was granted via `permission_tuples`.
     bootstrapAdminEmails: []
 
+  # Trusted reverse-proxy (PP) auth — trust identity headers from an
+  # upstream authenticating proxy. Leave `enabled: false` (default)
+  # unless an upstream proxy in front of the gateway asserts the user.
+  # When enabled the chart emits the `trusted_proxy_*` keys into
+  # config.yaml AND (when HMAC is on) wires
+  # `GATEWAY_TRUSTED_PROXY_HMAC_SECRET` from
+  # `secrets.trustedProxyHmacSecret.existingSecret.{name,key}`.
+  # See docs/operations/admin/ui-setup → Path D.
+  trustedProxy:
+    enabled: false
+    # Header carrying the asserted user email (e.g. X-PP-USER). Required
+    # when enabled; must not collide with X-Bzrk-* or the stripped
+    # reverse-proxy aliases (X-Forwarded-User, Remote-User, …).
+    userHeader: ""
+    # Header carrying the HMAC over the user header (e.g.
+    # X-PP-USER-INTEGRITY). Required only when HMAC is on (a secret is
+    # configured via secrets.trustedProxyHmacSecret).
+    integrityHeader: ""
+    # Acknowledge running WITHOUT HMAC — the user header is trusted on
+    # network grounds alone. Must be true when enabled and no HMAC
+    # secret is set, otherwise gateway refuses to start. Only safe when
+    # the gateway is unreachable except through the trusted proxy.
+    insecureNoHmac: false
+    # YAML list restricting auto-provisioning to these email domains.
+    # Empty (default) allows any domain.
+    allowedDomains: []
+    # YAML list of emails auto-promoted to cluster admin on first sign-in.
+    adminEmails: []
+
 # Secrets — gateway needs three: cookie signing key, its own service
 # token (X-Bzrk-Service-Token to admin_ui), and the permissions
 # service token. By default the chart manages a Secret with random
@@ -175,6 +204,19 @@ secrets:
     existingSecret:
       name: ""
       key: ""
+
+  # Trusted-proxy HMAC secret — referenced from an externally-managed
+  # Secret. When `config.trustedProxy.enabled: true` and this name/key
+  # is set, the deployment wires `GATEWAY_TRUSTED_PROXY_HMAC_SECRET`
+  # from it (HMAC verification on). Leave name/key empty to run in
+  # no-HMAC mode (requires `config.trustedProxy.insecureNoHmac: true`).
+  # `previousKey` (optional) wires `GATEWAY_TRUSTED_PROXY_HMAC_SECRET_PREVIOUS`
+  # from the same Secret for zero-downtime rotation.
+  trustedProxyHmacSecret:
+    existingSecret:
+      name: ""
+      key: ""
+      previousKey: ""
 
 # Bootstrap admin (optional). When email + password are set, gateway
 # creates the first admin user at startup instead of printing a

@@ -43,6 +43,28 @@ data:
       {{- toYaml . | nindent 6 }}
     {{- end }}
     {{- end }}
+    {{- if .Values.config.trustedProxy.enabled }}
+    # Trusted reverse-proxy auth. The HMAC secret itself does NOT come
+    # from this file; when configured it's wired as the
+    # `GATEWAY_TRUSTED_PROXY_HMAC_SECRET` env var from
+    # `secrets.trustedProxyHmacSecret`.
+    trusted_proxy_enabled: true
+    trusted_proxy_user_header: {{ required "config.trustedProxy.userHeader is required when config.trustedProxy.enabled" .Values.config.trustedProxy.userHeader | quote }}
+    {{- with .Values.config.trustedProxy.integrityHeader }}
+    trusted_proxy_integrity_header: {{ . | quote }}
+    {{- end }}
+    {{- if .Values.config.trustedProxy.insecureNoHmac }}
+    trusted_proxy_insecure_no_hmac: true
+    {{- end }}
+    {{- with .Values.config.trustedProxy.allowedDomains }}
+    trusted_proxy_allowed_domains:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.config.trustedProxy.adminEmails }}
+    trusted_proxy_admin_emails:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- end }}
     {{- include "berserk-common.observability-config" . | nindent 4 }}
   # The gRPC route table is JSON, kept as a separate file so operators
   # can `kubectl edit configmap` without re-flowing the YAML above.
