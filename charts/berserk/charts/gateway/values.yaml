@@ -104,6 +104,12 @@ config:
   # Set the `Secure` flag on session/auth cookies. Default true; flip
   # to false only for plain-HTTP localhost development.
   cookieSecure: true
+  # Whether assertion-based auth methods (OIDC, trusted-proxy) auto-create
+  # users on first sight. Default true. Set false for "directory mode":
+  # only users that already exist in the gateway authenticate; an unknown
+  # email is rejected and never created. The first admin then comes from
+  # the first-boot bootstrap. Applies to every provisioning method.
+  autoProvisionUsers: true
   # Session / TTL knobs (seconds). Defaults mirror gateway's own
   # ConfigDraft::default.
   sessionTtlSecs: 1209600 # 14 d

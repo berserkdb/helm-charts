@@ -14,6 +14,12 @@ data:
     permissions_connect_timeout_secs: {{ .Values.config.permissions.connectTimeoutSecs }}
     deployment_mode: {{ .Values.config.deploymentMode | quote }}
     cookie_secure: {{ .Values.config.cookieSecure }}
+    {{- if not .Values.config.autoProvisionUsers }}
+    # Directory mode: assertion-based methods (OIDC, trusted-proxy)
+    # authenticate only pre-existing users; unknown emails are rejected and
+    # never created. First admin comes from the first-boot bootstrap.
+    auto_provision_users: false
+    {{- end }}
     # `int` forces decimal rendering — without it Go's YAML emitter
     # rewrites large ints (e.g. 1_209_600) as scientific notation,
     # which gateway's strict YAML→i64 parse rejects.
