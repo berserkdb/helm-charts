@@ -92,6 +92,11 @@ config:
     maxBatchAgeSecs: 2
     keepAliveIntervalSecs: 120
 
+  # Concurrent in-flight requests (admission semaphore permits). Each permit
+  # can hold a decoded request, so peak buffering scales with this — raise it
+  # together with `resources` memory. See apps/ingest/src/config.rs.
+  maxInflight: 32
+
   # Authentication
   requireAuth: false                # Reject requests without Bearer token
   laxUtf8: true                     # Replace invalid UTF-8 with U+FFFD instead of rejecting
