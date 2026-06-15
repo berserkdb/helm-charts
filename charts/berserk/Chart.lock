@@ -20,14 +20,8 @@ dependencies:
 - name: gateway
   repository: ""
   version: '*'
-- name: admin-ui
-  repository: ""
-  version: '*'
 - name: permissions
   repository: ""
   version: '*'
-- name: source
-  repository: ""
-  version: '*'
-digest: sha256:275f900c8a5af23eacd36add3a04b32a67d3ebcd3add584f1597320a4eedee99
-generated: "2026-06-10T22:16:12.948465973+02:00"
+digest: sha256:0b89b988f29573544fbfaa26d8ed253bc59c94e15868e052bff8ffc4bf07f502
+generated: "2026-06-15T17:08:48.333439074+02:00"
