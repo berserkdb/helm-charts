@@ -332,6 +332,17 @@ ui:
   config:
     queryEndpoint: "http://query:9510"
     metaEndpoint: "http://meta:9560"
+    # Merged-app (formerly admin-ui) config: the ui now serves the
+    # workspace-admin surfaces too, so it needs the permissions client,
+    # its public base URL, and deployment mode.
+    # Inherits `global.publicBaseUrl` (the gateway URL) when empty.
+    publicBaseUrl: ""
+    deploymentMode: "self_hosted"
+    permissions:
+      baseUrl: "http://permissions:9580"
+    observability:
+      serviceName: "ui"
+      logLevel: "info,ui=debug"
 
 # Gateway service configuration (authenticating reverse proxy /
 # public edge for the new auth + admin_ui stack).
@@ -377,41 +388,6 @@ gateway:
       serviceName: "gateway"
       logLevel: "info,gateway=debug"
 
-# admin-ui service configuration (new internal-only Leptos SSR app
-# proxied by the gateway). Runs alongside the legacy `ui` chart for
-# now; flip both to suit which surface is active. The YAML key uses
-# a dash (matching the chart's k8s-DNS-safe name) — pair `--set`
-# overrides as `admin-ui.enabled=true`.
-admin-ui:
-  enabled: true
-  replicaCount: 1
-
-  image:
-    repository: admin-ui
-
-  service:
-    type: ClusterIP
-    port: 9570
-
-  resources:
-    requests:
-      memory: "128Mi"
-      cpu: "100m"
-    limits:
-      memory: "512Mi"
-      cpu: "500m"
-
-  config:
-    # Inherits `global.publicBaseUrl` (the gateway's URL) when empty;
-    # override here only to point admin-ui at a different URL.
-    publicBaseUrl: ""
-    deploymentMode: "self_hosted"
-    permissions:
-      baseUrl: "http://permissions:9580"
-    observability:
-      serviceName: "admin-ui"
-      logLevel: "info,admin_ui=debug"
-
 # Permissions service (authorization tuples + /v1/check). Shared by
 # gateway and admin_ui.
 permissions:
@@ -437,21 +413,6 @@ permissions:
     observability:
       serviceName: "permissions"
       logLevel: "info,permissions=debug"
-
-# Source MCP service: read-only git access for the in-UI agent. The
-# repo allow-list is the gateway-owned `source_repos` table (edited in
-# admin_ui), so it needs the auth Postgres. Off by default — opt in
-# per environment.
-source:
-  enabled: false
-  replicaCount: 1
-
-  image:
-    repository: source
-
-  service:
-    type: ClusterIP
-    port: 9585
 
 # Nursery service configuration
 nursery:

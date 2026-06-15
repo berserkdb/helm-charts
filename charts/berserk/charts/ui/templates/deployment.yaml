@@ -54,7 +54,13 @@
             # opt-out signal) flows through; `with` would skip on empty.
             - name: UI_DATABASE_SCHEMA
               value: {{ .Values.global.uiDatabaseSchema | quote }}
-            # Gateway-side trusted-identity service token. apps/ui
+            # The merged app's single pool sets search_path = {app schema},
+            # auth, public — the workspace-admin tables live in `auth`,
+            # reached by fallthrough. UI_APP_DATABASE_SCHEMA names the app
+            # schema (mirrors the dev scenario's run-ui.sh).
+            - name: UI_APP_DATABASE_SCHEMA
+              value: {{ .Values.global.uiDatabaseSchema | quote }}
+            # Gateway-side trusted-identity service token. ui
             # constant-time compares this against the
             # `X-Bzrk-Service-Token` header on incoming requests; only
             # gateway should have the value (defence in depth on top
@@ -64,6 +70,23 @@
                 secretKeyRef:
                   name: {{ .Values.secrets.secretName | quote }}
                   key: {{ .Values.secrets.gatewayServiceTokenKey | quote }}
+            # Authorization client — the merged app calls apps/permissions
+            # /v1/check with this service token (formerly admin-ui).
+            - name: UI_PERMISSIONS_SERVICE_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.secretName | quote }}
+                  key: {{ .Values.secrets.permissionsServiceTokenKey | quote }}
+            {{- if .Values.config.oidc.enabled }}
+            # OIDC client_secret mirror — same Secret+key gateway references,
+            # so the value stays single-source. Required because the merged
+            # app's config validator enforces the >=32-char floor at startup.
+            - name: UI_OIDC_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "ui secrets.oidcClientSecret.existingSecret.name is required when config.oidc.enabled" .Values.secrets.oidcClientSecret.existingSecret.name }}
+                  key: {{ required "ui secrets.oidcClientSecret.existingSecret.key is required when config.oidc.enabled" .Values.secrets.oidcClientSecret.existingSecret.key }}
+            {{- end }}
             - name: LEPTOS_OUTPUT_NAME
               value: "ui"
             - name: LEPTOS_SITE_ROOT
@@ -89,6 +112,14 @@
             - name: GIT_SSH_COMMAND
               value: "ssh -i /etc/git-ssh/id_ed25519 -o UserKnownHostsFile=/etc/git-ssh/known_hosts -o IdentitiesOnly=yes"
             {{- end }}
+            # AI agent's in-process source clone cache. Lives on the library
+            # volume (a `.source-clones` subdir of UI_LIBRARY_DIR by default).
+            - name: UI_SOURCE_DISK_CAP_BYTES
+              value: {{ .Values.source.diskCapBytes | quote }}
+            - name: UI_SOURCE_IDLE_TTL_SECS
+              value: {{ .Values.source.idleTtlSecs | quote }}
+            - name: UI_SOURCE_CLONE_DEPTH
+              value: {{ .Values.source.cloneDepth | quote }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           livenessProbe:

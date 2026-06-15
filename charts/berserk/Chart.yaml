@@ -34,14 +34,6 @@ dependencies:
     version: "*"
     condition: gateway.enabled
 
-  - name: admin-ui
-    version: "*"
-    condition: admin-ui.enabled
-
   - name: permissions
     version: "*"
     condition: permissions.enabled
-
-  - name: source
-    version: "*"
-    condition: source.enabled

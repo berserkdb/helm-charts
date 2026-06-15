@@ -141,9 +141,3 @@ permissions:
     limits:
       memory: "256Mi"
       cpu: "250m"
-
-source:
-  enabled: true
-  # Exercise the StatefulSet + PVC variant in kubeconform.
-  cache:
-    persistent: true

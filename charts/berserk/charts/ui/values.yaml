@@ -48,8 +48,6 @@ networkPolicy:
       ports: [{port: 9510}]
     - app: meta
       ports: [{port: 9560}]
-    - app: source
-      ports: [{port: 9585}]
   additionalIngress: []
   additionalEgress: []
 
@@ -64,10 +62,22 @@ resources:
 config:
   queryEndpoint: "http://query:9510"
   metaEndpoint: "http://meta:9560"
-  # MCP Streamable HTTP endpoint of the source service; empty disables
-  # the agent's source_* tools. Set when source.enabled is on, e.g.
-  # "http://source:9585/mcp".
-  sourceEndpoint: ""
+  # Merged-app (formerly admin-ui) config — the ui now serves the
+  # workspace-admin surfaces too. Empty publicBaseUrl inherits
+  # global.publicBaseUrl (the gateway URL).
+  publicBaseUrl: ""
+  deploymentMode: "self_hosted"
+  permissions:
+    baseUrl: "http://permissions:9580"
+  # In-cluster gateway Service URL for the UI's internal calls (the
+  # /internal/users Members API). Keeps the call inside the cluster rather
+  # than hairpinning through the public ingress. Empty ⇒ the app falls back
+  # to publicBaseUrl.
+  gatewayInternalBaseUrl: "http://gateway:9500"
+  # OIDC mirror of gateway.config.oidc; disabled by default (password
+  # auth). Enable + fill in an overlay (see values-valhalla.yaml).
+  oidc:
+    enabled: false
   featureFlags: {}
   observability:
     serviceName: "ui"
@@ -101,6 +111,17 @@ library:
   storageSize: "1Gi"
   storageClass: ""
 
+# The AI agent's in-process source tools (read-only git access). The repo
+# allow-list is the `source_repos` table apps/ui owns and admin_ui edits;
+# clones live in a `.source-clones` subdirectory of the library volume above
+# (no separate volume) and are evicted by a sweeper. Disposable: reads
+# re-clone lazily.
+source:
+  # Sweeper eviction budget in bytes (UI_SOURCE_DISK_CAP_BYTES).
+  diskCapBytes: "10737418240" # 10 GiB
+  idleTtlSecs: 3600
+  cloneDepth: 50
+
 # Service tokens. Gateway sits in front of `ui` post Stage-4 and
 # injects `X-Bzrk-*` identity headers; `ui` verifies the proxy hop
 # via the pre-shared service token. Default-points at the same
@@ -111,3 +132,6 @@ library:
 secrets:
   secretName: "gateway-secrets"
   gatewayServiceTokenKey: "service_token"
+  # Token the merged app presents to apps/permissions /v1/check
+  # (same shared secret the gateway uses).
+  permissionsServiceTokenKey: "permissions_service_token"
