@@ -313,7 +313,11 @@ ui:
   service:
     type: ClusterIP
     port: 80
-    targetPort: 3000
+    # Merged ui (formerly admin-ui) binds 9570 and serves /health there. This
+    # umbrella value overrides the subchart default, so it must be 9570 too —
+    # 3000 was the old standalone data-plane default and made the startup
+    # probe refuse (CrashLoop). Mirrors the subchart fix in #3476.
+    targetPort: 9570
 
   # Disabled by default. Enable to expose the UI via a Kubernetes
   # Ingress controller. Pair with cert-manager annotations for TLS.
@@ -372,14 +376,12 @@ gateway:
 
   config:
     # Public-facing URL of this gateway. Inherits `global.publicBaseUrl`
-    # when empty (set that once for the whole install); override here
-    # only if the gateway needs a different URL than admin-ui.
+    # when empty (set that once for the whole install).
     publicBaseUrl: ""
-    # `upstreamBaseUrl` (data plane) and `adminUpstreamBaseUrl`
-    # (admin plane) are inherited from the gateway subchart's
-    # defaults (`http://ui` and `http://admin-ui:9570`). The
-    # umbrella chart's Service layout makes those always work; no
-    # override needed in normal installs.
+    # `upstreamBaseUrl` (the single merged-ui upstream, data-plane + admin)
+    # is inherited from the gateway subchart default (`http://ui`). The
+    # umbrella chart's Service layout makes it always work; no override
+    # needed in normal installs.
     permissions:
       baseUrl: "http://permissions:9580"
     deploymentMode: "self_hosted"
