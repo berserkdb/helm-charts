@@ -115,9 +115,8 @@ gateway:
     # Plain HTTP in local kind — disable Secure-cookie flag so
     # browser-side flows work over the bring-up's port-forward.
     cookieSecure: false
-    # `upstreamBaseUrl` + `adminUpstreamBaseUrl` are inherited from
-    # the gateway subchart defaults (`http://ui` + `http://admin-ui:9570`).
-    # The umbrella chart's Service layout makes these always work.
+    # `upstreamBaseUrl` is inherited from the gateway subchart default
+    # (`http://ui`). The umbrella chart's Service layout makes it always work.
   resources:
     requests: { memory: "64Mi", cpu: "50m" }
     limits: { memory: "256Mi", cpu: "250m" }

@@ -68,11 +68,10 @@ config:
   # are minted from this). Leave empty to inherit `global.publicBaseUrl`;
   # set here only to override the install-wide URL for this service.
   publicBaseUrl: ""
-  # Data-plane upstream — the catch-all the identity-injecting
-  # proxy forwards every unmatched request to. Default matches the
-  # `ui` subchart's in-namespace Service: the unified-UI install
-  # always has gateway in front of both `ui` (data plane) and
-  # `admin-ui` (admin plane). Operators don't normally touch this
+  # Upstream — the catch-all the identity-injecting proxy forwards
+  # every request to. One merged `ui` Service serves the data plane,
+  # the workspace-admin pages (/admin/*), and /login (see
+  # `apps/gateway/src/proxy.rs`). Operators don't normally touch this
   # — it follows directly from the umbrella chart's layout.
   upstreamBaseUrl: "http://ui"
   # gRPC routing table — JSON array of {package_prefix, upstream}.
@@ -85,15 +84,6 @@ config:
       {"package_prefix": "query", "upstream": "http://query:9510"},
       {"package_prefix": "opentelemetry", "upstream": "http://ingest:4317"}
     ]
-  # Admin-plane upstream — gateway internally forwards the
-  # surfaces it owns (/admin/*, /login, the admin-ui `pkg/*`
-  # assets) here. The exact path list lives in
-  # `apps/gateway/src/proxy.rs`; this knob only controls *where*
-  # the admin plane runs. Default matches the `admin-ui` subchart's
-  # in-namespace Service so the umbrella chart just works out of
-  # the box. Leave empty to disable the split (every request goes
-  # to `upstreamBaseUrl`).
-  adminUpstreamBaseUrl: "http://admin-ui:9570"
   permissions:
     baseUrl: "http://permissions:9580"
     requestTimeoutSecs: 10
