@@ -22,7 +22,8 @@
 # Requires Docker Compose v2.23.1+ (for inline configs).
 #
 # Image tags below are pinned to the upcoming chart release that
-# carries the unified gateway + ui + admin-ui + permissions topology.
+# carries the unified gateway + ui + permissions topology (the ui
+# image serves both the data-plane and workspace-admin surfaces).
 # If your local Docker daemon can't reach those tags yet, build the
 # images from source via `bazel run //apps/<svc>:<svc>_tarball` for
 # each service — they tag as `berserk/<svc>-dev:dev`, and an
@@ -143,25 +144,21 @@ configs:
         otlp_enabled: true
         otlp_endpoint: "ingest:4317"
 
+  # The ui binary is the merged data-plane + workspace-admin app
+  # (formerly a separate admin-ui). It needs the admin-plane wiring
+  # — public_base_url, permissions_base_url, deployment_mode — or its
+  # admin half fails config validation at startup.
   ui-config:
     content: |
-      bind: "0.0.0.0:9540"
+      bind: "0.0.0.0:9570"
       query_endpoint: "http://query:9510"
       meta_endpoint: "http://meta:9560"
-      observability:
-        service_name: "ui"
-        log_level: "info"
-        otlp_enabled: true
-        otlp_endpoint: "ingest:4317"
-
-  admin-ui-config:
-    content: |
-      bind: "0.0.0.0:9570"
       public_base_url: "http://localhost:9500"
+      gateway_internal_base_url: "http://gateway:9500"
       permissions_base_url: "http://permissions:9580"
       deployment_mode: self_hosted
       observability:
-        service_name: "admin-ui"
+        service_name: "ui"
         log_level: "info"
         otlp_enabled: true
         otlp_endpoint: "ingest:4317"
@@ -171,8 +168,7 @@ configs:
       bind: "0.0.0.0:9500"
       public_base_url: "http://localhost:9500"
       cookie_secure: false
-      upstream_base_url: "http://ui:9540"
-      admin_upstream_base_url: "http://admin-ui:9570"
+      upstream_base_url: "http://ui:9570"
       permissions_base_url: "http://permissions:9580"
       deployment_mode: self_hosted
       grpc_routes: '[{"package_prefix":"meta","upstream":"http://meta:9560"},{"package_prefix":"query","upstream":"http://query:9510"},{"package_prefix":"opentelemetry","upstream":"http://ingest:4317"}]'
@@ -190,7 +186,7 @@ configs:
         otlp_enabled: true
         otlp_endpoint: "ingest:4317"
 
-  # No bootstrap SQL needed: as of v1.0.112, gateway / admin-ui /
+  # No bootstrap SQL needed: as of v1.0.112, gateway / ui /
   # permissions share the meta DB and isolate themselves via the
   # `auth` schema (gateway creates the schema on first boot and
   # pins every connection's `search_path` to it). sqlx puts
@@ -312,7 +308,7 @@ services:
 
   meta:
     <<: *common
-    image: ghcr.io/berserkdb/meta:v1.0.118
+    image: ghcr.io/berserkdb/meta:v1.0.122
     depends_on:
       postgres:
         condition: service_healthy
@@ -335,7 +331,7 @@ services:
 
   query:
     <<: *common
-    image: ghcr.io/berserkdb/query:v1.0.118
+    image: ghcr.io/berserkdb/query:v1.0.122
     depends_on:
       meta:
         condition: service_healthy
@@ -368,7 +364,7 @@ services:
   # reads at startup. Talks to meta over gRPC directly (no bearer
   # token → ClientChannel::direct, see apps/cli/src/network/meta_client.rs).
   ingest-token-init:
-    image: ghcr.io/berserkdb/cli:v1.0.118
+    image: ghcr.io/berserkdb/cli:v1.0.122
     networks:
       - berserk
     depends_on:
@@ -387,7 +383,7 @@ services:
 
   ingest:
     <<: *common
-    image: ghcr.io/berserkdb/ingest:v1.0.118
+    image: ghcr.io/berserkdb/ingest:v1.0.122
     depends_on:
       meta:
         condition: service_healthy
@@ -425,7 +421,7 @@ services:
 
   janitor:
     <<: *common
-    image: ghcr.io/berserkdb/janitor:v1.0.118
+    image: ghcr.io/berserkdb/janitor:v1.0.122
     depends_on:
       meta:
         condition: service_healthy
@@ -455,7 +451,7 @@ services:
 
   nursery:
     <<: *common
-    image: ghcr.io/berserkdb/nursery:v1.0.118
+    image: ghcr.io/berserkdb/nursery:v1.0.122
     depends_on:
       meta:
         condition: service_healthy
@@ -483,7 +479,7 @@ services:
 
   ui:
     <<: *common
-    image: ghcr.io/berserkdb/ui:v1.0.118
+    image: ghcr.io/berserkdb/ui:v1.0.122
     depends_on:
       postgres:
         condition: service_healthy
@@ -491,12 +487,13 @@ services:
         condition: service_healthy
       meta:
         condition: service_healthy
+      permissions:
+        condition: service_healthy
     environment:
       <<: *common-env
       # Per-user preferences live in the shared workspace DB, isolated
-      # in the `ui` schema (apps/ui's default). Mirrors admin-ui's
-      # UI_DATABASE_URL; without it the ui binary fails config
-      # validation ("missing required field: database_url").
+      # in the `ui` schema (apps/ui's default). Without it the ui binary
+      # fails config validation ("missing required field: database_url").
       UI_DATABASE_URL: "postgres://berserk:berserk@postgres:5432/berserk"
       # Constant-time-compared by the trusted-identity extractor in
       # `apps/ui` against the `X-Bzrk-Service-Token` header gateway
@@ -505,21 +502,24 @@ services:
       # short shared secret so the three services agree out of the
       # box.
       UI_GATEWAY_SERVICE_TOKEN: "local-dev-gateway-service-token"
+      # The merged ui serves the workspace-admin surfaces, which call
+      # apps/permissions /v1/check with this pre-shared token.
+      UI_PERMISSIONS_SERVICE_TOKEN: "local-dev-permissions-service-token"
       LEPTOS_OUTPUT_NAME: ui
       LEPTOS_SITE_ROOT: /
       LEPTOS_SITE_PKG_DIR: pkg
-      LEPTOS_SITE_ADDR: "0.0.0.0:9540"
+      LEPTOS_SITE_ADDR: "0.0.0.0:9570"
       ENVIRONMENT: local
     command: ["-c", "/config/config.yaml"]
     # ui is no longer the public entry point — gateway (port 9500)
     # fronts it. Leave the internal port unmapped; debugging is via
-    # `docker compose exec ui` or `docker compose port ui 9540`.
+    # `docker compose exec ui` or `docker compose port ui 9570`.
     configs:
       - source: ui-config
         target: /config/config.yaml
         mode: 0444
     healthcheck:
-      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/9540'"]
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/9570'"]
       interval: 5s
       timeout: 3s
       start_period: 10s
@@ -529,7 +529,7 @@ services:
 
   permissions:
     <<: *common
-    image: ghcr.io/berserkdb/permissions:v1.0.118
+    image: ghcr.io/berserkdb/permissions:v1.0.122
     depends_on:
       postgres:
         condition: service_healthy
@@ -545,44 +545,13 @@ services:
       start_period: 10s
       retries: 10
 
-  admin-ui:
-    <<: *common
-    image: ghcr.io/berserkdb/admin-ui:v1.0.118
-    depends_on:
-      postgres:
-        condition: service_healthy
-      permissions:
-        condition: service_healthy
-    environment:
-      <<: *common-env
-      UI_DATABASE_URL: "postgres://berserk:berserk@postgres:5432/berserk"
-      UI_PERMISSIONS_SERVICE_TOKEN: "local-dev-permissions-service-token"
-      UI_GATEWAY_SERVICE_TOKEN: "local-dev-gateway-service-token"
-      LEPTOS_OUTPUT_NAME: admin_ui
-      LEPTOS_SITE_ROOT: /
-      LEPTOS_SITE_PKG_DIR: pkg
-      LEPTOS_SITE_ADDR: "0.0.0.0:9570"
-    command: ["-c", "/config/config.yaml"]
-    configs:
-      - source: admin-ui-config
-        target: /config/config.yaml
-        mode: 0444
-    healthcheck:
-      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/9570'"]
-      interval: 5s
-      timeout: 3s
-      start_period: 10s
-      retries: 10
-
   gateway:
     <<: *common
-    image: ghcr.io/berserkdb/gateway:v1.0.118
+    image: ghcr.io/berserkdb/gateway:v1.0.122
     depends_on:
       postgres:
         condition: service_healthy
       permissions:
-        condition: service_healthy
-      admin-ui:
         condition: service_healthy
       ui:
         condition: service_healthy
