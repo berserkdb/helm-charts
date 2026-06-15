@@ -10,7 +10,11 @@ image:
 service:
   type: ClusterIP
   port: 80
-  targetPort: 3000
+  # The merged ui binary (formerly admin-ui) binds 9570. This feeds the
+  # container port, the startup/readiness probe, the configmap `bind`, and
+  # LEPTOS_SITE_ADDR — all must agree with the binary or the probe refuses.
+  # (3000 was the old standalone data-plane ui default; do not reintroduce it.)
+  targetPort: 9570
   # externalIPs: optional list of node-bound VIPs (see _service.tpl docs).
   # Almost never used for the UI; prefer ingress below or LoadBalancer.
   externalIPs: []
@@ -33,7 +37,7 @@ ingress:
   #   secretName: ui-tls
 
 # NetworkPolicy: ui sits behind gateway after Stage-4. Only the
-# gateway pod should reach it on port 3000; external ingress flows
+# gateway pod should reach it on port 9570; external ingress flows
 # through the gateway's public surface, not directly into ui.
 # Egress goes to query/meta as before.
 networkPolicy:
@@ -42,7 +46,7 @@ networkPolicy:
 
   ingressFrom:
     - app: gateway
-      ports: [{port: 3000}]
+      ports: [{port: 9570}]
   egressTo:
     - app: query
       ports: [{port: 9510}]
