@@ -2,6 +2,49 @@ apiVersion: v1
 entries:
   berserk:
   - apiVersion: v2
+    appVersion: 1.0.127
+    created: "2026-06-16T10:25:40.769891094Z"
+    dependencies:
+    - condition: meta.enabled
+      name: meta
+      repository: ""
+      version: '*'
+    - condition: query.enabled
+      name: query
+      repository: ""
+      version: '*'
+    - condition: ingest.enabled
+      name: ingest
+      repository: ""
+      version: '*'
+    - condition: janitor.enabled
+      name: janitor
+      repository: ""
+      version: '*'
+    - condition: ui.enabled
+      name: ui
+      repository: ""
+      version: '*'
+    - condition: nursery.enabled
+      name: nursery
+      repository: ""
+      version: '*'
+    - condition: gateway.enabled
+      name: gateway
+      repository: ""
+      version: '*'
+    - condition: permissions.enabled
+      name: permissions
+      repository: ""
+      version: '*'
+    description: Berserk - High-performance observability data platform
+    digest: 456a428c7472f2f317865dfb00c4f81797917d64156a8f3bbd5214730d30117f
+    name: berserk
+    type: application
+    urls:
+    - https://github.com/berserkdb/helm-charts/releases/download/berserk-1.0.127/berserk-1.0.127.tgz
+    version: 1.0.127
+  - apiVersion: v2
     appVersion: 1.0.124
     created: "2026-06-15T21:35:51.554813323Z"
     dependencies:
@@ -1652,4 +1695,4 @@ entries:
     urls:
     - https://github.com/berserkdb/helm-charts/releases/download/berserk-0.1.0/berserk-0.1.0.tgz
     version: 0.1.0
-generated: "2026-06-15T21:35:51.555087517Z"
+generated: "2026-06-16T10:25:40.770155257Z"
