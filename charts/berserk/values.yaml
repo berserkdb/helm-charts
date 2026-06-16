@@ -349,7 +349,7 @@ ui:
       logLevel: "info,ui=debug"
 
 # Gateway service configuration (authenticating reverse proxy /
-# public edge for the new auth + admin_ui stack).
+# public edge for the auth + ui stack).
 gateway:
   # Disabled by default — operators opt in once they're ready to run
   # the OIDC/CLI-auth flow. Old `ui` keeps working in parallel.
@@ -391,7 +391,7 @@ gateway:
       logLevel: "info,gateway=debug"
 
 # Permissions service (authorization tuples + /v1/check). Shared by
-# gateway and admin_ui.
+# gateway and ui.
 permissions:
   enabled: true
   replicaCount: 1

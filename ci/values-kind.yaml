@@ -14,7 +14,6 @@
 #   //apps/nursery:nursery_tarball   → berserk/nursery-dev:dev
 #   //apps/ui:ui_tarball             → berserk/ui-dev:dev
 #   //apps/gateway:gateway_tarball   → berserk/gateway-dev:dev
-#   //apps/admin_ui:admin_ui_tarball   → berserk/admin-ui-dev:dev
 #   //apps/permissions:permissions_tarball → berserk/permissions-dev:dev
 #   //apps/cli:cli_tarball           → berserk/cli-dev:dev
 
@@ -117,13 +116,6 @@ gateway:
     cookieSecure: false
     # `upstreamBaseUrl` is inherited from the gateway subchart default
     # (`http://ui`). The umbrella chart's Service layout makes it always work.
-  resources:
-    requests: { memory: "64Mi", cpu: "50m" }
-    limits: { memory: "256Mi", cpu: "250m" }
-
-admin-ui:
-  enabled: true
-  image: { pullPolicy: Never, repository: "admin-ui-dev" }
   resources:
     requests: { memory: "64Mi", cpu: "50m" }
     limits: { memory: "256Mi", cpu: "250m" }

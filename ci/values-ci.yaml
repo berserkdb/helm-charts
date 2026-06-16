@@ -122,16 +122,6 @@ gateway:
       memory: "256Mi"
       cpu: "250m"
 
-admin-ui:
-  enabled: true
-  resources:
-    requests:
-      memory: "64Mi"
-      cpu: "50m"
-    limits:
-      memory: "256Mi"
-      cpu: "250m"
-
 permissions:
   enabled: true
   resources:

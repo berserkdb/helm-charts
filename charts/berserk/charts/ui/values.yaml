@@ -116,7 +116,7 @@ library:
   storageClass: ""
 
 # The AI agent's in-process source tools (read-only git access). The repo
-# allow-list is the `source_repos` table apps/ui owns and admin_ui edits;
+# allow-list is the `source_repos` table apps/ui owns and edits via its admin surface;
 # clones live in a `.source-clones` subdirectory of the library volume above
 # (no separate volume) and are evicted by a sweeper. Disposable: reads
 # re-clone lazily.

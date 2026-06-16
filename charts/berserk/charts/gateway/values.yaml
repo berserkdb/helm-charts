@@ -14,7 +14,7 @@ service:
   externalIPs: []
 
 # Ingress (optional). The gateway is the public edge — once exposed it
-# terminates user-facing HTTPS and proxies to admin_ui (HTTP) plus gRPC
+# terminates user-facing HTTPS and proxies to ui (HTTP) plus gRPC
 # routes to meta/query/ingest.
 ingress:
   enabled: false
@@ -30,7 +30,7 @@ ingress:
   #   secretName: gateway-tls
 
 # NetworkPolicy: ingress from anywhere (it IS the edge); egress to
-# permissions, admin_ui, meta, query, ingest, plus external for OIDC
+# permissions, ui, meta, query, ingest, plus external for OIDC
 # discovery + the shared Postgres.
 networkPolicy:
   allowExternal: true
@@ -171,7 +171,7 @@ config:
     adminEmails: []
 
 # Secrets — gateway needs three: cookie signing key, its own service
-# token (X-Bzrk-Service-Token to admin_ui), and the permissions
+# token (X-Bzrk-Service-Token to ui), and the permissions
 # service token. By default the chart manages a Secret with random
 # values; set `managed: false` to reference an existing Secret.
 #

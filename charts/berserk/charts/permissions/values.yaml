@@ -12,7 +12,7 @@ service:
   port: 9580
   externalIPs: []
 
-# NetworkPolicy: only gateway + admin_ui should reach permissions in
+# NetworkPolicy: only gateway + ui should reach permissions in
 # normal operation. allowExternal is off — there's no reason to
 # expose this externally.
 networkPolicy:
@@ -22,7 +22,7 @@ networkPolicy:
   ingressFrom:
     - app: gateway
       ports: [{port: 9580}]
-    - app: admin-ui
+    - app: ui
       ports: [{port: 9580}]
   egressTo: []
   additionalIngress: []
@@ -42,10 +42,10 @@ config:
     logLevel: "info,permissions=debug"
     # otlpEnabled / otlpEndpoint fall through to global.observability.*
 
-# Service token shared with gateway + admin_ui. By default the
+# Service token shared with gateway + ui. By default the
 # permissions chart does NOT manage its own secret — the gateway
 # subchart already produces and rotates `permissions_service_token`,
-# and admin_ui references the same value. Set `secretName` to the
+# and ui references the same value. Set `secretName` to the
 # gateway-provided secret so the three services agree.
 secrets:
   secretName: "gateway-secrets"
