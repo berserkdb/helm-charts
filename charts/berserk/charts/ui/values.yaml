@@ -52,6 +52,8 @@ networkPolicy:
       ports: [{port: 9510}]
     - app: meta
       ports: [{port: 9560}]
+    - app: permissions
+      ports: [{port: 9580}]
   additionalIngress: []
   additionalEgress: []
 
