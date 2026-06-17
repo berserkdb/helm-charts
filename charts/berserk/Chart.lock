@@ -1,27 +1,27 @@
 dependencies:
 - name: meta
   repository: ""
-  version: '*'
+  version: '>=0.0.0-0'
 - name: query
   repository: ""
-  version: '*'
+  version: '>=0.0.0-0'
 - name: ingest
   repository: ""
-  version: '*'
+  version: '>=0.0.0-0'
 - name: janitor
   repository: ""
-  version: '*'
+  version: '>=0.0.0-0'
 - name: ui
   repository: ""
-  version: '*'
+  version: '>=0.0.0-0'
 - name: nursery
   repository: ""
-  version: '*'
+  version: '>=0.0.0-0'
 - name: gateway
   repository: ""
-  version: '*'
+  version: '>=0.0.0-0'
 - name: permissions
   repository: ""
-  version: '*'
-digest: sha256:0b89b988f29573544fbfaa26d8ed253bc59c94e15868e052bff8ffc4bf07f502
-generated: "2026-06-15T17:08:48.333439074+02:00"
+  version: '>=0.0.0-0'
+digest: sha256:f580da095064b804e0ce411bf6c31b5a4e15f883081f9359ad932e43f0b0f390
+generated: "2026-06-17T12:44:38.291438367+02:00"
