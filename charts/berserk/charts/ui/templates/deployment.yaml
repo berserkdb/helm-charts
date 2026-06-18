@@ -1,30 +1,5 @@
 {{- include "berserk-common.deployment.header" . }}
 {{- include "berserk-common.serviceAccountName" . }}
-      {{- if .Values.library.gitRepo }}
-      initContainers:
-        # Stage the SSH key from the k8s Secret onto a tmpfs with mode 0400
-        # owned by UID 1000. The pod runs as non-root with fsGroup=1000, which
-        # would leave the mounted Secret as root:1000 mode 0440 — and SSH's
-        # strict check rejects any identity file with group-read bits set.
-        - name: git-ssh-perms
-          image: {{ include "berserk-common.image" . }}
-          imagePullPolicy: {{ .Values.image.pullPolicy | default .Values.global.imagePullPolicy | default "Always" }}
-          securityContext:
-            allowPrivilegeEscalation: false
-          command:
-            - /bin/sh
-            - -c
-            - |
-              set -eu
-              install -m 0400 /etc/git-ssh-src/id_ed25519  /etc/git-ssh/id_ed25519
-              install -m 0444 /etc/git-ssh-src/known_hosts /etc/git-ssh/known_hosts
-          volumeMounts:
-            - name: git-ssh-src
-              mountPath: /etc/git-ssh-src
-              readOnly: true
-            - name: git-ssh
-              mountPath: /etc/git-ssh
-      {{- end }}
       containers:
         - name: ui
           image: {{ include "berserk-common.image" . }}
@@ -102,16 +77,8 @@
             {{- include "berserk-common.env.cluster-name" . | nindent 12 }}
             - name: UI_LIBRARY_DIR
               value: "/library"
-            {{- if .Values.library.gitRepo }}
-            - name: UI_GIT_REPO
-              value: {{ .Values.library.gitRepo | quote }}
-            - name: UI_GIT_BRANCH
-              value: {{ .Values.library.gitBranch | default "main" | quote }}
-            - name: UI_GIT_SYNC_INTERVAL_SECS
-              value: {{ .Values.library.syncIntervalSecs | default 60 | quote }}
-            - name: GIT_SSH_COMMAND
-              value: "ssh -i /etc/git-ssh/id_ed25519 -o UserKnownHostsFile=/etc/git-ssh/known_hosts -o IdentitiesOnly=yes"
-            {{- end }}
+            # The library git remote is configured at runtime in the admin UI
+            # (stored in ui_config), not via env. HTTPS-only.
             # AI agent's in-process source clone cache. Lives on the library
             # volume (a `.source-clones` subdir of UI_LIBRARY_DIR by default).
             - name: UI_SOURCE_DISK_CAP_BYTES
@@ -144,11 +111,6 @@
             {{- include "berserk-common.volumeMount.config" . | nindent 12 }}
             - name: library
               mountPath: /library
-            {{- if .Values.library.gitRepo }}
-            - name: git-ssh
-              mountPath: /etc/git-ssh
-              readOnly: true
-            {{- end }}
       volumes:
         {{- include "berserk-common.volume.config" . | nindent 8 }}
         {{- if eq (.Values.library.storage | default "emptyDir") "pvc" }}
@@ -158,17 +120,4 @@
         {{- else }}
         - name: library
           emptyDir: {}
-        {{- end }}
-        {{- if .Values.library.gitRepo }}
-        - name: git-ssh-src
-          secret:
-            secretName: {{ required "library.ssh.secretName is required when library.gitRepo is set" .Values.library.ssh.secretName | quote }}
-            defaultMode: 0400
-        # tmpfs staging area written by the init container so the key ends up
-        # UID 1000, mode 0400 — the only shape OpenSSH's strict check accepts
-        # for a non-root process.
-        - name: git-ssh
-          emptyDir:
-            medium: Memory
-            sizeLimit: 1Mi
         {{- end }}

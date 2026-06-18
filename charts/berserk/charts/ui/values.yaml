@@ -94,26 +94,14 @@ config:
     # otlpEndpoint: ""
 
 library:
-  # Leave gitRepo empty to disable git sync (file-only mode).
-  gitRepo: ""
-  gitBranch: "main"
-  syncIntervalSecs: 60
-
-  # SSH credentials for the git remote.
-  # Both modes reference the same `secretName`; it must contain keys:
-  #   id_ed25519 (private key), known_hosts (ssh-keyscan output).
-  # managed: true  -> chart creates the Secret. Supply privateKey + knownHosts
-  #                   via --set-file on first install; the template uses
-  #                   lookup() to preserve the existing data on subsequent
-  #                   upgrades, so you do not have to pass them every time.
-  # managed: false -> reference an existing Secret (create it out-of-band).
-  ssh:
-    managed: false
-    secretName: "ui-library-git-ssh"
-    privateKey: ""
-    knownHosts: ""
-
-  # Storage: "emptyDir" (ephemeral, fine with git sync) or "pvc" (persistent).
+  # The git remote for the saved-query library is configured at runtime in the
+  # admin UI ("Library Repository" settings, stored in the ui_config table) —
+  # HTTPS-only, with a write-only token. There is no chart/env git config.
+  # NOTE: library git sync requires replicaCount: 1 (single writer).
+  #
+  # Storage backs the library_dir volume (the working clone + the AI
+  # .source-clones cache). "emptyDir" (ephemeral; re-cloned on restart, fine
+  # since Postgres is the source of truth) or "pvc" (persistent).
   # NOTE: "pvc" uses ReadWriteOnce — only works with replicaCount: 1.
   storage: "emptyDir"
   storageSize: "1Gi"

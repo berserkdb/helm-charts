@@ -57,12 +57,27 @@ spec:
 
           echo "=== NetworkPolicy test: ingress from unauthorized pod ==="
           echo ""
-          echo "This pod has no Berserk labels, so it should be blocked"
-          echo "from internal services and allowed to external services."
+          echo "This pod has no Berserk labels. Only the gateway (public edge)"
+          echo "and ingest (telemetry intake) should accept it; the internal"
+          echo "services must reject it."
           echo ""
 
+          {{- if .Values.gateway.enabled }}
+          expect_allowed "gateway:{{ .Values.gateway.service.port }}" "http://gateway:{{ .Values.gateway.service.port }}/health/live"
+          {{- end }}
+          {{- if .Values.ingest.enabled }}
+          expect_allowed "ingest:{{ .Values.ingest.service.ports.health }}" "http://ingest:{{ .Values.ingest.service.ports.health }}/health/live"
+          {{- end }}
+          {{- if .Values.query.enabled }}
+          # query still sets allowExternal:true for the customer validation probe;
+          # planned to move behind the gateway, after which this becomes expect_blocked.
+          expect_allowed "query:{{ .Values.query.service.port }}" "http://query:{{ .Values.query.service.port }}/health/live"
+          {{- end }}
           {{- if .Values.meta.enabled }}
           expect_blocked "meta:{{ .Values.meta.service.port }}" "http://meta:{{ .Values.meta.service.port }}/health/live"
+          {{- end }}
+          {{- if .Values.ui.enabled }}
+          expect_blocked "ui:{{ .Values.ui.service.port }}" "http://ui:{{ .Values.ui.service.port }}/health/live"
           {{- end }}
           {{- if .Values.janitor.enabled }}
           expect_blocked "janitor" "http://janitor:9502/health/live"
@@ -70,11 +85,8 @@ spec:
           {{- if .Values.nursery.enabled }}
           expect_blocked "nursery:{{ .Values.nursery.service.port }}" "http://nursery:{{ .Values.nursery.service.port }}/health/live"
           {{- end }}
-          {{- if .Values.query.enabled }}
-          expect_allowed "query:{{ .Values.query.service.port }}" "http://query:{{ .Values.query.service.port }}/health/live"
-          {{- end }}
-          {{- if .Values.ui.enabled }}
-          expect_allowed "ui:{{ .Values.ui.service.port }}" "http://ui:{{ .Values.ui.service.port }}/health/live"
+          {{- if .Values.permissions.enabled }}
+          expect_blocked "permissions:{{ .Values.permissions.service.port }}" "http://permissions:{{ .Values.permissions.service.port }}/health/live"
           {{- end }}
 
           echo ""
