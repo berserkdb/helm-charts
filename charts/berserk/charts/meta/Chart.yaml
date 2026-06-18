@@ -2,8 +2,8 @@ apiVersion: v2
 name: meta
 description: Berserk Meta Service - Metadata management
 type: application
-version: 1.0.131
-appVersion: 1.0.131
+version: 1.0.132-rc.1
+appVersion: 1.0.132-rc.1
 dependencies:
   - name: berserk-common
     version: "*"

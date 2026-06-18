@@ -48,6 +48,8 @@ networkPolicy:
     - app: gateway
       ports: [{port: 9570}]
   egressTo:
+    - app: gateway
+      ports: [{port: 9500}]
     - app: query
       ports: [{port: 9510}]
     - app: meta
