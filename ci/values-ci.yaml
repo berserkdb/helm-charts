@@ -63,7 +63,10 @@ query:
       memory: "128Mi"
       cpu: "100m"
     limits:
-      memory: "512Mi"
+      # query enforces a 512Mi startup floor (bzrk_bootstrap); the
+      # cgroup memory.max is read from this limit, so keep headroom
+      # above 512Mi.
+      memory: "1Gi"
       cpu: "500m"
 
 ingest:
@@ -84,7 +87,9 @@ janitor:
       memory: "128Mi"
       cpu: "100m"
     limits:
-      memory: "512Mi"
+      # janitor enforces a 1Gi startup floor (bzrk_bootstrap), read from
+      # the cgroup memory.max which mirrors this limit.
+      memory: "1Gi"
       cpu: "500m"
 
 nursery:
@@ -93,7 +98,9 @@ nursery:
       memory: "128Mi"
       cpu: "100m"
     limits:
-      memory: "512Mi"
+      # nursery enforces a 1Gi startup floor (bzrk_bootstrap), read from
+      # the cgroup memory.max which mirrors this limit.
+      memory: "1Gi"
       cpu: "500m"
 
 ui:

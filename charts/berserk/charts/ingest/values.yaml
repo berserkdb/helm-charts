@@ -92,10 +92,20 @@ config:
     maxBatchAgeSecs: 2
     keepAliveIntervalSecs: 120
 
-  # Concurrent in-flight requests (admission semaphore permits). Each permit
-  # can hold a decoded request, so peak buffering scales with this — raise it
-  # together with `resources` memory. See apps/ingest/src/config.rs.
-  maxInflight: 32
+  # Admission control. All default in the binary, so leave unset unless you
+  # have a specific reason to override (see apps/ingest/src/config.rs):
+  #   memoryCeilingFraction — the single memory knob (default 0.8, capped 0.8).
+  #     The RSS shed-ceiling = fraction × the pod's memory limit, and the
+  #     in-flight byte budget is derived a fixed step below it (0.75 × that, so
+  #     0.6 × the limit at the default). Lower it for more OOM headroom; both
+  #     gates scale together.
+  #   maxConcurrentRequests — liveness backstop (default 10000). Memory is
+  #     bounded by the two memory gates above, not this count.
+  #   maxTotalInflightBytes — advanced: only *lowers* the byte budget below its
+  #     derived value (a larger value is clamped). Rarely needed.
+  # memoryCeilingFraction: 0.8
+  # maxConcurrentRequests: 10000
+  # maxTotalInflightBytes: 1073741824
 
   # Authentication
   requireAuth: false                # Reject requests without Bearer token

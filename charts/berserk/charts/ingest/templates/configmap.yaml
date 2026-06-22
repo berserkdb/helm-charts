@@ -19,6 +19,14 @@ data:
     max_batch_age_secs: {{ .Values.config.batch.maxBatchAgeSecs }}
     keep_alive_interval_secs: {{ .Values.config.batch.keepAliveIntervalSecs }}
 
-    max_inflight: {{ .Values.config.maxInflight }}
+    {{- with .Values.config.maxConcurrentRequests }}
+    max_concurrent_requests: {{ . }}
+    {{- end }}
+    {{- with .Values.config.memoryCeilingFraction }}
+    memory_ceiling_fraction: {{ . }}
+    {{- end }}
+    {{- with .Values.config.maxTotalInflightBytes }}
+    max_total_inflight_bytes: {{ int . }}
+    {{- end }}
 
     {{- include "berserk-common.observability-config" . | nindent 4 }}
