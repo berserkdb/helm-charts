@@ -433,8 +433,8 @@ nursery:
       memory: "256Mi"
       cpu: "200m"
     limits:
-      memory: "1Gi"
-      cpu: "1000m"
+      memory: "4Gi"
+      cpu: "4000m"
 
   # Working directory size limit for baby segments
   workingDir:
