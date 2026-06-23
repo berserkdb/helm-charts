@@ -315,7 +315,7 @@ services:
 
   meta:
     <<: *common
-    image: ghcr.io/berserkdb/meta:v1.0.140-rc.1
+    image: ghcr.io/berserkdb/meta:v1.0.141
     depends_on:
       postgres:
         condition: service_healthy
@@ -338,7 +338,7 @@ services:
 
   query:
     <<: *common
-    image: ghcr.io/berserkdb/query:v1.0.140-rc.1
+    image: ghcr.io/berserkdb/query:v1.0.141
     depends_on:
       meta:
         condition: service_healthy
@@ -371,7 +371,7 @@ services:
   # reads at startup. Talks to meta over gRPC directly (no bearer
   # token → ClientChannel::direct, see apps/cli/src/network/meta_client.rs).
   ingest-token-init:
-    image: ghcr.io/berserkdb/cli:v1.0.140-rc.1
+    image: ghcr.io/berserkdb/cli:v1.0.141
     networks:
       - berserk
     depends_on:
@@ -390,7 +390,7 @@ services:
 
   ingest:
     <<: *common
-    image: ghcr.io/berserkdb/ingest:v1.0.140-rc.1
+    image: ghcr.io/berserkdb/ingest:v1.0.141
     depends_on:
       meta:
         condition: service_healthy
@@ -428,7 +428,7 @@ services:
 
   janitor:
     <<: *common
-    image: ghcr.io/berserkdb/janitor:v1.0.140-rc.1
+    image: ghcr.io/berserkdb/janitor:v1.0.141
     depends_on:
       meta:
         condition: service_healthy
@@ -458,7 +458,7 @@ services:
 
   nursery:
     <<: *common
-    image: ghcr.io/berserkdb/nursery:v1.0.140-rc.1
+    image: ghcr.io/berserkdb/nursery:v1.0.141
     depends_on:
       meta:
         condition: service_healthy
@@ -486,7 +486,7 @@ services:
 
   ui:
     <<: *common
-    image: ghcr.io/berserkdb/ui:v1.0.140-rc.1
+    image: ghcr.io/berserkdb/ui:v1.0.141
     depends_on:
       postgres:
         condition: service_healthy
@@ -536,7 +536,7 @@ services:
 
   permissions:
     <<: *common
-    image: ghcr.io/berserkdb/permissions:v1.0.140-rc.1
+    image: ghcr.io/berserkdb/permissions:v1.0.141
     depends_on:
       postgres:
         condition: service_healthy
@@ -554,7 +554,7 @@ services:
 
   gateway:
     <<: *common
-    image: ghcr.io/berserkdb/gateway:v1.0.140-rc.1
+    image: ghcr.io/berserkdb/gateway:v1.0.141
     depends_on:
       postgres:
         condition: service_healthy
