@@ -37,10 +37,16 @@ networkPolicy:
 
 resources:
   requests:
-    memory: "256Mi"
+    # +50 MB header room over pre-vsearch baseline for model mmap +
+    # embedding cache + per-segment seal transients.
+    # See docs/dev/vidx-vsearch-resources.md §4.
+    memory: "320Mi"
     cpu: "200m"
   limits:
-    memory: "1Gi"
+    # +100 MB over pre-vsearch baseline. The 8 MiB EmbeddingCache lives
+    # here; per-merge transient stays the dominant factor and is bounded
+    # by SegmentMergerConfig.
+    memory: "1100Mi"
     cpu: "1000m"
 
 # Working directory size limit for baby segments
@@ -69,3 +75,15 @@ config:
   observability:
     serviceName: "nursery"
     logLevel: "info"
+
+# vsearch (semantic-search) configuration. Off by default — opt in per
+# environment by setting `fields`. Empty `fields` keeps the feature
+# inactive: no model load, no template stamping at ingest, no
+# VCEN/VTPH/VTPC written at seal. Production-grade per-table opt-in lands
+# later (`docs/dev/vidx-vsearch-impl-plan.md` Deferred → "Meta tier-0
+# integration").
+#
+# The embedding model is baked into the image at a fixed path (a build
+# constant; see `embedding::baked_model_paths`) — there is no model-path knob.
+vsearch:
+  fields: ""

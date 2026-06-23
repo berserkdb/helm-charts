@@ -109,10 +109,15 @@ cache:
 
 resources:
   requests:
-    memory: "1Gi"
+    # +50 MB headroom over pre-vsearch baseline for model mmap +
+    # per-query worker state. See docs/dev/vidx-vsearch-resources.md §4.
+    memory: "1074Mi"
     cpu: "2000m"
   limits:
-    memory: "16Gi"
+    # +100 MB over pre-vsearch baseline. The model RSS sits well inside
+    # the 16 GiB ceiling — the bump is bookkeeping consistency with the
+    # request bump, not a real cap change.
+    memory: "16484Mi"
     cpu: "8000m"
 
 config:
@@ -161,3 +166,19 @@ config:
     # default off; flip on per-cluster when chasing a contention
     # regression.
     waitProfilerEnabled: false
+
+# vsearch (semantic-search) configuration. Off by default — opt in per
+# environment by setting `fields`. Empty `fields` = vsearch off (the binary
+# loads no model, and `similarto` queries fail fast at request time).
+# When set, `fields` lists the field NAMES/paths the nursery indexes (the
+# queried field must be one of them); order is irrelevant — the worker resolves
+# `on=<field>` by name via each segment's VCEN directory.
+#
+# The embedding model itself is baked into the image at a fixed path (a build
+# constant; see `embedding::baked_model_paths`) — there is no model-path knob.
+#
+# `disabled: true` emits BZRK_VSEARCH_DISABLED to reject every similarto query
+# at bind time cluster-wide (rollback escape hatch) without clearing `fields`.
+vsearch:
+  fields: ""
+  disabled: false

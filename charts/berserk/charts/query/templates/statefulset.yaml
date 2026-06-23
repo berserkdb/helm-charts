@@ -161,6 +161,24 @@ spec:
               value: {{ $isHttps | quote }}
             {{- include "berserk-common.env.s3-credentials" (dict "accessKeyEnv" "BZRK_QWS_CLOUD_STORAGE_ACCESS_KEY" "secretKeyEnv" "BZRK_QWS_CLOUD_STORAGE_SECRET_KEY" "Values" .Values) | nindent 12 }}
             {{- end }}
+            {{- /* vsearch wiring. `BZRK_VSEARCH_FIELDS` lists the field
+                  NAMES/paths that may be searched (the queried field must be
+                  one nursery indexes; order is irrelevant — the worker resolves
+                  it by name via each segment's VCEN directory). A non-empty
+                  list enables semantic search and the binary loads the model
+                  from its baked-in image path (a build constant — see
+                  `embedding::baked_model_paths`), so there is no model-path env
+                  var. Forked QWS/QW/qc-child processes inherit this env. */ -}}
+            {{- if .Values.vsearch.fields }}
+            - name: BZRK_VSEARCH_FIELDS
+              value: {{ .Values.vsearch.fields | quote }}
+            {{- end }}
+            {{- /* Cluster-wide kill switch: reject every similarto query at
+                  bind time without changing the field list. */ -}}
+            {{- if .Values.vsearch.disabled }}
+            - name: BZRK_VSEARCH_DISABLED
+              value: "1"
+            {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           livenessProbe:

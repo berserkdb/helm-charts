@@ -23,14 +23,33 @@ networkPolicy:
 
 resources:
   requests:
-    memory: "256Mi"
+    # +50 MB headroom over pre-vsearch baseline for merger transient
+    # template-index growth. See docs/dev/vidx-vsearch-resources.md §4.
+    memory: "320Mi"
     cpu: "200m"
   limits:
-    memory: "1Gi"
+    # +200 MB over pre-vsearch baseline. Worst-case 8×8 cap-tier merge
+    # builds a ~1 GiB transient JanitorTemplateIndex (§1.5); bumping the
+    # cap to 1.2 GiB gives header room above the existing 1 GiB ceiling
+    # so the kill is by `max_concurrent_merges` (logged) rather than by
+    # OOM-kill (silent restart loop).
+    memory: "1200Mi"
     cpu: "1000m"
 
 cache:
   size: "10Gi"
+
+# vsearch (semantic-search) merger configuration. The janitor consumes
+# `BZRK_VSEARCH_FIELDS` to know which fields' VCEN/VTPH/VTPC/VIDF chunks
+# to rebuild during cloud-segment merge — same field NAMES as nursery/query
+# (order irrelevant; the merger reconciles input fields by name). It reads
+# per-template embeddings from input VTPCs and never calls Model::encode,
+# so this image deliberately does NOT bake in the model artifact
+# (`docs/dev/vidx-vsearch-impl-plan.md` §8 Cross-cutting decisions).
+# Off by default — opt in per environment by setting `fields`. Empty
+# `fields` makes the merger skip the VXXX rebuild path entirely.
+vsearch:
+  fields: ""
 
 config:
   metaEndpoint: "http://meta:9560"

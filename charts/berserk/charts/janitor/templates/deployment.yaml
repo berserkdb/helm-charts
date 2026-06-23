@@ -22,6 +22,15 @@
               value: "1"
             {{- include "berserk-common.env.cluster-name" . | nindent 12 }}
             {{- include "berserk-common.env.s3-credentials" (dict "accessKeyEnv" "JANITOR_STORAGE_ACCESS_KEY" "secretKeyEnv" "JANITOR_STORAGE_SECRET_KEY" "Values" .Values) | nindent 12 }}
+            {{- /* vsearch wiring (PR 11). Janitor needs only
+                  `BZRK_VSEARCH_FIELDS` — the merger reads per-template
+                  embeddings from input VTPCs, never invokes the model.
+                  Use the same field NAMES as nursery (order irrelevant —
+                  the merger reconciles input fields by name). */ -}}
+            {{- if .Values.vsearch.fields }}
+            - name: BZRK_VSEARCH_FIELDS
+              value: {{ .Values.vsearch.fields | quote }}
+            {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           livenessProbe:

@@ -41,6 +41,17 @@
             {{- end }}
             {{- include "berserk-common.env.cluster-name" . | nindent 12 }}
             {{- include "berserk-common.env.s3-credentials" (dict "accessKeyEnv" "NURSERY_STORAGE_ACCESS_KEY" "secretKeyEnv" "NURSERY_STORAGE_SECRET_KEY" "Values" .Values) | nindent 12 }}
+            {{- /* vsearch wiring. `BZRK_VSEARCH_FIELDS` is the process-wide
+                  list of field NAMES/paths to index. The segment's VCEN
+                  directory records name→id, so the query resolves the field by
+                  name — services need the same field names, order irrelevant.
+                  A non-empty list enables indexing and the nursery loads the
+                  model from its baked-in image path (a build constant — see
+                  `embedding::baked_model_paths`); there is no model-path env. */ -}}
+            {{- if .Values.vsearch.fields }}
+            - name: BZRK_VSEARCH_FIELDS
+              value: {{ .Values.vsearch.fields | quote }}
+            {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           livenessProbe:
