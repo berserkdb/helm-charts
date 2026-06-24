@@ -47,17 +47,17 @@ data:
     {{- end }}
     {{- end }}
     {{- if .Values.config.trustedProxy.enabled }}
-    # Trusted reverse-proxy auth. The HMAC secret itself does NOT come
-    # from this file; when configured it's wired as the
-    # `GATEWAY_TRUSTED_PROXY_HMAC_SECRET` env var from
-    # `secrets.trustedProxyHmacSecret`.
+    # Trusted reverse-proxy auth. Identity is trusted on network grounds
+    # alone — no secret material is involved. At least one of the two
+    # extraction strategies below must be configured.
     trusted_proxy_enabled: true
-    trusted_proxy_user_header: {{ required "config.trustedProxy.userHeader is required when config.trustedProxy.enabled" .Values.config.trustedProxy.userHeader | quote }}
-    {{- with .Values.config.trustedProxy.integrityHeader }}
-    trusted_proxy_integrity_header: {{ . | quote }}
+    {{- with .Values.config.trustedProxy.userHeader }}
+    trusted_proxy_user_header: {{ . | quote }}
     {{- end }}
-    {{- if .Values.config.trustedProxy.insecureNoHmac }}
-    trusted_proxy_insecure_no_hmac: true
+    {{- if .Values.config.trustedProxy.onBehalfOf.enabled }}
+    trusted_proxy_on_behalf_of_header: {{ .Values.config.trustedProxy.onBehalfOf.header | quote }}
+    trusted_proxy_on_behalf_of_prefix: {{ required "config.trustedProxy.onBehalfOf.spiffePrefix is required when onBehalfOf.enabled" .Values.config.trustedProxy.onBehalfOf.spiffePrefix | quote }}
+    trusted_proxy_on_behalf_of_email_domain: {{ required "config.trustedProxy.onBehalfOf.emailDomain is required when onBehalfOf.enabled" .Values.config.trustedProxy.onBehalfOf.emailDomain | quote }}
     {{- end }}
     {{- with .Values.config.trustedProxy.allowedDomains }}
     trusted_proxy_allowed_domains:

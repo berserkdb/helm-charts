@@ -54,23 +54,6 @@
                   name: {{ required "secrets.oidcClientSecret.existingSecret.name is required when config.oidc.enabled" .Values.secrets.oidcClientSecret.existingSecret.name }}
                   key: {{ required "secrets.oidcClientSecret.existingSecret.key is required when config.oidc.enabled" .Values.secrets.oidcClientSecret.existingSecret.key }}
             {{- end }}
-            {{- if and .Values.config.trustedProxy.enabled .Values.secrets.trustedProxyHmacSecret.existingSecret.name }}
-            # Trusted-proxy HMAC secret — externally-managed (Sealed)Secret
-            # per `secrets.trustedProxyHmacSecret`. When absent the gateway
-            # runs in no-HMAC mode (config.trustedProxy.insecureNoHmac).
-            - name: GATEWAY_TRUSTED_PROXY_HMAC_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.secrets.trustedProxyHmacSecret.existingSecret.name }}
-                  key: {{ required "secrets.trustedProxyHmacSecret.existingSecret.key is required when the trusted-proxy HMAC secret is set" .Values.secrets.trustedProxyHmacSecret.existingSecret.key }}
-            {{- with .Values.secrets.trustedProxyHmacSecret.existingSecret.previousKey }}
-            - name: GATEWAY_TRUSTED_PROXY_HMAC_SECRET_PREVIOUS
-              valueFrom:
-                secretKeyRef:
-                  name: {{ $.Values.secrets.trustedProxyHmacSecret.existingSecret.name }}
-                  key: {{ . }}
-            {{- end }}
-            {{- end }}
             # gRPC route table — gateway reads `grpc_routes` from a
             # JSON-encoded env var (figment matches the
             # GATEWAY_GRPC_ROUTES → grpc_routes field name).

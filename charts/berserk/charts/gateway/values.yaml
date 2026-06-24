@@ -144,26 +144,26 @@ config:
   # Trusted reverse-proxy (PP) auth — trust identity headers from an
   # upstream authenticating proxy. Leave `enabled: false` (default)
   # unless an upstream proxy in front of the gateway asserts the user.
-  # When enabled the chart emits the `trusted_proxy_*` keys into
-  # config.yaml AND (when HMAC is on) wires
-  # `GATEWAY_TRUSTED_PROXY_HMAC_SECRET` from
-  # `secrets.trustedProxyHmacSecret.existingSecret.{name,key}`.
+  # Identity is trusted on network grounds alone (no cryptographic
+  # verification), so the gateway must be unreachable except through the
+  # proxy. When enabled, configure at least one extraction strategy below.
   # See docs/operations/admin/ui-setup → Path D.
   trustedProxy:
     enabled: false
-    # Header carrying the asserted user email (e.g. X-PP-USER). Required
-    # when enabled; must not collide with X-Bzrk-* or the stripped
-    # reverse-proxy aliases (X-Forwarded-User, Remote-User, …).
+    # Strategy 1 — direct email header (e.g. X-PP-USER) carrying a full
+    # user email. Leave empty to disable this strategy. Must not collide
+    # with X-Bzrk-* or the stripped reverse-proxy aliases
+    # (X-Forwarded-User, Remote-User, …).
     userHeader: ""
-    # Header carrying the HMAC over the user header (e.g.
-    # X-PP-USER-INTEGRITY). Required only when HMAC is on (a secret is
-    # configured via secrets.trustedProxyHmacSecret).
-    integrityHeader: ""
-    # Acknowledge running WITHOUT HMAC — the user header is trusted on
-    # network grounds alone. Must be true when enabled and no HMAC
-    # secret is set, otherwise gateway refuses to start. Only safe when
-    # the gateway is unreachable except through the trusted proxy.
-    insecureNoHmac: false
+    # Strategy 2 — SPIFFE on-behalf-of. The upstream forwards a SPIFFE
+    # identity (spiffe://<trust-domain>/user/<name>) in `header`; the
+    # gateway strips `spiffePrefix` to recover the username and appends
+    # `@emailDomain` to form the identity email.
+    onBehalfOf:
+      enabled: false
+      header: "on-behalf-of"
+      spiffePrefix: "" # e.g. "spiffe://prod.example.net/user/"
+      emailDomain: "" # e.g. "example.com"
     # YAML list restricting auto-provisioning to these email domains.
     # Empty (default) allows any domain.
     allowedDomains: []
@@ -199,19 +199,6 @@ secrets:
     existingSecret:
       name: ""
       key: ""
-
-  # Trusted-proxy HMAC secret — referenced from an externally-managed
-  # Secret. When `config.trustedProxy.enabled: true` and this name/key
-  # is set, the deployment wires `GATEWAY_TRUSTED_PROXY_HMAC_SECRET`
-  # from it (HMAC verification on). Leave name/key empty to run in
-  # no-HMAC mode (requires `config.trustedProxy.insecureNoHmac: true`).
-  # `previousKey` (optional) wires `GATEWAY_TRUSTED_PROXY_HMAC_SECRET_PREVIOUS`
-  # from the same Secret for zero-downtime rotation.
-  trustedProxyHmacSecret:
-    existingSecret:
-      name: ""
-      key: ""
-      previousKey: ""
 
 # Bootstrap admin (optional). When email + password are set, gateway
 # creates the first admin user at startup instead of printing a
