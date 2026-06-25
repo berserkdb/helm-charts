@@ -75,6 +75,13 @@ config:
   # global.publicBaseUrl (the gateway URL).
   publicBaseUrl: ""
   deploymentMode: "self_hosted"
+  # CSP nonce source (Phoenix ui's BzrkExploreWeb.ContentSecurityPolicy).
+  # Empty ⇒ the app mints its own nonce. Set to a request-header name ⇒ the
+  # app requires that header on every browser request and uses its value as
+  # the nonce; a front proxy mints the nonce, sends it on the request, and
+  # injects the same value into the CSP policy header it emits (e.g. Dropbox
+  # PP's `x-pp-csp-nonce` + `script_random_nonce`). No default name.
+  cspNonceHeader: ""
   permissions:
     baseUrl: "http://permissions:9580"
   # In-cluster gateway Service URL for the UI's internal calls (the

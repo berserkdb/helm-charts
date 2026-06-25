@@ -62,6 +62,12 @@
                   name: {{ required "ui secrets.oidcClientSecret.existingSecret.name is required when config.oidc.enabled" .Values.secrets.oidcClientSecret.existingSecret.name }}
                   key: {{ required "ui secrets.oidcClientSecret.existingSecret.key is required when config.oidc.enabled" .Values.secrets.oidcClientSecret.existingSecret.key }}
             {{- end }}
+            {{- if .Values.config.cspNonceHeader }}
+            # When set, the Phoenix ui requires this request header (minted and
+            # injected by the front proxy) and uses its value as the CSP nonce.
+            - name: CSP_NONCE_HEADER
+              value: {{ .Values.config.cspNonceHeader | quote }}
+            {{- end }}
             - name: LEPTOS_OUTPUT_NAME
               value: "ui"
             - name: LEPTOS_SITE_ROOT

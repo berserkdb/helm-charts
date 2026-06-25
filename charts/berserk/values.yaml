@@ -285,15 +285,43 @@ janitor:
       memory: "512Mi"
       cpu: "1500m"
     limits:
-      memory: "12Gi"
+      # One merge per pod (sequential). `WriterBudget::Auto` is 100% of this
+      # limit, so writers/pass = limit / WRITER_MEMORY_ESTIMATE (4 MiB) ≈ 1024 at
+      # 4Gi — raising the limit means more writers/fewer passes, lowering it adds
+      # passes. The merge heap is small (~few hundred MiB writer pool + ≤64 MiB
+      # hash tracker + ~0.5 GiB vsearch index + ~0.5 GiB baseline); the multi-GiB
+      # OOMs were MIMX alias accumulation, fixed by deduping (mimx_collector).
+      # File-backed page cache (mmap inputs + temp writes) is reclaimable and not
+      # counted against OOM. 4Gi gives ample headroom; requests stay 512Mi
+      # (burstable). NB: keep ≥ ~2x the writer pool — a tighter 2Gi previously
+      # OOMed.
+      memory: "4Gi"
       cpu: "4000m"
 
   cache:
-    size: "20Gi"
+    # Merge scratch lives on this pod-internal emptyDir (mounted at
+    # /tmp/segment-cache, see `config.cacheDir`). Sequential per pod; a merge's
+    # peak on-disk footprint is compressed inputs + temp files + output ≈ 3× the
+    # meta planner's `max_segment_size` (total-compressed-input cap, default 5GB).
+    #
+    # SIZING RULE (rule of thumb): cache.size >= ~6 × meta max_segment_size. At
+    # the 5GB default that is this 30Gi. If you raise meta's max_segment_size,
+    # raise this proportionally or large merges evict mid-transfer. HARD cap —
+    # the pod is evicted if exceeded mid-merge.
+    #
+    # 30Gi also keeps the per-node total modest: janitors share node disk with
+    # the query segment-cache PVC, and on the tightest node 4 × 30Gi fits well
+    # inside free space. (Orphans from SIGKILLed merges are reclaimed at startup,
+    # see janitor `reclaim_scratch`, so this need only cover one live merge.)
+    size: "30Gi"
 
   config:
     metaEndpoint: "http://meta:9560"
     queryEndpoint: "http://query:9510"
+    # Janitor merge scratch dir. Point this at the pod-internal `cache`
+    # volume above (/tmp/segment-cache), NEVER the container's system-wide
+    # /tmp — janitor scratch is many GiB and /tmp is often a small tmpfs.
+    cacheDir: "/tmp/segment-cache"
     # Merge settings
     mergerIntervalSeconds: 300
     observability:

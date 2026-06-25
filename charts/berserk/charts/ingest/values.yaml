@@ -85,6 +85,21 @@ resources:
 config:
   metaEndpoint: "http://meta:9560"
 
+  # When ingest acknowledges a request, and what it does when the in-memory
+  # buffer fills (see apps/ingest/src/config.rs::AckMode):
+  #   durable        ack after the batch is persisted to S3; throttle (429) when full. (default)
+  #   fast_drop      ack on receipt, persist async; drop excess when full — never backs the
+  #                  client up, at-most-once durability.
+  #   fast_throttle  ack on receipt, persist async; throttle (429) when full — no loss,
+  #                  bounded backpressure.
+  # The fast_* modes remove head-of-line blocking for Loki/promtail multi-senders
+  # (a slow ack to one sender stalls them all) at the cost of at-most-once durability
+  # on a crash. They REQUIRE a pod memory limit — without one the buffer is sized off
+  # node RAM and the RSS shed-gate is disabled (ingest logs a warning at startup).
+  # Leave unset to keep the binary default (durable); override per-environment in
+  # charts/values-<env>.yaml (Dev runs fast_drop).
+  # ackMode: durable
+
   # Batching knobs (see apps/ingest/src/config.rs for the full surface and
   # the ack_timeout > max_batch_age + MAX_RETRY_AGE invariant).
   batch:
