@@ -6,93 +6,90 @@
           imagePullPolicy: {{ .Values.image.pullPolicy | default .Values.global.imagePullPolicy | default "Always" }}
           securityContext:
             allowPrivilegeEscalation: false
-          args:
-            - "-c"
-            - "/config/config.yaml"
           ports:
             - containerPort: {{ .Values.service.targetPort }}
               name: http
               protocol: TCP
           env:
-            - name: POD_IP
+            # The image entrypoint migrates the database, then starts the HTTP
+            # server bound to 0.0.0.0:$PORT.
+            - name: PHX_SERVER
+              value: "true"
+            - name: PORT
+              value: {{ .Values.service.targetPort | quote }}
+            # Public host for URL/link generation and same-origin websocket
+            # checks. Derived from the gateway's public base URL unless set.
+            - name: PHX_HOST
+              value: {{ .Values.config.phxHost | default (regexReplaceAll "^https?://([^:/]+).*" (.Values.config.publicBaseUrl | default .Values.global.publicBaseUrl) "${1}") | quote }}
+            {{- with .Values.config.checkOrigin }}
+            - name: PHX_CHECK_ORIGIN
+              value: {{ . | quote }}
+            {{- end }}
+            # Cookie/CSRF signing key (not authentication — auth is the
+            # gateway's trusted identity); the `ui-secrets` Secret self-manages a
+            # stable random value.
+            - name: SECRET_KEY_BASE
               valueFrom:
-                fieldRef:
-                  fieldPath: status.podIP
-            # apps/ui shares the single workspace database (the same one
-            # meta uses) and isolates its tables in the `ui` schema.
-            - name: UI_DATABASE_URL
+                secretKeyRef:
+                  name: {{ include "berserk-common.fullname" . }}-secrets
+                  key: secret_key_base
+            # Shared workspace database (same one meta uses).
+            - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
                   name: {{ .Values.global.postgresCredentials.secretName }}
                   key: {{ .Values.global.postgresCredentials.databaseUrlKey }}
-            # Rendered unconditionally so an explicit empty value (the
-            # opt-out signal) flows through; `with` would skip on empty.
-            - name: UI_DATABASE_SCHEMA
-              value: {{ .Values.global.uiDatabaseSchema | quote }}
-            # The merged app's single pool sets search_path = {app schema},
-            # auth, public — the workspace-admin tables live in `auth`,
-            # reached by fallthrough. UI_APP_DATABASE_SCHEMA names the app
-            # schema (mirrors the dev scenario's run-ui.sh).
-            - name: UI_APP_DATABASE_SCHEMA
-              value: {{ .Values.global.uiDatabaseSchema | quote }}
-            # Gateway-side trusted-identity service token. ui
-            # constant-time compares this against the
-            # `X-Bzrk-Service-Token` header on incoming requests; only
-            # gateway should have the value (defence in depth on top
-            # of the NetworkPolicy that already restricts ingress).
-            - name: UI_GATEWAY_SERVICE_TOKEN
+            # Rendered unconditionally so an explicit empty value (opt-out of
+            # schema isolation) flows through; `with` would skip on empty.
+            - name: UI_PHOENIX_DATABASE_SCHEMA
+              value: {{ .Values.config.databaseSchema | quote }}
+            - name: POOL_SIZE
+              value: {{ .Values.config.poolSize | default 10 | quote }}
+            # gRPC backends: bare host:port (no scheme). The values keep the
+            # `http://` form operators recognise; the scheme is stripped here.
+            - name: QUERY_GRPC_ENDPOINT
+              value: {{ regexReplaceAll "^https?://" .Values.config.queryEndpoint "" | quote }}
+            - name: META_GRPC_ENDPOINT
+              value: {{ regexReplaceAll "^https?://" .Values.config.metaEndpoint "" | quote }}
+            # Gateway-side trusted-identity service token. The app constant-time
+            # compares this against the `X-Bzrk-Service-Token` header on incoming
+            # requests; only gateway should hold the value.
+            - name: GATEWAY_SERVICE_TOKEN
               valueFrom:
                 secretKeyRef:
                   name: {{ .Values.secrets.secretName | quote }}
                   key: {{ .Values.secrets.gatewayServiceTokenKey | quote }}
-            # Authorization client — the merged app calls apps/permissions
-            # /v1/check with this service token (formerly admin-ui).
-            - name: UI_PERMISSIONS_SERVICE_TOKEN
+            # Authorization client — the app calls apps/permissions /v1/check
+            # with this service token.
+            - name: PERMISSIONS_SERVICE_TOKEN
               valueFrom:
                 secretKeyRef:
                   name: {{ .Values.secrets.secretName | quote }}
                   key: {{ .Values.secrets.permissionsServiceTokenKey | quote }}
-            {{- if .Values.config.oidc.enabled }}
-            # OIDC client_secret mirror — same Secret+key gateway references,
-            # so the value stays single-source. Required because the merged
-            # app's config validator enforces the >=32-char floor at startup.
-            - name: UI_OIDC_CLIENT_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: {{ required "ui secrets.oidcClientSecret.existingSecret.name is required when config.oidc.enabled" .Values.secrets.oidcClientSecret.existingSecret.name }}
-                  key: {{ required "ui secrets.oidcClientSecret.existingSecret.key is required when config.oidc.enabled" .Values.secrets.oidcClientSecret.existingSecret.key }}
-            {{- end }}
+            # Admin HTTP backends (keep scheme). Gateway members API
+            # (/internal/users) and permissions (/v1/check).
+            - name: GATEWAY_HTTP_ENDPOINT
+              value: {{ .Values.config.gatewayInternalBaseUrl | quote }}
+            - name: PERMISSIONS_HTTP_ENDPOINT
+              value: {{ .Values.config.permissions.baseUrl | quote }}
             {{- if .Values.config.cspNonceHeader }}
-            # When set, the Phoenix ui requires this request header (minted and
-            # injected by the front proxy) and uses its value as the CSP nonce.
+            # When set, the app requires this request header (minted and injected
+            # by the front proxy) and uses its value as the CSP nonce.
             - name: CSP_NONCE_HEADER
               value: {{ .Values.config.cspNonceHeader | quote }}
             {{- end }}
-            - name: LEPTOS_OUTPUT_NAME
-              value: "ui"
-            - name: LEPTOS_SITE_ROOT
-              value: "/"
-            - name: LEPTOS_SITE_PKG_DIR
-              value: "pkg"
-            - name: LEPTOS_SITE_ADDR
-              value: "0.0.0.0:{{ .Values.service.targetPort }}"
-            - name: RUST_BACKTRACE
-              value: "1"
-            - name: ENVIRONMENT
-              value: "demo"
+            {{- if (.Values.config.observability.otlpEnabled | default .Values.global.observability.otlpEnabled) }}
+            # OpenTelemetry: export traces to the cluster OTLP collector via the
+            # standard OTEL_* env vars. OTEL_RESOURCE_ATTRIBUTES (bzrk.cluster.name
+            # + k8s.*) comes from the shared helper below.
+            - name: OTEL_SERVICE_NAME
+              value: {{ .Values.config.observability.serviceName | quote }}
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ printf "http://%s" (.Values.config.observability.otlpEndpoint | default .Values.global.observability.otlpEndpoint | trimPrefix "https://" | trimPrefix "http://") | quote }}
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: "grpc"
             {{- include "berserk-common.env.cluster-name" . | nindent 12 }}
-            - name: UI_LIBRARY_DIR
-              value: "/library"
-            # The library git remote is configured at runtime in the admin UI
-            # (stored in ui_config), not via env. HTTPS-only.
-            # AI agent's in-process source clone cache. Lives on the library
-            # volume (a `.source-clones` subdir of UI_LIBRARY_DIR by default).
-            - name: UI_SOURCE_DISK_CAP_BYTES
-              value: {{ .Values.source.diskCapBytes | quote }}
-            - name: UI_SOURCE_IDLE_TTL_SECS
-              value: {{ .Values.source.idleTtlSecs | quote }}
-            - name: UI_SOURCE_CLONE_DEPTH
-              value: {{ .Values.source.cloneDepth | quote }}
+            {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           livenessProbe:
@@ -113,17 +110,3 @@
               port: http
             failureThreshold: 30
             periodSeconds: 3
-          volumeMounts:
-            {{- include "berserk-common.volumeMount.config" . | nindent 12 }}
-            - name: library
-              mountPath: /library
-      volumes:
-        {{- include "berserk-common.volume.config" . | nindent 8 }}
-        {{- if eq (.Values.library.storage | default "emptyDir") "pvc" }}
-        - name: library
-          persistentVolumeClaim:
-            claimName: {{ printf "%s-library" (include "berserk-common.fullname" .) }}
-        {{- else }}
-        - name: library
-          emptyDir: {}
-        {{- end }}

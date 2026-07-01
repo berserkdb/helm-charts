@@ -1,1 +1,38 @@
-{{ include "berserk-common.service" . }}
+{{- /*
+Gateway Service. Forked from the shared `berserk-common.service` helper so it
+can expose an OPTIONAL second port (`extraListener`) alongside the primary one:
+the helper renders a single port, but the extra port is conditional on
+`extraListener.enabled`. Both ports target the same gateway, which auto-detects
+HTTP/1.1 vs h2c per connection. Keep the non-port stanzas in sync with the
+shared helper.
+*/ -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "berserk-common.fullname" . }}
+  labels:
+    {{- include "berserk-common.labels" . | nindent 4 }}
+    component: {{ .Values.component | default "gateway" }}
+  {{- with .Values.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    {{- include "berserk-common.selectorLabels" . | nindent 4 }}
+  {{- with .Values.service.externalIPs }}
+  externalIPs:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: {{ .Values.service.targetPort | default .Values.service.port }}
+      protocol: TCP
+      name: {{ .Values.service.portName | default "http" }}
+    {{- if .Values.extraListener.enabled }}
+    - port: {{ .Values.extraListener.port }}
+      targetPort: {{ .Values.extraListener.port }}
+      protocol: TCP
+      name: {{ .Values.extraListener.name | default "grpc" }}
+    {{- end }}

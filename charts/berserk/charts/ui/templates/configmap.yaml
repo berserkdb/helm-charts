@@ -1,42 +1,6 @@
-{{ include "berserk-common.configmap.metadata" . }}
-data:
-  config.yaml: |
-    bind: "0.0.0.0:{{ .Values.service.targetPort }}"
-    query_endpoint: {{ .Values.config.queryEndpoint | quote }}
-    meta_endpoint: {{ .Values.config.metaEndpoint | quote }}
-    {{- with (.Values.config.publicBaseUrl | default .Values.global.publicBaseUrl) }}
-    public_base_url: {{ . | quote }}
-    {{- end }}
-    {{- with .Values.config.gatewayInternalBaseUrl }}
-    # In-cluster gateway URL for the UI's internal /internal/users call — keeps
-    # it inside the cluster instead of hairpinning through the public ingress.
-    gateway_internal_base_url: {{ . | quote }}
-    {{- end }}
-    {{- with .Values.config.deploymentMode }}
-    deployment_mode: {{ . | quote }}
-    {{- end }}
-    {{- with .Values.config.permissions }}
-    permissions_base_url: {{ .baseUrl | quote }}
-    {{- end }}
-    {{- if .Values.config.oidc.enabled }}
-    # OIDC config mirror — values come from the same overlay block that
-    # drives gateway. The merged app validates the same way (issuer URL,
-    # >=32-char client_secret floor, required-scope union), so config drift
-    # fails it at startup too.
-    oidc_issuer: {{ required "ui.config.oidc.issuer is required when config.oidc.enabled" .Values.config.oidc.issuer | quote }}
-    oidc_client_id: {{ required "ui.config.oidc.clientId is required when config.oidc.enabled" .Values.config.oidc.clientId | quote }}
-    oidc_require_email_verified: {{ .Values.config.oidc.requireEmailVerified }}
-    {{- with .Values.config.oidc.scopes }}
-    oidc_scopes:
-      {{- toYaml . | nindent 6 }}
-    {{- end }}
-    {{- with .Values.config.oidc.bootstrapAdminEmails }}
-    oidc_bootstrap_admin_emails:
-      {{- toYaml . | nindent 6 }}
-    {{- end }}
-    {{- end }}
-    {{- with .Values.config.featureFlags }}
-    feature_flags:
-      {{- toYaml . | nindent 6 }}
-    {{- end }}
-    {{- include "berserk-common.observability-config" . | nindent 4 }}
+{{- /*
+No ConfigMap. The ui is configured entirely via environment variables in the
+Deployment (no config file), so a config change already rolls the pods on its
+own. This file exists only so the shared deployment helper's checksum include
+resolves; it renders nothing.
+*/ -}}

@@ -38,9 +38,12 @@ global:
     managed: true
     accessKeyId: "minioadmin"
     secretAccessKey: "minioadmin"
+  # Pre-created by kind-up.sh before the chart install (mirrors prod/dev, where
+  # this is externally managed). The ui migrate pre-install hook reads
+  # postgres-credentials, and a chart-managed secret only appears in the main
+  # sync phase — after pre-install hooks run — so it must pre-exist.
   postgresCredentials:
-    managed: true
-    databaseUrl: "postgres://postgres:testpassword@postgres-postgresql:5432/berserk?sslmode=disable"
+    managed: false
   # Auth-side services share the meta DB and isolate themselves
   # via the `auth` schema (gateway creates the schema on first
   # boot and sets `search_path = auth`; admin_ui and permissions
@@ -99,9 +102,12 @@ nursery:
 
 ui:
   image: { pullPolicy: Never, repository: "ui-dev" }
+  # The ui is now a Phoenix/BEAM release (~640-680Mi RSS boot floor; schedulers
+  # capped via ELIXIR_ERL_OPTIONS in the image). 1Gi here leaves headroom for
+  # the kind node's nested cgroups on a busy host.
   resources:
-    requests: { memory: "64Mi", cpu: "50m" }
-    limits: { memory: "256Mi", cpu: "250m" }
+    requests: { memory: "512Mi", cpu: "100m" }
+    limits: { memory: "1Gi", cpu: "500m" }
 
 setup:
   image: { pullPolicy: Never, repository: "cli-dev" }

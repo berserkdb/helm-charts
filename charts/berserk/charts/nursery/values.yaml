@@ -8,6 +8,16 @@ component: backend
 strategy:
   type: Recreate
 
+# Stable node id for the cluster registry (sets NURSERY_NODE_ID). This id is the
+# nursery's identity and the key stream-group ownership is fenced on; pinning it
+# (instead of the pod HOSTNAME, which churns every rollout) lets a redeployed pod
+# re-own its groups immediately rather than waiting out the liveness TTL for a
+# fresh id. Safe as a fixed literal because each Berserk install has its own meta
+# / registry, so the id only has to be unique within one release — which holds at
+# the mandatory single replica. N>=2 would need distinct per-pod ids (a
+# StatefulSet); the deployment template fails the render at replicaCount > 1.
+nodeId: "nursery-0"
+
 image:
   repository: nursery
   pullPolicy: Always

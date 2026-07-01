@@ -13,6 +13,11 @@
             - containerPort: {{ .Values.service.port }}
               name: http
               protocol: TCP
+            {{- if .Values.extraListener.enabled }}
+            - containerPort: {{ .Values.extraListener.port }}
+              name: {{ .Values.extraListener.name | default "grpc" }}
+              protocol: TCP
+            {{- end }}
           env:
             - name: POD_IP
               valueFrom:

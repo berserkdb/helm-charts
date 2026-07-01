@@ -1,0 +1,64 @@
+{{- if .Values.migrations.enabled }}
+{{- /*
+Runs the Ecto migrations to completion BEFORE the app rolls out, as a
+pre-install / pre-upgrade Helm hook. The image entrypoint also migrates on boot
+(idempotent), which is enough for a single replica; this hook is what makes a
+multi-replica rollout safe — migrations finish once, here, so the app pods boot
+against an already-current schema instead of racing each other. A migration
+failure fails the hook (and the release) cleanly, rather than crash-looping the
+app on a half-applied schema.
+*/ -}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "berserk-common.fullname" . }}-migrate
+  labels:
+    {{- include "berserk-common.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-5"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        {{- include "berserk-common.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: migrate
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: {{ include "berserk-common.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | default .Values.global.imagePullPolicy | default "Always" }}
+          securityContext:
+            allowPrivilegeEscalation: false
+          command: ["/bin/sh", "-c"]
+          args:
+            - exec /app/bin/bzrk_explore eval "BzrkExplore.Release.migrate()"
+          env:
+            # config/runtime.exs requires DATABASE_URL in :prod; the schema pins
+            # where migrated tables land — it must match the deployment's
+            # UI_PHOENIX_DATABASE_SCHEMA (config.databaseSchema) so the app reads
+            # the same schema the migrations write.
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.global.postgresCredentials.secretName }}
+                  key: {{ .Values.global.postgresCredentials.databaseUrlKey }}
+            - name: UI_PHOENIX_DATABASE_SCHEMA
+              value: {{ .Values.config.databaseSchema | quote }}
+            # runtime.exs (:prod) also requires SECRET_KEY_BASE, but this Job
+            # only runs migrate() — it starts no endpoint (no PHX_SERVER), so the
+            # value signs nothing. A throwaway keeps this pre-install hook from
+            # depending on the `ui-secrets` Secret, which is created in the main
+            # sync phase (after hooks) and so wouldn't exist yet on a fresh install.
+            - name: SECRET_KEY_BASE
+              value: {{ printf "%s-ui-migrate" .Release.Name | sha256sum | quote }}
+            - name: POOL_SIZE
+              value: {{ .Values.config.poolSize | default 10 | quote }}
+{{- end }}

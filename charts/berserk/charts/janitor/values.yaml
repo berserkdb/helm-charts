@@ -53,7 +53,9 @@ vsearch:
 config:
   metaEndpoint: "http://meta:9560"
   queryEndpoint: "http://query:9510"
-  mergerIntervalSeconds: 300
+  # Idle re-poll cadence; a cycle drains the queue back-to-back, so a backlog
+  # clears at merge-speed regardless. Umbrella mirrors this.
+  mergerIntervalSeconds: 10
   maxSegmentsPerBatch: 50
   minSegments: 3
   maxSegmentAgeDays: 7

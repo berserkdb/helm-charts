@@ -13,6 +13,20 @@ service:
   # externalIPs: optional list of node-bound VIPs.
   externalIPs: []
 
+# Optional second listener. The gateway serves the IDENTICAL surface on this
+# extra port; both ports auto-detect HTTP/1.1 vs h2c per connection. Enable it
+# when an upstream proxy (e.g. envoy) can't attach two backend protocols to a
+# single downstream endpoint: point its HTTP/1.1 cluster at `service.port` and
+# its h2c cluster at this one (route native gRPC `/api/grpc` to the h2c port).
+# Disabled by default — the single auto-detecting `service.port` already carries
+# HTTP, SSE, and gRPC together. When enabled, the chart binds the listener,
+# exposes the port on the Service, and opens it on the NetworkPolicy.
+extraListener:
+  enabled: false
+  port: 9501
+  # Service/containerPort name (DNS-1123 label, ≤15 chars).
+  name: grpc
+
 # Ingress (optional). The gateway is the public edge — once exposed it
 # terminates user-facing HTTPS and proxies to ui (HTTP) plus gRPC
 # routes to meta/query/ingest.
@@ -28,6 +42,13 @@ ingress:
   tls: []
   # - hosts: [gateway.example.com]
   #   secretName: gateway-tls
+  # Traefik-only: when the Service is forwarded over h2c (for native gRPC),
+  # WebSocket upgrades fail because they can't ride HTTP/2. Enabling this adds a
+  # Traefik IngressRoute that forwards upgrade requests over HTTP/1.1 instead,
+  # leaving all other traffic on the h2c Ingress. No effect on non-Traefik
+  # ingresses (they pass WebSockets natively).
+  websocketSplit: false
+  websocketEntrypoint: "websecure"
 
 # NetworkPolicy: ingress from anywhere (it IS the edge); egress to
 # permissions, ui, meta, query, ingest, plus external for OIDC

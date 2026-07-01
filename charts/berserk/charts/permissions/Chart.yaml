@@ -2,8 +2,8 @@ apiVersion: v2
 name: permissions
 description: Berserk permissions service (authorization tuples + /v1/check)
 type: application
-version: 1.0.146
-appVersion: 1.0.146
+version: 1.0.148
+appVersion: 1.0.148
 dependencies:
   - name: berserk-common
     version: "*"

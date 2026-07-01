@@ -13,9 +13,12 @@ global:
     managed: true
     accessKeyId: "minioadmin"
     secretAccessKey: "minioadmin"
+  # Pre-created by the workflow before `helm install` (mirrors prod/dev, where
+  # this is externally managed by Terraform/CNPG). The ui migrate pre-install
+  # hook reads postgres-credentials, but a chart-managed secret is created in
+  # the main sync phase — after pre-install hooks run — so it must pre-exist.
   postgresCredentials:
-    managed: true
-    databaseUrl: "postgres://postgres:testpassword@postgres-postgresql:5432/berserk?sslmode=disable"
+    managed: false
   # Auth-side services share the meta DB and isolate themselves
   # via the `auth` schema (gateway creates the schema on first
   # boot and sets `search_path = auth`; admin_ui and permissions
@@ -104,13 +107,18 @@ nursery:
       cpu: "500m"
 
 ui:
+  # The Phoenix/BEAM ui needs far more headroom than the old Leptos Rust binary
+  # (~640-680Mi RSS boot floor; schedulers capped via ELIXIR_ERL_OPTIONS). At
+  # 256Mi/250m the BEAM can't reach a listening Bandit within the startup probe
+  # and the pod restart-loops. 1Gi leaves headroom for kind's nested cgroups,
+  # matching charts/ci/values-kind.yaml.
   resources:
     requests:
-      memory: "64Mi"
-      cpu: "50m"
+      memory: "512Mi"
+      cpu: "100m"
     limits:
-      memory: "256Mi"
-      cpu: "250m"
+      memory: "1Gi"
+      cpu: "500m"
 
 # Auth stack — gateway + admin-ui + permissions. Enabled here so the
 # helm-integration smoke install exercises the production shape (ui

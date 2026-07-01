@@ -20,8 +20,8 @@ global:
   clusterName: ""
   # Public-facing base URL of this install — the gateway's externally
   # reachable URL (scheme + host [+ port], no trailing path). `gateway`
-  # mints OIDC redirect URIs from it and `admin-ui` builds absolute SSR
-  # links against it; both inherit this value unless they set their own
+  # mints OIDC redirect URIs from it and `ui` builds absolute links against
+  # it; both inherit this value unless they set their own
   # `config.publicBaseUrl`. The default targets a local gateway (port
   # 9500) so `helm install` renders out of the box — override it with
   # your real URL for any networked deployment.
@@ -50,8 +50,8 @@ global:
     secretName: "postgres-credentials"
     databaseUrl: ""
     databaseUrlKey: "database_url"
-  # PostgreSQL credentials for the auth-side stack (gateway / admin-ui /
-  # permissions). By default they share the meta database and isolate
+  # PostgreSQL credentials for the auth-side stack (gateway / permissions).
+  # By default they share the meta database and isolate
   # themselves via the `auth` schema (see `authDatabaseSchema` below);
   # sqlx puts `_sqlx_migrations` in the first writable schema on the
   # connection's search_path, so `auth._sqlx_migrations` and
@@ -71,15 +71,6 @@ global:
   # the empty string to opt out (e.g. dev cluster, which keeps the
   # historical two-DB layout with auth tables in `public`).
   authDatabaseSchema: "auth"
-  # Postgres schema for apps/ui's tables (per-user preferences, recent
-  # queries). `"ui"` is the default — apps/ui shares the single
-  # workspace database (`postgresCredentials`) and isolates itself in
-  # this schema, creating it on first boot and pinning every pool
-  # connection's `search_path` to it. Distinct from `authDatabaseSchema`
-  # because apps/ui owns its own migrations and can't co-tenant the auth
-  # stack's `_sqlx_migrations`. Set to "" to opt out (apps/ui then needs
-  # its own separate database to avoid colliding with meta in `public`).
-  uiDatabaseSchema: "ui"
   # Ingest token configuration.
   # `managed: true` (default) makes the ingest service's init container create
   # the default table and a default ingest token on first install, storing the
@@ -322,8 +313,11 @@ janitor:
     # volume above (/tmp/segment-cache), NEVER the container's system-wide
     # /tmp — janitor scratch is many GiB and /tmp is often a small tmpfs.
     cacheDir: "/tmp/segment-cache"
-    # Merge settings
-    mergerIntervalSeconds: 300
+    # Merge poll cadence. A merger cycle drains the queue — it merges tasks
+    # back-to-back while any exist — so this is only the idle re-poll interval
+    # between empty polls. Kept short so a freshly-created task is picked up
+    # promptly; a backlog clears at merge-speed regardless of this value.
+    mergerIntervalSeconds: 10
     observability:
       serviceName: "janitor"
       logLevel: "info"
@@ -341,10 +335,9 @@ ui:
   service:
     type: ClusterIP
     port: 80
-    # Merged ui (formerly admin-ui) binds 9570 and serves /health there. This
-    # umbrella value overrides the subchart default, so it must be 9570 too —
-    # 3000 was the old standalone data-plane default and made the startup
-    # probe refuse (CrashLoop). Mirrors the subchart fix in #3476.
+    # The UI listens on 9570 and serves /health there. This umbrella value
+    # overrides the subchart default, so it must stay 9570 — the health probes
+    # target this port.
     targetPort: 9570
 
   # Disabled by default. Enable to expose the UI via a Kubernetes
@@ -353,28 +346,23 @@ ui:
   ingress:
     enabled: false
 
+  # Sized for the UI runtime (~650 MB resident at startup); see subchart values.
   resources:
     requests:
-      memory: "128Mi"
+      memory: "512Mi"
       cpu: "100m"
     limits:
-      memory: "512Mi"
+      memory: "768Mi"
       cpu: "500m"
 
   config:
+    # gRPC backends (scheme stripped in the deployment template).
     queryEndpoint: "http://query:9510"
     metaEndpoint: "http://meta:9560"
-    # Merged-app (formerly admin-ui) config: the ui now serves the
-    # workspace-admin surfaces too, so it needs the permissions client,
-    # its public base URL, and deployment mode.
-    # Inherits `global.publicBaseUrl` (the gateway URL) when empty.
+    # PHX_HOST is derived from global.publicBaseUrl when phxHost is empty.
     publicBaseUrl: ""
-    deploymentMode: "self_hosted"
     permissions:
       baseUrl: "http://permissions:9580"
-    observability:
-      serviceName: "ui"
-      logLevel: "info,ui=debug"
 
 # Gateway service configuration (authenticating reverse proxy /
 # public edge for the auth + ui stack).

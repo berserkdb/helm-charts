@@ -1,3 +1,6 @@
+{{- if gt (int .Values.replicaCount) 1 }}
+{{- fail "nursery must run a single replica: its node id is the cluster-registry identity that stream-group ownership is fenced on, and a fixed NURSERY_NODE_ID is stable AND unique only at replicaCount=1. For N>=2, switch to a StatefulSet so each pod gets a distinct stable id." }}
+{{- end }}
 {{- include "berserk-common.deployment.header" . }}
 {{- include "berserk-common.serviceAccountName" . }}
       containers:
@@ -30,6 +33,16 @@
                   fieldPath: status.podIP
             - name: RUST_BACKTRACE
               value: "1"
+            {{- /* Stable node id for the cluster registry. The nursery's node id
+                  is the key stream-group ownership is fenced on; a fixed value
+                  (vs the per-rollout-churning pod HOSTNAME) lets a redeployed
+                  pod re-own its groups immediately instead of waiting out the
+                  liveness TTL for a fresh id. Single-replica only — enforced by
+                  the replicaCount guard above. */ -}}
+            {{- if .Values.nodeId }}
+            - name: NURSERY_NODE_ID
+              value: {{ .Values.nodeId | quote }}
+            {{- end }}
             {{- /* `NurseryQueryService` binds 0.0.0.0:<port> but the
                   cluster registry needs a routable URL — the pod IP.
                   Plumbed via the downward API so each nursery

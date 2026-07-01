@@ -1,1 +1,26 @@
 {{ include "berserk-common.networkpolicy" . }}
+{{- /*
+The shared helper opens only `service.port` externally. When the optional second
+listener is enabled, open its port too. NetworkPolicies are additive (allow
+rules union), so a separate resource avoids forking the shared helper. Gated on
+`allowExternal` to mirror how the primary port's external access is controlled.
+*/ -}}
+{{- if and .Values.global.networkPolicy.enabled .Values.extraListener.enabled .Values.networkPolicy.allowExternal }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "berserk-common.fullname" . }}-extra
+  labels:
+    {{- include "berserk-common.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "berserk-common.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - ports:
+        - port: {{ .Values.extraListener.port }}
+          protocol: TCP
+{{- end }}

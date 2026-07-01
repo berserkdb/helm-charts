@@ -1,0 +1,39 @@
+{{- /*
+Traefik route so WebSocket upgrades reach the gateway over HTTP/1.1. The plain
+Ingress forwards to the gateway over h2c (needed for native gRPC); a WebSocket
+upgrade can't ride HTTP/2, so on the h2c path it fails. This higher-priority
+IngressRoute matches only upgrade requests and forwards them with scheme http;
+all other traffic still matches the plain Ingress and stays on h2c. Traefik-only;
+opt in with ingress.websocketSplit (non-Traefik ingresses pass WS by default).
+*/ -}}
+{{- if and .Values.ingress.enabled .Values.ingress.websocketSplit }}
+{{- $svc := include "berserk-common.fullname" . }}
+{{- $port := .Values.service.port }}
+{{- $entrypoint := .Values.ingress.websocketEntrypoint | default "websecure" }}
+{{- range $h := .Values.ingress.hosts }}
+{{- $secret := "" }}
+{{- range $t := $.Values.ingress.tls }}{{- if has $h.host $t.hosts }}{{- $secret = $t.secretName }}{{- end }}{{- end }}
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: {{ printf "%s-ws-%s" $svc ($h.host | replace "." "-") | trunc 63 | trimSuffix "-" }}
+  labels:
+    {{- include "berserk-common.labels" $ | nindent 4 }}
+spec:
+  entryPoints:
+    - {{ $entrypoint }}
+  routes:
+    - match: Host(`{{ $h.host }}`) && HeaderRegexp(`Upgrade`, `(?i)^websocket$`)
+      kind: Rule
+      priority: 1000
+      services:
+        - name: {{ $svc }}
+          port: {{ $port }}
+          scheme: http
+  {{- if $secret }}
+  tls:
+    secretName: {{ $secret }}
+  {{- end }}
+{{- end }}
+{{- end }}
