@@ -152,6 +152,13 @@ setup:
 # Meta service configuration
 meta:
   enabled: true
+  # Operator /metrics scrape (annotation-based, #3792). Portable default that
+  # works with a vanilla Prometheus kubernetes_sd pod-discovery job; no
+  # Prometheus Operator required. meta serves /metrics on its :9560 HTTP side.
+  podAnnotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/path: /metrics
+    prometheus.io/port: "9560"
   replicaCount: 1
 
   image:
@@ -185,6 +192,12 @@ meta:
 # Query service configuration
 query:
   enabled: true
+  # Operator /metrics on the dedicated internal admin listener :9511 (#3792),
+  # separate from the public unified HTTP+gRPC :9510.
+  podAnnotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/path: /metrics
+    prometheus.io/port: "9511"
   replicaCount: 1
 
   image:
@@ -198,7 +211,6 @@ query:
   cache:
     enabled: true
     size: "128Gi"
-    sizeLimit: "128GiB"
 
   resources:
     requests:
@@ -219,6 +231,11 @@ query:
 # Ingest service configuration
 ingest:
   enabled: true
+  # Operator /metrics on ingest's internal health port :9550 (#3792).
+  podAnnotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/path: /metrics
+    prometheus.io/port: "9550"
   replicaCount: 1
 
   image:
@@ -266,6 +283,11 @@ ingest:
 # Janitor service configuration
 janitor:
   enabled: true
+  # Operator /metrics on janitor's internal health port :9502 (#3792, phase 1).
+  podAnnotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/path: /metrics
+    prometheus.io/port: "9502"
   replicaCount: 1
 
   image:
@@ -327,6 +349,16 @@ janitor:
 # UI configuration
 ui:
   enabled: true
+  # Operator /metrics scrape (annotation-based, #3792). Vanilla Prometheus
+  # kubernetes_sd pod discovery; no Prometheus Operator required. The Phoenix UI
+  # serves /metrics on a DEDICATED internal listener :9571 (not its public :9570,
+  # which the gateway forwards) — see apps/ui_phoenix OperatorMetrics. This port
+  # must match the app's BZRK_UI_METRICS_PORT default (9571) and the `metrics`
+  # containerPort in the deployment.
+  podAnnotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/path: /metrics
+    prometheus.io/port: "9571"
   replicaCount: 1
 
   image:
@@ -379,6 +411,23 @@ gateway:
     type: ClusterIP
     port: 9500
 
+  # Operator /metrics on the dedicated internal admin listener :9502 (#3792).
+  # The primary :9500 port is the PUBLIC edge, so /metrics deliberately does NOT
+  # ride it — the gateway binary serves the scrape surface on `metricsPort`
+  # (subchart default 9502; distinct from extraListener's :9501). Where
+  # NetworkPolicies are enforced (not dev), :9502 is not opened by the shared
+  # policy — reaching it from a monitoring namespace is a per-customer
+  # NetworkPolicy carve-out, deliberately not defaulted.
+  #
+  # KEEP `prometheus.io/port` BELOW == `gateway.metricsPort`. The shared
+  # deployment header renders podAnnotations verbatim (Helm can't template a
+  # static value against another), so a custom `metricsPort` must update this
+  # annotation too. To disable the listener entirely, set `metricsPort: ""`.
+  podAnnotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/path: /metrics
+    prometheus.io/port: "9502"
+
   ingress:
     enabled: false
 
@@ -419,6 +468,14 @@ permissions:
     type: ClusterIP
     port: 9580
 
+  # Operator /metrics on permissions' existing internal :9580 (#3792). It's an
+  # internal-only, low-traffic helper, so the scrape surface rides the main port
+  # (served unauthenticated alongside the kube probes — no dedicated listener).
+  podAnnotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/path: /metrics
+    prometheus.io/port: "9580"
+
   resources:
     requests:
       memory: "64Mi"
@@ -435,6 +492,11 @@ permissions:
 # Nursery service configuration
 nursery:
   enabled: true
+  # Operator /metrics on nursery's internal health port :9530 (#3792).
+  podAnnotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/path: /metrics
+    prometheus.io/port: "9530"
   replicaCount: 1
 
   image:
@@ -442,7 +504,10 @@ nursery:
 
   service:
     type: ClusterIP
-    port: 3002
+    # Health + operator /metrics port. 9530 matches the nursery binary default
+    # and the 95xx convention; drives http_bind, containerPort, probes, and the
+    # /metrics annotation above (all reference service.port).
+    port: 9530
 
   resources:
     requests:
@@ -452,9 +517,9 @@ nursery:
       memory: "4Gi"
       cpu: "4000m"
 
-  # Working directory size limit for baby segments
+  # Working-dir PVC size (baby segments + disk-resident node identity)
   workingDir:
-    sizeLimit: "50Gi"
+    size: "50Gi"
 
   config:
     metaEndpoint: "http://meta:9560"
@@ -462,3 +527,49 @@ nursery:
     metaPollIntervalSecs: 5
     # Stream inactivity timeout in seconds
     streamTimeoutSecs: 300
+
+# Operator-tier Prometheus (#3792). Off by default — a self-managed, single-pod
+# Prometheus (no Operator/CRDs) that scrapes the annotation-based operator
+# `/metrics` endpoints via in-cluster pod discovery. Enable per-environment
+# (dev) where an operator wants the pull-based view. See templates/prometheus.yaml.
+prometheus:
+  enabled: false
+  image:
+    repository: prom/prometheus
+    tag: v3.1.0
+    pullPolicy: IfNotPresent
+  # TSDB retention. Small on purpose — this is an operator health view, not
+  # long-term storage (that's the OTLP→Berserk path).
+  retention: "1d"
+  scrapeInterval: "30s"
+  # Load a temporary always-firing canary rule to verify rule evaluation.
+  # Leave off in normal operation.
+  canaryAlert: false
+  storage:
+    size: "5Gi"
+    # Empty -> cluster default StorageClass (local-path on the dev K3s cluster).
+    storageClassName: ""
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "1Gi"
+  nodeSelector: {}
+  tolerations: []
+  # Native Prometheus basic auth (web.config.file). Guards the whole surface
+  # (UI, /api, /metrics). Prometheus requires a bcrypt password hash.
+  basicAuth:
+    enabled: false
+    username: "admin"
+    passwordHash: ""
+  # Expose the Prometheus UI. Pair with cert-manager annotations for TLS.
+  ingress:
+    enabled: false
+    className: traefik
+    host: ""
+    annotations: {}
+    tls:
+      enabled: false
+      secretName: ""

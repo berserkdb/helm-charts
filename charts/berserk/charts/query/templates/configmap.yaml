@@ -22,14 +22,17 @@ data:
     {{- if .Values.cache.enabled }}
     cache:
       dir: "/segment_cache"
-      {{- /* sizeBytes (fixed bytes) is the cache_server eviction
-            ceiling for remote mode; falls back to `size` (which can
-            be a percent / size string accepted by the in-process
-            cache) when not set. */ -}}
-      {{- if .Values.cache.sizeBytes }}
-      total_size_limit: "{{ .Values.cache.sizeBytes }}"
-      {{- else }}
-      total_size_limit: "{{ .Values.cache.size }}"
-      {{- end }}
+    {{- /* Single cache-disk budget = the volume size. The query service
+          derives the segment-cache and map-reduce-state-cache ceilings from
+          it via the percentages below and validates they sum to < 100%.
+          Appending "B" turns the k8s quantity (500Gi -> 500GiB) into a
+          bytesize the binary parses; no arithmetic happens in the template. */}}
+    cache_total_size: "{{ .Values.cache.size }}B"
+    {{- if hasKey .Values.cache "segmentCachePercent" }}
+    cache_segment_percent: {{ .Values.cache.segmentCachePercent }}
+    {{- end }}
+    {{- if hasKey .Values.cache "resultCachePercent" }}
+    cache_result_percent: {{ .Values.cache.resultCachePercent }}
+    {{- end }}
     {{- end }}
     {{- include "berserk-common.observability-config" . | nindent 4 }}

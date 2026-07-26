@@ -22,7 +22,7 @@ service:
 # registry and fans queries out to them; co-locating one in every
 # query pod keeps the pool elastic without a separate deployment.
 #
-# The cache size budget reuses `.Values.cache.sizeBytes` — there is
+# The cache size budget reuses `.Values.cache.size` — there is
 # one cache PVC per pod, one cache_server child, one qws forked
 # inside the query container.
 qws:
@@ -75,6 +75,9 @@ cache:
   enabled: true
   # persistent: true uses a PVC (StatefulSet), false uses emptyDir (Deployment).
   persistent: false
+  # The single cache-disk budget: the size of the /segment_cache volume
+  # (PVC or emptyDir). The query service derives the segment-cache and
+  # map-reduce-state-cache ceilings from this via the percentages below.
   size: "128Gi"
   storageClass: ""
   # hostPath: set to a path (e.g. /mnt/nvme) to use a local NVMe mount instead of emptyDir.
@@ -91,12 +94,14 @@ cache:
   #              a UDS in the cache directory. Required pairing with
   #              `config.transport == grpc_spawn` (the default).
   mode: "remote"
-  # Cache size budget, fixed bytes (e.g. "10GiB"). Used in remote
-  # mode as the cache_server's eviction ceiling. Empty string =
-  # eviction off (the conservative default; production overlays
-  # should set this explicitly). Only honored as a Size variant —
-  # percent-of-disk forms are in-process-only.
-  sizeBytes: ""
+  # Per-cache shares of `size`, as percentages of the total budget. The
+  # remainder (100 − segment − result) is left as disk overhead for
+  # cache.log, the cache_server WAL, and filesystem slack. Defaults live in
+  # the query service (apps/query/src/cache_budget.rs) and are used when
+  # these are unset; override only for unusual workloads. The query service
+  # validates that they sum to < 100%.
+  segmentCachePercent: 85
+  resultCachePercent: 5
   # Max concurrent S3 fetches per (endpoint,bucket) coordinator inside
   # each cache_server. 0 = built-in default. Lower this to bound a query
   # pod's outbound S3 connection burst when a large scan saturates the

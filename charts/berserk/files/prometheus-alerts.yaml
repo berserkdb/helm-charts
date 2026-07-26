@@ -1,0 +1,295 @@
+# Example Prometheus alerting rules for Berserk operator metrics.
+#
+# These are STARTING POINTS, not a supported ruleset. Copy this file into your
+# own Prometheus `rule_files:` include, then tune thresholds and `for:` windows
+# to your traffic. Berserk services expose these metrics on their operator
+# `/metrics` endpoint (see README.md for the scrape config).
+#
+# Metric-name conventions (verified against a live scrape — use verbatim):
+#   * Every metric is prefixed `bzrk_`; dots in the source name become `_`.
+#   * Counters generally do NOT carry a `_total` suffix (e.g. `bzrk_query_errors`,
+#     `bzrk_nursery_bytes_ingested`). A few do (`bzrk_ingest_invalid_otlp_total`,
+#     `bzrk_*_cpu_seconds_total`, `bzrk_cache_server_*_total`). Copy names as-is.
+#   * Histograms expose `_bucket{le=...}`, `_sum`, `_count`.
+#
+# Label model (all samples): `service` (meta|query|nursery|ingest|janitor),
+# `pod`, `node`, `namespace`, `job="kubernetes-pods"`. A `cluster` label set via
+# `external_labels` is NOT queryable inside these expressions (external labels
+# attach only to outbound alerts / remote-write), so none of the rules group by
+# it — they aggregate on `service`.
+#
+# Each pod exposes only the operator metrics its own role records, so a metric
+# like `bzrk_nursery_*` appears only on `service="nursery"`. Rules therefore
+# aggregate on `service`; fleet-wide rules (up, process fds) are left unscoped.
+#
+# Thresholds below mirror Berserk's built-in Grafana alerts (which evaluate the
+# OTLP copy of these same metrics). Where a Grafana alert has no scrape-side
+# equivalent it is noted inline.
+
+groups:
+  # ---------------------------------------------------------------------------
+  - name: berserk.availability
+    rules:
+      # No Grafana equivalent: Grafana alerts on ingested telemetry, so it can't
+      # see a target that stopped being scrapeable. This is the Prometheus-native
+      # complement — pair it with the "stopped" rate alerts below, which go silent
+      # (no series) when a pod disappears.
+      - alert: BerserkTargetDown
+        expr: up{job="kubernetes-pods"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Berserk {{ $labels.service }} target down"
+          description: "{{ $labels.pod }} ({{ $labels.service }}) has been unscrapeable for 2m."
+
+  # ---------------------------------------------------------------------------
+  - name: berserk.meta
+    rules:
+      # Grafana: value_above 18 (pool max is 20).
+      - alert: MetaDbPoolNearExhaustion
+        expr: bzrk_meta_db_pool_active > 18
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "meta DB connection pool near exhaustion"
+          description: "{{ $value }} of 20 connections active on {{ $labels.pod }}."
+
+      # Grafana: value_above 3600 — a merge job stuck > 60 min.
+      - alert: MetaMergeJobStuck
+        expr: bzrk_meta_oldest_merge_job > 3600
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "meta merge job stuck > 1h"
+          description: "Oldest merge job age is {{ $value | humanizeDuration }}."
+
+      # Grafana: value_above 0 — expired table still holding segments.
+      - alert: MetaTombstonedTableWithSegments
+        expr: bzrk_meta_tombstoned_table_with_segments > 0
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "tombstoned table still has segments"
+          description: "{{ $value }} tombstoned table(s) with lingering segments."
+
+  # ---------------------------------------------------------------------------
+  - name: berserk.query
+    rules:
+      # Grafana: rate_above 0.001 errors/s.
+      - alert: QueryErrorRate
+        expr: sum by (service) (rate(bzrk_query_errors[5m])) > 0.001
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "query error rate elevated"
+          description: "{{ $value | printf \"%.4f\" }} query errors/s over 5m."
+
+      # No direct Grafana equivalent (its latency alert is vsearch-specific and
+      # feature-gated). Included as a general end-to-end latency SLO example —
+      # tune the 5s threshold to yours.
+      - alert: QueryLatencyP95High
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (le) (rate(bzrk_query_execution_duration_bucket[5m]))
+          ) > 5000
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "query p95 latency > 5s"
+          description: "p95 end-to-end query latency is {{ $value | printf \"%.0f\" }} ms."
+
+      # S3 backend reliability — unified across all services (#3792). Covers
+      # every S3 path (segment_storage, segment_cache reads, ingest uploads)
+      # via bzrk.s3.*; not_found is excluded from failures_total by design.
+      - alert: S3BackendErrors
+        expr: sum by (kind) (rate(bzrk_s3_failures_total[5m])) > 0.5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "S3 backend errors ({{ $labels.kind }})"
+          description: "{{ $value | printf \"%.3f\" }} {{ $labels.kind }} S3 ops/s across the fleet."
+
+      # S3 throughput-stall alerts are intentionally NOT active. A raw rate_below
+      # on bzrk_s3_{upload,download}_bytes_total false-pages on a healthy-but-idle
+      # deployment: the S3-scoped pods export these counters as zero-valued series,
+      # so with no cold reads / no ingest backlog the rate sits at 0 even though the
+      # backend is fine. A sound stall signal needs demand gating (alert only when
+      # there IS read/write demand) or a "seconds since last successful S3 op"
+      # staleness gauge (cf. ingest's time_since_last_upload_seconds). Enable a
+      # tuned version once that signal exists:
+      #
+      # - alert: S3UploadsStalled
+      #   expr: sum(rate(bzrk_s3_upload_bytes_total[5m])) < 1
+      #   for: 5m
+      #   labels: { severity: warning }
+      #   annotations:
+      #     summary: "S3 uploads stalled"
+      #     description: "Fleet S3 upload throughput has been ~0 B/s for 5m."
+      #
+      # - alert: S3DownloadsStalled
+      #   expr: sum(rate(bzrk_s3_download_bytes_total[5m])) < 1
+      #   for: 5m
+      #   labels: { severity: warning }
+      #   annotations:
+      #     summary: "S3 downloads stalled"
+      #     description: "Fleet S3 download throughput has been ~0 B/s for 5m."
+
+  # ---------------------------------------------------------------------------
+  - name: berserk.nursery
+    rules:
+      # Grafana: value_above 300 — most-stale stream lag > 5 min.
+      - alert: NurseryIngestLagHigh
+        expr: bzrk_nursery_ingest_lag_seconds > 300
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "nursery ingest lag > 5m"
+          description: "Most-stale stream lag is {{ $value | humanizeDuration }}."
+
+      # Grafana: rate_below 1 byte/s over 180s (pending 2m) — ingest has stopped.
+      # NOTE: if the nursery pod dies the series disappears and this cannot fire;
+      # BerserkTargetDown covers that case.
+      - alert: NurseryIngestStopped
+        expr: sum by (service) (rate(bzrk_nursery_bytes_ingested[3m])) < 1
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "nursery ingest stopped"
+          description: "No bytes ingested (rate {{ $value | printf \"%.2f\" }} B/s over 3m)."
+
+      # Grafana: rate_above 0 — malformed protobuf / conversion failures.
+      - alert: NurseryDataErrors
+        expr: sum by (service) (rate(bzrk_nursery_data_errors[5m])) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "nursery data errors"
+          description: "{{ $value | printf \"%.3f\" }} data errors/s."
+
+      # Grafana: rate_above 0.1 — sustained S3/I/O infra errors.
+      - alert: NurseryInfraErrors
+        expr: sum by (service) (rate(bzrk_nursery_infra_errors[5m])) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "nursery infra errors sustained"
+          description: "{{ $value | printf \"%.3f\" }} infra errors/s (S3/I/O)."
+
+      # Grafana: value_above 120 — merge threshold is ~30s.
+      - alert: NurseryUnmergedDataAgeHigh
+        expr: bzrk_nursery_oldest_unmerged_data_age_seconds > 120
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "nursery unmerged data > 2m old"
+          description: "Oldest unmerged baby segment is {{ $value | humanizeDuration }}."
+
+  # ---------------------------------------------------------------------------
+  - name: berserk.janitor
+    rules:
+      # Grafana: rate_above 0 — failed merge cycles.
+      - alert: JanitorMergeFailures
+        expr: sum by (service) (rate(bzrk_janitor_merge_failures[5m])) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "janitor merge failures"
+          description: "{{ $value | printf \"%.3f\" }} merge failures/s."
+
+      # Grafana: avg_above p75 5000ms — probe queries slow.
+      - alert: JanitorProbeLatencyP75High
+        expr: |
+          histogram_quantile(
+            0.75,
+            sum by (le) (rate(bzrk_janitor_probe_duration_bucket[5m]))
+          ) > 5000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "janitor probe p75 latency > 5s"
+          description: "p75 probe query latency is {{ $value | printf \"%.0f\" }} ms."
+
+      # Grafana: rate_below nominal (expected ~0.0167 probes/s/pod, alerts under
+      # ~34% of that). Probes stopping means the query path is likely unreachable.
+      - alert: JanitorProbesStopped
+        expr: sum (rate(bzrk_janitor_probes_completed[10m])) < 0.005
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "janitor probe queries stopped"
+          description: "Probe completion rate {{ $value | printf \"%.4f\" }}/s — query path may be down."
+
+  # ---------------------------------------------------------------------------
+  # cache_server runs under the query supervisor. The matching Grafana alerts
+  # ship PAUSED (tuning in progress); enable these once you've calibrated.
+  - name: berserk.cache_server
+    rules:
+      - alert: CacheServerCrashLoop
+        expr: increase(bzrk_cache_server_respawn_total[5m]) > 3
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "cache_server crash loop"
+          description: "{{ $value }} respawns in 5m on {{ $labels.pod }}."
+
+      - alert: CacheServerLivenessKill
+        expr: increase(bzrk_cache_server_liveness_kill_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "cache_server force-killed (wedged)"
+          description: "Supervisor liveness-killed a wedged child on {{ $labels.pod }}."
+
+  # ---------------------------------------------------------------------------
+  # Saturation examples. No built-in Grafana equivalents; these show the pattern
+  # on metrics every service exports.
+  - name: berserk.saturation
+    rules:
+      # Real ratio: ingest admission byte budget. inflight/limit approaching 1
+      # means backpressure is imminent.
+      - alert: IngestAdmissionNearSaturation
+        expr: bzrk_ingest_inflight_bytes / bzrk_ingest_inflight_bytes_limit > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "ingest admission budget > 90% used"
+          description: "In-flight bytes at {{ $value | humanizePercentage }} of limit."
+
+      # File-descriptor saturation applies to every service.
+      - alert: ProcessFdSaturation
+        expr: bzrk_process_open_fds / bzrk_process_max_fds > 0.8
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.service }} fd usage > 80%"
+          description: "{{ $labels.pod }} using {{ $value | humanizePercentage }} of its fd limit."
+
+      # Container working-set memory. Berserk does not export a memory *limit*
+      # metric, so substitute your pod's limit (bytes) below, or divide by
+      # kube-state-metrics' kube_pod_container_resource_limits if you scrape it.
+      # - alert: ContainerMemoryNearLimit
+      #   expr: bzrk_container_memory_bytes > 3.5e9   # <-- set to ~90% of your limit
+      #   for: 10m
+      #   labels: { severity: warning }
+      #   annotations:
+      #     summary: "{{ $labels.service }} memory near limit"

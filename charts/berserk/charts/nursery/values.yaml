@@ -2,21 +2,12 @@
 replicaCount: 1
 component: backend
 
-# Recreate strategy: stop old pod before starting new.
-# The nursery owns stream offsets and merge state — running two instances
-# simultaneously causes offset mismatch errors when both register segments.
+# Recreate strategy: stop old pod before starting new. Load-bearing twice:
+# the nursery owns stream offsets and merge state (two instances cause offset
+# mismatch errors when both register segments), and the working dir is a
+# ReadWriteOnce PVC the old pod must unmount before the replacement can start.
 strategy:
   type: Recreate
-
-# Stable node id for the cluster registry (sets NURSERY_NODE_ID). This id is the
-# nursery's identity and the key stream-group ownership is fenced on; pinning it
-# (instead of the pod HOSTNAME, which churns every rollout) lets a redeployed pod
-# re-own its groups immediately rather than waiting out the liveness TTL for a
-# fresh id. Safe as a fixed literal because each Berserk install has its own meta
-# / registry, so the id only has to be unique within one release — which holds at
-# the mandatory single replica. N>=2 would need distinct per-pod ids (a
-# StatefulSet); the deployment template fails the render at replicaCount > 1.
-nodeId: "nursery-0"
 
 image:
   repository: nursery
@@ -25,7 +16,11 @@ image:
 
 service:
   type: ClusterIP
-  port: 3002
+  # Health + operator /metrics HTTP port. Matches the nursery binary's own
+  # default (config.rs http_bind 0.0.0.0:9530) and the 95xx convention used by
+  # every other service; drives containerPort, http_bind, probes, and the
+  # /metrics scrape annotation (all reference .Values.service.port).
+  port: 9530
   portName: health
 
 # NetworkPolicy: egress to meta; query pods connect to NurseryQueryService.
@@ -59,9 +54,17 @@ resources:
     memory: "1100Mi"
     cpu: "1000m"
 
-# Working directory size limit for baby segments
+# Working dir: baby segments + the disk-resident node identity (`nodeid`).
+# persistent=false (default) uses an emptyDir — no storage requirements on
+# the cluster, but every pod replacement is a disk loss: fresh minted id,
+# TTL-aged stream-group failover, cold cache. persistent=true uses a PVC
+# (dynamic provisioning required) so redeploys keep both id and cache warm.
 workingDir:
-  sizeLimit: "50Gi"
+  persistent: false
+  size: "50Gi"
+  # PVC only. Empty -> cluster default StorageClass (local-path on the K3s
+  # clusters). local-path pins the pod to the node holding the volume.
+  storageClassName: ""
 
 config:
   metaEndpoint: "http://meta:9560"

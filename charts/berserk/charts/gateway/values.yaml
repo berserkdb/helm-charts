@@ -13,6 +13,12 @@ service:
   # externalIPs: optional list of node-bound VIPs.
   externalIPs: []
 
+# Operator /metrics admin listener port (#3792). The gateway serves the scrape
+# surface here, off the public `service.port` edge. Kept distinct from
+# `extraListener.port` (9501) so the two never clash. Point the
+# `prometheus.io/port` pod annotation at this value.
+metricsPort: 9502
+
 # Optional second listener. The gateway serves the IDENTICAL surface on this
 # extra port; both ports auto-detect HTTP/1.1 vs h2c per connection. Enable it
 # when an upstream proxy (e.g. envoy) can't attach two backend protocols to a

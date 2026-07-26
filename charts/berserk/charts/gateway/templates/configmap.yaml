@@ -7,6 +7,15 @@ data:
     # target HTTP/1.1 and h2c on distinct endpoints (both auto-detect anyway).
     extra_bind: "0.0.0.0:{{ .Values.extraListener.port }}"
     {{- end }}
+    # Operator /metrics admin listener (#3792), separate from the public `bind`
+    # port. Scraped via the prometheus.io pod annotations; kept distinct from
+    # extraListener.port to avoid a bind clash when both are enabled.
+    {{- if .Values.metricsPort }}
+    metrics_bind: "0.0.0.0:{{ .Values.metricsPort }}"
+    {{- else }}
+    # metricsPort cleared → gateway leaves the operator /metrics listener off.
+    metrics_bind: ""
+    {{- end }}
     public_base_url: {{ .Values.config.publicBaseUrl | default .Values.global.publicBaseUrl | required "publicBaseUrl is required — set global.publicBaseUrl (or gateway.config.publicBaseUrl)" | quote }}
     {{- with .Values.config.upstreamBaseUrl }}
     upstream_base_url: {{ . | quote }}

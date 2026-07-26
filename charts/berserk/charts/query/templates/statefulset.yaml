@@ -40,6 +40,9 @@ spec:
         component: {{ .Values.component | default "backend" }}
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
     spec:
       # k8s injects service-link env vars like QUERY_SERVICE_HOST / QUERY_PORT
       # into every pod in the namespace. Figment's Env::prefixed("QUERY_") would
@@ -138,16 +141,26 @@ spec:
             - name: BZRK_CACHE_UNBINNED
               value: "0"
             {{- end }}
+            {{- /* Honour the `x-bzrk-test-now` request-metadata header, letting a
+                  caller override the query's `now()` for one query (reproducible
+                  historical replay by the agent eval harness). Off by default;
+                  opt a dev/eval cluster in with config.allowTestNow. Never enable
+                  in production — it lets any caller move the query clock. */ -}}
+            {{- if and (hasKey .Values.config "allowTestNow") .Values.config.allowTestNow }}
+            - name: ALLOW_TEST_NOW
+              value: "true"
+            {{- end }}
             {{- include "berserk-common.env.cluster-name" . | nindent 12 }}
             {{- include "berserk-common.env.s3-credentials" (dict "accessKeyEnv" "AWS_ACCESS_KEY_ID" "secretKeyEnv" "AWS_SECRET_ACCESS_KEY" "Values" .Values) | nindent 12 }}
             {{- /* When transport=grpc, apps/query forks a qws child
                   at startup. The qws inherits this container's env,
-                  so the qws-only knobs (cache size, S3 creds for
-                  cache_server, etc.) live here on the parent now —
-                  no separate qws container, no separate cgroup. */ -}}
+                  so the qws-only knobs (S3 creds for cache_server,
+                  etc.) live here on the parent now — no separate qws
+                  container, no separate cgroup. The segment cache
+                  eviction ceiling is NOT set here: it's derived from
+                  the total cache budget in the query service and passed
+                  to the forked qws as an explicit --cache-size-bytes. */ -}}
             {{- if and (hasKey .Values.config "transport") (eq .Values.config.transport "grpc") }}
-            - name: BZRK_CACHE_SIZE_BYTES
-              value: {{ .Values.cache.sizeBytes | default "0" | quote }}
             - name: BZRK_SEGMENT_CACHE_MAX_CONCURRENT_S3
               value: {{ .Values.cache.maxConcurrentS3Requests | default 0 | quote }}
             - name: BZRK_SEGMENT_CACHE_MAX_TOTAL_S3

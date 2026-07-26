@@ -34,8 +34,17 @@
 #   https://www.bzrk.dev/legal/pre-release-license-terms/
 # Each service image also carries the terms at /usr/share/doc/berserk/NOTICE.md.
 
+# Cap container stdout/stderr so a long-running stack can't fill the host
+# disk with accumulated log noise: 10 MB × 5 files = 50 MB max per container.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
 x-common: &common
   restart: unless-stopped
+  logging: *logging
   networks:
     - berserk
   # Merge-heavy services (janitor, nursery) and the query cache open many
@@ -247,6 +256,7 @@ services:
 
   postgres:
     image: postgres:17
+    logging: *logging
     networks:
       - berserk
     environment:
@@ -266,6 +276,7 @@ services:
 
   minio:
     image: minio/minio:latest
+    logging: *logging
     networks:
       - berserk
     command: server /data --console-address ":9001"
@@ -287,6 +298,7 @@ services:
   # Create the default bucket on startup
   minio-init:
     image: minio/mc:latest
+    logging: *logging
     networks:
       - berserk
     depends_on:
@@ -303,6 +315,7 @@ services:
   # Fix volume ownership for UID 1000 (mirrors Helm fsGroup: 1000)
   volume-init:
     image: alpine:latest
+    logging: *logging
     entrypoint: /bin/sh -c "chown -R 1000:1000 /mnt/*"
     volumes:
       - query-cache:/mnt/query-cache
@@ -315,7 +328,7 @@ services:
 
   meta:
     <<: *common
-    image: ghcr.io/berserkdb/meta:v1.0.149-rc.1
+    image: ghcr.io/berserkdb/meta:v1.0.150-rc.3
     depends_on:
       postgres:
         condition: service_healthy
@@ -338,7 +351,7 @@ services:
 
   query:
     <<: *common
-    image: ghcr.io/berserkdb/query:v1.0.149-rc.1
+    image: ghcr.io/berserkdb/query:v1.0.150-rc.3
     depends_on:
       meta:
         condition: service_healthy
@@ -371,7 +384,8 @@ services:
   # reads at startup. Talks to meta over gRPC directly (no bearer
   # token → ClientChannel::direct, see apps/cli/src/network/meta_client.rs).
   ingest-token-init:
-    image: ghcr.io/berserkdb/cli:v1.0.149-rc.1
+    image: ghcr.io/berserkdb/cli:v1.0.150-rc.3
+    logging: *logging
     networks:
       - berserk
     depends_on:
@@ -390,7 +404,7 @@ services:
 
   ingest:
     <<: *common
-    image: ghcr.io/berserkdb/ingest:v1.0.149-rc.1
+    image: ghcr.io/berserkdb/ingest:v1.0.150-rc.3
     depends_on:
       meta:
         condition: service_healthy
@@ -428,7 +442,7 @@ services:
 
   janitor:
     <<: *common
-    image: ghcr.io/berserkdb/janitor:v1.0.149-rc.1
+    image: ghcr.io/berserkdb/janitor:v1.0.150-rc.3
     depends_on:
       meta:
         condition: service_healthy
@@ -458,7 +472,7 @@ services:
 
   nursery:
     <<: *common
-    image: ghcr.io/berserkdb/nursery:v1.0.149-rc.1
+    image: ghcr.io/berserkdb/nursery:v1.0.150-rc.3
     depends_on:
       meta:
         condition: service_healthy
@@ -486,7 +500,7 @@ services:
 
   ui:
     <<: *common
-    image: ghcr.io/berserkdb/ui:v1.0.149-rc.1
+    image: ghcr.io/berserkdb/ui:v1.0.150-rc.3
     depends_on:
       postgres:
         condition: service_healthy
@@ -536,7 +550,7 @@ services:
 
   permissions:
     <<: *common
-    image: ghcr.io/berserkdb/permissions:v1.0.149-rc.1
+    image: ghcr.io/berserkdb/permissions:v1.0.150-rc.3
     depends_on:
       postgres:
         condition: service_healthy
@@ -554,7 +568,7 @@ services:
 
   gateway:
     <<: *common
-    image: ghcr.io/berserkdb/gateway:v1.0.149-rc.1
+    image: ghcr.io/berserkdb/gateway:v1.0.150-rc.3
     depends_on:
       postgres:
         condition: service_healthy

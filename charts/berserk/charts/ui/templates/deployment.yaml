@@ -10,6 +10,13 @@
             - containerPort: {{ .Values.service.targetPort }}
               name: http
               protocol: TCP
+            # Operator Prometheus /metrics (#3792) on a dedicated internal
+            # listener, scraped via the pod's prometheus.io/* annotations. Fixed
+            # at the app's BZRK_UI_METRICS_PORT default (9571); keep in sync with
+            # the podAnnotations prometheus.io/port.
+            - containerPort: 9571
+              name: metrics
+              protocol: TCP
           env:
             # The image entrypoint migrates the database, then starts the HTTP
             # server bound to 0.0.0.0:$PORT.

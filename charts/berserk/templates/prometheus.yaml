@@ -1,0 +1,325 @@
+{{- /*
+Operator-tier Prometheus (#3792). A single self-managed Prometheus that scrapes
+the annotation-based operator `/metrics` endpoints (prometheus.io/scrape) exposed
+by the Berserk services. No Prometheus Operator, no CRDs — one Deployment with
+in-cluster pod service-discovery.
+
+Off by default (values.yaml); enabled only where an operator wants the pull-based
+view (dev). Cluster-scoped RBAC objects are namespace-qualified so parallel
+installs in different namespaces never collide.
+*/ -}}
+{{- define "berserk.prometheus.config" -}}
+global:
+  scrape_interval: {{ .Values.prometheus.scrapeInterval | default "30s" }}
+  scrape_timeout: 10s
+  external_labels:
+    cluster: {{ .Values.global.clusterName | default "default" | quote }}
+rule_files:
+  - /etc/prometheus-rules/*.yaml
+scrape_configs:
+  {{- if not .Values.prometheus.basicAuth.enabled }}
+  # Prometheus scrapes its own /metrics. Skipped when basicAuth is on — the
+  # self-scrape carries no credentials, so it would 401 against its own
+  # authed endpoint (and we don't want the plaintext password in the config).
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+  {{- end }}
+
+  # Operator /metrics via annotation-based pod discovery, scoped to this
+  # namespace. Honors prometheus.io/{scrape,path,port} set on the service
+  # pods (charts/berserk/values.yaml). This is the vanilla-Prometheus
+  # equivalent of a PodMonitor — no Operator required.
+  - job_name: kubernetes-pods
+    kubernetes_sd_configs:
+      - role: pod
+        namespaces:
+          names: [{{ .Release.Namespace }}]
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+        action: keep
+        regex: "true"
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+        action: replace
+        target_label: __metrics_path__
+        regex: (.+)
+      - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+        action: replace
+        regex: ([^:]+)(?::\d+)?;(\d+)
+        replacement: $1:$2
+        target_label: __address__
+      - source_labels: [__meta_kubernetes_namespace]
+        action: replace
+        target_label: namespace
+      - source_labels: [__meta_kubernetes_pod_name]
+        action: replace
+        target_label: pod
+      - source_labels: [__meta_kubernetes_pod_node_name]
+        action: replace
+        target_label: node
+      # app label (deployment/statefulset name) as the Prometheus `service`.
+      - source_labels: [__meta_kubernetes_pod_label_app]
+        action: replace
+        target_label: service
+{{- end -}}
+{{- if .Values.prometheus.enabled }}
+{{- $ns := .Release.Namespace }}
+{{- $name := "prometheus" }}
+{{- $crName := printf "%s-prometheus" $ns }}
+{{- $p := .Values.prometheus }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $name }}
+  namespace: {{ $ns }}
+  labels:
+    app: prometheus
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ $crName }}
+  labels:
+    app: prometheus
+rules:
+  - apiGroups: [""]
+    resources: ["nodes", "services", "endpoints", "pods"]
+    verbs: ["get", "list", "watch"]
+  - nonResourceURLs: ["/metrics"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ $crName }}
+  labels:
+    app: prometheus
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ $crName }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ $name }}
+    namespace: {{ $ns }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $name }}-config
+  namespace: {{ $ns }}
+  labels:
+    app: prometheus
+data:
+  prometheus.yml: |
+    {{- include "berserk.prometheus.config" . | nindent 4 }}
+  {{- if $p.basicAuth.enabled }}
+  # Native Prometheus basic auth. Applies to ALL endpoints (UI, /api, /metrics,
+  # and the /-/ready + /-/healthy probes) — verified against v3.1.0 — so the
+  # kubelet probes below use tcpSocket rather than an authenticated httpGet.
+  web.yml: |
+    basic_auth_users:
+      {{ $p.basicAuth.username }}: {{ $p.basicAuth.passwordHash | quote }}
+  {{- end }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $name }}-rules
+  namespace: {{ $ns }}
+  labels:
+    app: prometheus
+data:
+  # Example operator alerting rules, mirroring the built-in Grafana alerts.
+  # Loaded via rule_files: /etc/prometheus-rules/*.yaml.
+  berserk-alerts.yaml: |
+    {{- .Files.Get "files/prometheus-alerts.yaml" | nindent 4 }}
+  {{- if $p.canaryAlert }}
+  # Temporary always-firing canary — proves rule evaluation works end-to-end.
+  # Disable with prometheus.canaryAlert=false.
+  canary.yaml: |
+    groups:
+      - name: berserk.canary
+        rules:
+          - alert: BerserkAlertingCanary
+            expr: vector(1)
+            for: 0m
+            labels:
+              severity: info
+              canary: "true"
+            annotations:
+              summary: "Berserk alerting canary — rule evaluation is working"
+              description: "Synthetic always-on alert. FIRING here means rule_files load + evaluate. Disable via prometheus.canaryAlert=false."
+  {{- end }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $name }}-data
+  namespace: {{ $ns }}
+  labels:
+    app: prometheus
+spec:
+  accessModes: ["ReadWriteOnce"]
+  {{- with $p.storage.storageClassName }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ $p.storage.size | default "5Gi" | quote }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  namespace: {{ $ns }}
+  labels:
+    app: prometheus
+spec:
+  replicas: 1
+  # Single writer to one RWO volume — never run two Prometheis on one PVC.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+      annotations:
+        # Roll the pod when the scrape config, auth, or alerting rules change.
+        checksum/config: {{ printf "%s|%s|%s|%v" (include "berserk.prometheus.config" .) ($p.basicAuth.passwordHash | default "") (.Files.Get "files/prometheus-alerts.yaml") $p.canaryAlert | sha256sum | trunc 16 | quote }}
+    spec:
+      serviceAccountName: {{ $name }}
+      securityContext:
+        # prom/prometheus runs as uid 65534 (nobody); fsGroup lets it write the
+        # local-path (root-owned) volume.
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        fsGroup: 65534
+      {{- with $p.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $p.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: prometheus
+          image: "{{ $p.image.repository }}:{{ $p.image.tag }}"
+          imagePullPolicy: {{ $p.image.pullPolicy | default "IfNotPresent" }}
+          args:
+            - --config.file=/etc/prometheus/prometheus.yml
+            - --storage.tsdb.path=/prometheus
+            - --storage.tsdb.retention.time={{ $p.retention | default "1d" }}
+            - --web.enable-lifecycle
+            {{- if $p.basicAuth.enabled }}
+            - --web.config.file=/etc/prometheus/web.yml
+            {{- end }}
+            {{- if and $p.ingress.enabled $p.ingress.host }}
+            - --web.external-url=https://{{ $p.ingress.host }}
+            - --web.route-prefix=/
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: 9090
+          {{- if $p.basicAuth.enabled }}
+          # Basic auth guards /-/ready + /-/healthy too, so probe the socket.
+          readinessProbe:
+            tcpSocket:
+              port: 9090
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 9090
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          {{- else }}
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: 9090
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /-/healthy
+              port: 9090
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          {{- end }}
+          resources:
+            {{- toYaml $p.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/prometheus
+            - name: rules
+              mountPath: /etc/prometheus-rules
+            - name: data
+              mountPath: /prometheus
+      volumes:
+        - name: config
+          configMap:
+            name: {{ $name }}-config
+        - name: rules
+          configMap:
+            name: {{ $name }}-rules
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ $name }}-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  namespace: {{ $ns }}
+  labels:
+    app: prometheus
+spec:
+  type: ClusterIP
+  selector:
+    app: prometheus
+  ports:
+    - name: http
+      port: 9090
+      targetPort: 9090
+{{- if $p.ingress.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ $name }}
+  namespace: {{ $ns }}
+  labels:
+    app: prometheus
+  {{- with $p.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- with $p.ingress.className }}
+  ingressClassName: {{ . | quote }}
+  {{- end }}
+  {{- if and $p.ingress.tls.enabled $p.ingress.host }}
+  tls:
+    - hosts: [{{ $p.ingress.host | quote }}]
+      secretName: {{ $p.ingress.tls.secretName | quote }}
+  {{- end }}
+  rules:
+    - host: {{ $p.ingress.host | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $name }}
+                port:
+                  number: 9090
+{{- end }}
+{{- end }}
