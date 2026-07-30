@@ -215,7 +215,7 @@ query:
   resources:
     requests:
       memory: "1Gi"
-      cpu: "2000m"
+      cpu: "500m"
     limits:
       memory: "4Gi"
       cpu: "4000m"
@@ -296,7 +296,7 @@ janitor:
   resources:
     requests:
       memory: "512Mi"
-      cpu: "1500m"
+      cpu: "200m"
     limits:
       # One merge per pod (sequential). `WriterBudget::Auto` is 100% of this
       # limit, so writers/pass = limit / WRITER_MEMORY_ESTIMATE (4 MiB) ≈ 1024 at

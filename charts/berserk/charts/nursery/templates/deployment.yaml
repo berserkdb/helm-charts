@@ -16,6 +16,7 @@
           ports:
             - containerPort: {{ .Values.service.port }}
               name: health
+              protocol: TCP
             {{- /* NurseryQueryService gRPC port — exposed only when
                   `query_grpc_bind` is configured. The bind value is
                   parsed for its port number; declaring it on the

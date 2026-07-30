@@ -1,4 +1,4 @@
-{{ include "berserk-common.configmap.metadata" . }}
+{{- define "ingest.config-data" -}}
 data:
   config.yaml: |
     meta_endpoint: {{ .Values.config.metaEndpoint | quote }}
@@ -34,3 +34,5 @@ data:
     {{- end }}
 
     {{- include "berserk-common.observability-config" . | nindent 4 }}
+{{- end }}
+{{- include "berserk-common.configmap" . }}

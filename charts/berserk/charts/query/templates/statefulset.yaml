@@ -38,11 +38,10 @@ spec:
       labels:
         {{- include "berserk-common.selectorLabels" . | nindent 8 }}
         component: {{ .Values.component | default "backend" }}
+      {{- with .Values.podAnnotations }}
       annotations:
-        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
-        {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
-        {{- end }}
+      {{- end }}
     spec:
       # k8s injects service-link env vars like QUERY_SERVICE_HOST / QUERY_PORT
       # into every pod in the namespace. Figment's Env::prefixed("QUERY_") would

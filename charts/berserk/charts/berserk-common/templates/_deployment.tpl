@@ -1,7 +1,6 @@
 {{/*
 Deployment header: everything from apiVersion through imagePullSecrets.
 The calling template continues with the containers: list.
-Uses $.Template.BasePath from the calling chart's context for configmap checksum.
 */}}
 {{- define "berserk-common.deployment.header" -}}
 apiVersion: apps/v1
@@ -26,11 +25,10 @@ spec:
       labels:
         {{- include "berserk-common.selectorLabels" . | nindent 8 }}
         component: {{ .Values.component | default "backend" }}
+      {{- with .Values.podAnnotations }}
       annotations:
-        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
-        {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
-        {{- end }}
+      {{- end }}
     spec:
       {{- with .Values.global.imagePullSecrets }}
       imagePullSecrets:
@@ -137,7 +135,7 @@ Config volume definition.
 {{- define "berserk-common.volume.config" -}}
 - name: config
   configMap:
-    name: {{ include "berserk-common.fullname" . }}-config
+    name: {{ include "berserk-common.configName" . }}
 {{- end }}
 
 {{/*

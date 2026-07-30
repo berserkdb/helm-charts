@@ -1,4 +1,4 @@
-{{ include "berserk-common.configmap.metadata" . }}
+{{- define "janitor.config-data" -}}
 data:
   config.yaml: |
     bind: "0.0.0.0:9502"
@@ -23,3 +23,5 @@ data:
         query: "{{ $defaultTable }} | take 1"
         interval_seconds: 60
         since: "1h ago"
+{{- end }}
+{{- include "berserk-common.configmap" . }}

@@ -1,5 +1,7 @@
-{{ include "berserk-common.configmap.metadata" . }}
+{{- define "permissions.config-data" -}}
 data:
   config.yaml: |
     bind: "0.0.0.0:{{ .Values.service.port }}"
     {{- include "berserk-common.observability-config" . | nindent 4 }}
+{{- end }}
+{{- include "berserk-common.configmap" . }}

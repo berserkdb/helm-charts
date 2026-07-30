@@ -1,6 +1,0 @@
-{{- /*
-No ConfigMap. The ui is configured entirely via environment variables in the
-Deployment (no config file), so a config change already rolls the pods on its
-own. This file exists only so the shared deployment helper's checksum include
-resolves; it renders nothing.
-*/ -}}

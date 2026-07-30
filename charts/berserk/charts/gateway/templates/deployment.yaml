@@ -65,7 +65,7 @@
             - name: GATEWAY_GRPC_ROUTES
               valueFrom:
                 configMapKeyRef:
-                  name: {{ include "berserk-common.fullname" . }}-config
+                  name: {{ include "berserk-common.configName" . }}
                   key: grpc_routes.json
             {{- if .Values.bootstrap.disabled }}
             - name: GATEWAY_BOOTSTRAP_DISABLED

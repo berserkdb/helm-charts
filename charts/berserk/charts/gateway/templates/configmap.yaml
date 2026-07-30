@@ -1,4 +1,4 @@
-{{ include "berserk-common.configmap.metadata" . }}
+{{- define "gateway.config-data" -}}
 data:
   config.yaml: |
     bind: "0.0.0.0:{{ .Values.service.port }}"
@@ -83,7 +83,9 @@ data:
     {{- end }}
     {{- end }}
     {{- include "berserk-common.observability-config" . | nindent 4 }}
-  # The gRPC route table is JSON, kept as a separate file so operators
-  # can `kubectl edit configmap` without re-flowing the YAML above.
+  # The gRPC route table is JSON, kept as its own key so it can be read straight
+  # into GATEWAY_GRPC_ROUTES rather than parsed out of the YAML above.
   grpc_routes.json: |-
     {{- .Values.config.grpcRoutes | nindent 4 }}
+{{- end }}
+{{- include "berserk-common.configmap" . }}
