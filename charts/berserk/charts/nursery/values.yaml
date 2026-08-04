@@ -2,10 +2,9 @@
 replicaCount: 1
 component: backend
 
-# Recreate strategy: stop old pod before starting new. Load-bearing twice:
-# the nursery owns stream offsets and merge state (two instances cause offset
-# mismatch errors when both register segments), and the working dir is a
-# ReadWriteOnce PVC the old pod must unmount before the replacement can start.
+# Recreate strategy: stop the old pod before starting the new. A rolling
+# update would briefly double the live-nursery count, ratcheting the
+# coordinator's grow-only group target upward on every deploy.
 strategy:
   type: Recreate
 
@@ -54,17 +53,15 @@ resources:
     memory: "1100Mi"
     cpu: "1000m"
 
-# Working dir: baby segments + the disk-resident node identity (`nodeid`).
-# persistent=false (default) uses an emptyDir — no storage requirements on
-# the cluster, but every pod replacement is a disk loss: fresh minted id,
-# TTL-aged stream-group failover, cold cache. persistent=true uses a PVC
-# (dynamic provisioning required) so redeploys keep both id and cache warm.
+# Working dir: baby segments + the disk-resident node identity (`nodeid`),
+# on a pod-scoped emptyDir. emptyDir survives container crashes (kubelet
+# restarts the container in the same pod), so a crashed nursery comes back
+# with its identity and working dir warm, inside the liveness TTL. Pod
+# replacement (deploys, evictions, node loss) is a disk loss by design:
+# fresh identity, TTL-aged stream-group failover, and a bounded S3 refetch
+# of the small unmerged working set.
 workingDir:
-  persistent: false
   size: "50Gi"
-  # PVC only. Empty -> cluster default StorageClass (local-path on the K3s
-  # clusters). local-path pins the pod to the node holding the volume.
-  storageClassName: ""
 
 config:
   metaEndpoint: "http://meta:9560"
