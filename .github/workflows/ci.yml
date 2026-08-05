@@ -65,6 +65,18 @@ jobs:
             --set primary.resources.requests.cpu=100m \
             --wait --timeout 120s
 
+      # postgres-credentials is externally managed in prod/dev; ci/values-ci.yaml
+      # sets postgresCredentials.managed=false and the ui migrate pre-install hook
+      # reads this secret, so it must exist before `helm install` (a chart-managed
+      # secret would only appear after pre-install hooks run). Mirrors
+      # tools/scripts/kind-up.sh in the source repo.
+      - name: Create postgres-credentials secret
+        run: |
+          kubectl create secret generic postgres-credentials \
+            --namespace berserk-test \
+            --from-literal=database_url='postgres://postgres:testpassword@postgres-postgresql:5432/berserk?sslmode=disable' \
+            --dry-run=client -o yaml | kubectl apply -f -
+
       - name: Deploy MinIO
         run: |
           kubectl apply -n berserk-test -f - <<'EOF'
