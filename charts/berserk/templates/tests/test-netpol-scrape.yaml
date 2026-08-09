@@ -1,0 +1,100 @@
+{{- if and .Values.global.networkPolicy.enabled .Values.global.networkPolicy.scrape.enabled .Values.global.networkPolicy.scrape.from }}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "berserk.fullname" . }}-test-netpol-scrape
+  labels:
+    {{- include "berserk.labels" . | nindent 4 }}
+    # Impersonates a scraper matched by global.networkPolicy.scrape.from's default
+    # `podLabels: {app: prometheus}` entry. test-networkpolicy.yaml's unlabelled pod
+    # is the negative control for the same rule; this is the positive one.
+    app: prometheus
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-weight: "11"
+    helm.sh/hook-delete-policy: before-hook-creation
+spec:
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+  restartPolicy: Never
+  containers:
+    - name: test-netpol-scrape
+      image: busybox:1.37
+      securityContext:
+        allowPrivilegeEscalation: false
+      command: ["/bin/sh", "-c"]
+      args:
+        - |
+          set -e
+          PASS=0
+          FAIL=0
+
+          expect_allowed() {
+            SVC="$1"; URL="$2"
+            echo -n "  $SVC (expect allowed)... "
+            if wget -qO- --timeout=5 "$URL" >/dev/null 2>&1; then
+              echo "OK - allowed"
+              PASS=$((PASS + 1))
+            else
+              echo "FAIL - connection failed (should be allowed)"
+              FAIL=$((FAIL + 1))
+            fi
+          }
+
+          expect_blocked() {
+            SVC="$1"; URL="$2"
+            echo -n "  $SVC (expect blocked)... "
+            if wget -qO- --timeout=5 "$URL" >/dev/null 2>&1; then
+              echo "FAIL - connection succeeded (should be blocked)"
+              FAIL=$((FAIL + 1))
+            else
+              echo "OK - blocked"
+              PASS=$((PASS + 1))
+            fi
+          }
+
+          echo "=== NetworkPolicy test: operator /metrics scrape ingress ==="
+          echo ""
+          echo "This pod carries app=prometheus, so the generic scrape rule should"
+          echo "admit it to each service's operator /metrics port -- and to nothing"
+          echo "else. Only the services whose operator port is reachable through a"
+          echo "Service are testable here: query 9511, janitor 9502, gateway 9502"
+          echo "and ui 9571 are on dedicated listeners that appear in no Service, so"
+          echo "DNS cannot reach them and an expect_blocked would pass vacuously."
+          echo ""
+
+          {{- if .Values.meta.enabled }}
+          expect_allowed "meta /metrics" "http://meta:{{ .Values.meta.service.port }}/metrics"
+          {{- end }}
+          {{- if .Values.nursery.enabled }}
+          expect_allowed "nursery /metrics" "http://nursery:{{ .Values.nursery.service.port }}/metrics"
+          {{- end }}
+          {{- if .Values.ingest.enabled }}
+          expect_allowed "ingest /metrics" "http://ingest:{{ .Values.ingest.service.ports.health }}/metrics"
+          {{- end }}
+          {{- if .Values.permissions.enabled }}
+          expect_allowed "permissions /metrics" "http://permissions:{{ .Values.permissions.service.port }}/metrics"
+          {{- end }}
+
+          echo ""
+          echo "The rule is port-scoped, not host-scoped: a scraper gets /metrics and"
+          echo "nothing more."
+          {{- if .Values.ui.enabled }}
+          expect_blocked "ui app port" "http://ui:{{ .Values.ui.service.port }}/health/live"
+          {{- end }}
+
+          echo ""
+          echo "Results: ${PASS} passed, ${FAIL} failed"
+
+          if [ "$FAIL" -gt 0 ]; then
+            echo "FAILED: the operator-metrics scrape rule is not behaving as declared."
+            echo "This test is a no-op on a cluster whose CNI does not enforce"
+            echo "NetworkPolicy (notably kind/kindnet) -- run it on Calico, Cilium or"
+            echo "EKS with enableNetworkPolicy."
+            exit 1
+          fi
+
+          echo "PASSED: operator /metrics is reachable by declared scrapers only."
+{{- end }}

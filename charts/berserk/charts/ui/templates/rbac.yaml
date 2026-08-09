@@ -1,0 +1,60 @@
+{{/*
+Pod discovery for the in-product operator-metrics collector (#4122).
+
+The collector lists pods in THIS namespace and reads their
+`prometheus.io/{scrape,path,port}` annotations plus `status.podIP` to build its
+scrape target set — the same annotation contract the bundled Prometheus uses
+(templates/prometheus.yaml). `list` is the only verb it needs: a List response
+carries the full pod objects. No `get`, no `watch` (discovery is a list per
+interval, not an informer — add "watch" here if that ever changes), no other
+resource, and a namespaced Role rather than a ClusterRole.
+
+CONTRACT the chart cannot enforce: when this RBAC is absent — `collector.rbac`
+false, an admission policy that rejects it, or a non-Kubernetes install — the
+pod-list call is refused and the app MUST fall back to its static target list
+(BZRK_COLLECTOR_STATIC_TARGETS). Degraded, never a crash loop.
+
+Follows ingest's token-init idiom: when the install supplies
+`global.serviceAccountName` (IRSA on EKS, created out of band) that account is
+bound and no ServiceAccount is created here.
+*/}}
+{{- $wants := include "ui.podDiscoveryRBAC" . | trim | eq "true" }}
+{{- $hasGlobalSA := .Values.global.serviceAccountName }}
+{{- if and $wants (not $hasGlobalSA) }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "berserk-common.fullname" . }}
+  labels:
+    {{- include "berserk-common.labels" . | nindent 4 }}
+{{- end }}
+{{- if $wants }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "berserk-common.fullname" . }}-pod-discovery
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "berserk-common.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "berserk-common.fullname" . }}-pod-discovery
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "berserk-common.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "berserk-common.fullname" . }}-pod-discovery
+subjects:
+  - kind: ServiceAccount
+    name: {{ $hasGlobalSA | default (include "berserk-common.fullname" .) }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}

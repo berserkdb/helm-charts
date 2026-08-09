@@ -134,6 +134,69 @@ global:
     #    ports:
     #      - port: 4317
     #        protocol: TCP
+    # Operator `/metrics` scrape access. ONE generic rule rather than enumerating
+    # every scraper -> service port pair: each service's policy opens ITS OWN
+    # operator port -- read from that pod's `prometheus.io/port` annotation, so the
+    # policy cannot drift from the endpoint that is actually scraped -- to the peers
+    # listed in `from`.
+    #
+    # Without this, an install with networkPolicy.enabled has no path to any
+    # operator `/metrics` port, so both the bundled Prometheus and the in-product
+    # collector in `ui` fail closed and report nothing.
+    scrape:
+      enabled: true
+      # Who may scrape. Same entry shapes as `otlpEgress` above, plus:
+      #   - {app: <chart name>}                  pod of THIS release (AND'ed with
+      #                                          app.kubernetes.io/instance)
+      #   - {podLabels: {...}}                   any pod in this namespace carrying
+      #                                          these labels
+      #   - {namespace: <ns>, podLabels: {...}}  cross-namespace scraper
+      #   - {cidr: <cidr>}                       off-cluster scraper
+      # An EMPTY list disables the rule: an empty NetworkPolicy `from` would mean
+      # "from anywhere", which is never what is wanted here.
+      from:
+        # The bundled Prometheus (templates/prometheus.yaml, prometheus.enabled).
+        # Matched by label rather than `{app: prometheus}` because that pod carries
+        # no app.kubernetes.io/instance label, which an `app` entry ANDs in.
+        - podLabels:
+            app: prometheus
+        # The in-product operator-metrics collector in `ui`. Also covers ui scraping
+        # its own /metrics, and replica-to-replica if ui ever scales past 1.
+        - app: ui
+        # Your own monitoring stack, for example:
+        # - namespace: monitoring
+        #   podLabels:
+        #     app.kubernetes.io/name: prometheus
+      # Every operator `/metrics` port in this release. Two jobs: (1) the allowlist a
+      # scraping service (networkPolicy.scrapeEgress) may egress to, and (2) a drift
+      # guard -- the render FAILS if an annotated pod's `prometheus.io/port` is
+      # missing here, so a renumbered port is a build error instead of a silent
+      # connection timeout found weeks later.
+      #   query 9511 · janitor 9502 · gateway 9502 · nursery 9530
+      #   ingest 9550 · meta 9560 · ui 9571 · permissions 9580
+      operatorPorts: [9502, 9511, 9530, 9550, 9560, 9571, 9580]
+    # Egress to the Kubernetes API server, for a service doing in-cluster discovery
+    # (enabled per service with `networkPolicy.kubeApiEgress` — today only ui's
+    # operator-metrics collector).
+    #
+    # PORTABILITY: most CNIs evaluate egress AFTER the kube-proxy DNAT, so the
+    # destination they see is the real control-plane address, not the `kubernetes`
+    # Service ClusterIP on 443 — port 443 on EKS/GKE, 6443 on K3s/kubeadm/kind.
+    # Find yours with `kubectl get endpoints kubernetes`. The default covers both and
+    # should be narrowed to your control-plane CIDR in production, the same posture
+    # as `externalEgress` above. On Cilium, CIDR rules do not always match
+    # cluster-internal identities: if discovery still fails, set this to [] and add a
+    # CiliumNetworkPolicy with `toEntities: [kube-apiserver]`.
+    #
+    # When this is empty or wrong, discovery fails and the collector falls back to
+    # its static target list — degraded, not a crash.
+    kubeApiEgress:
+      - cidr: 0.0.0.0/0
+        ports:
+          - port: 443
+            protocol: TCP
+          - port: 6443
+            protocol: TCP
   # Node scheduling constraints (applied to all services unless overridden)
   nodeSelector: {}
   tolerations: []
@@ -378,13 +441,14 @@ ui:
   ingress:
     enabled: false
 
-  # Sized for the UI runtime (~650 MB resident at startup); see subchart values.
+  # Sized for the UI runtime (~650 MB resident at startup) plus the in-product
+  # operator-metrics collector (#4122); see subchart values for the arithmetic.
   resources:
     requests:
       memory: "512Mi"
       cpu: "100m"
     limits:
-      memory: "768Mi"
+      memory: "1Gi"
       cpu: "500m"
 
   config:
@@ -532,6 +596,12 @@ nursery:
 # Prometheus (no Operator/CRDs) that scrapes the annotation-based operator
 # `/metrics` endpoints via in-cluster pod discovery. Enable per-environment
 # (dev) where an operator wants the pull-based view. See templates/prometheus.yaml.
+#
+# Complements — does not duplicate — the in-product collector in `ui`
+# (`ui.collector.enabled`, on by default): that one is always available with a
+# short in-memory window and no extra infrastructure, this one is retention,
+# alerting and integration with your own stack. Do not switch this off on the
+# strength of the other. See charts/README.md, "Operator metrics: two views".
 prometheus:
   enabled: false
   image:

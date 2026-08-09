@@ -63,14 +63,32 @@ networkPolicy:
       ports: [{port: 9580}]
   additionalIngress: []
   additionalEgress: []
+  # The in-product operator-metrics collector (#4122) scrapes every annotated
+  # Berserk pod's operator /metrics and lists pods from the Kubernetes API. Both are
+  # generic rules driven by global.networkPolicy.scrape / .kubeApiEgress —
+  # deliberately not a per-peer port list here, so adding a service or moving an
+  # operator port needs no edit on this side. Turn both off together with
+  # collector.enabled.
+  #
+  # Verification after a rollout is `bzrk_collector_targets_stale` and
+  # `bzrk_collector_scrapes_failed_total` on this pod's own /metrics: a policy that
+  # is too tight shows up there rather than as a crash.
+  scrapeEgress: true
+  kubeApiEgress: true
 
-# The UI runtime needs ~650 MB resident; keep the memory limit at/above 768Mi.
+# The UI runtime needs ~650 MB resident. The operator-metrics collector (#4122) adds
+# ~12-20 MB of steady-state ring buffers plus per-cycle parse transients across every
+# scraped pod, which does not fit comfortably in the ~100 MB of headroom a 768Mi limit
+# leaves — so the limit is 1Gi. (CI, kind and internal clusters have run the Phoenix ui
+# at 1Gi since it landed, so it is the better-exercised value.) Watch
+# `bzrk_collector_ets_memory_bytes` and `bzrk_collector_series` before raising
+# collector.windowSeconds or widening its allowlist.
 resources:
   requests:
     memory: "512Mi"
     cpu: "100m"
   limits:
-    memory: "768Mi"
+    memory: "1Gi"
     cpu: "500m"
 
 config:
@@ -136,3 +154,39 @@ secrets:
   # Token the app presents to apps/permissions /v1/check (same shared secret
   # the gateway uses).
   permissionsServiceTokenKey: "permissions_service_token"
+
+# In-product operator-metrics collector (#4122). Scrapes every pod annotated
+# `prometheus.io/scrape: "true"` in this namespace on its operator /metrics port
+# every `intervalSeconds`, and keeps a `windowSeconds` rolling window IN MEMORY
+# (one ring buffer per series). No time-series database, no PromQL, no retention
+# beyond the window, and it is lost on restart.
+#
+# This is the in-product health view, NOT a replacement for the bundled Prometheus
+# (`prometheus.enabled`), which is where durable retention, alerting and
+# integration with your own monitoring stack live. Both are wanted; see
+# charts/README.md, "Operator metrics: two views".
+collector:
+  enabled: true
+  # Kubernetes pod discovery. Needs `list` on pods in this namespace — the chart
+  # creates a ServiceAccount + namespaced Role for it (see `rbac` below and
+  # templates/rbac.yaml). Set false for a non-Kubernetes install; the app then uses
+  # `staticTargets`.
+  podDiscovery: true
+  # Let the chart own the ServiceAccount + Role + RoleBinding. Set false to bring
+  # your own: pre-create them and point the pod at the account through
+  # `global.serviceAccountName`. With discovery unauthorised the app falls back to
+  # `staticTargets` — degraded, not broken.
+  rbac: true
+  # Matches prometheus.scrapeInterval so the two views are comparable.
+  intervalSeconds: 30
+  # The retained window. Memory is roughly
+  # (series x windowSeconds/intervalSeconds x 12 bytes); watch
+  # `bzrk_collector_series` and `bzrk_collector_ets_memory_bytes` on this pod's own
+  # /metrics before raising either.
+  windowSeconds: 3600
+  # Fallback targets when discovery is off or unauthorised, as `host:port` or
+  # `host:port/path`. These are operator /metrics ports, NOT service ports —
+  # query's operator listener is 9511, not 9510.
+  staticTargets: []
+  # - query:9511
+  # - meta:9560

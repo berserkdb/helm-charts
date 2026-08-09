@@ -1,5 +1,13 @@
 {{- include "berserk-common.deployment.header" . }}
-{{- include "berserk-common.serviceAccountName" . }}
+{{- /* The shared helper only emits `global.serviceAccountName`, so without this
+       override ui would run as the namespace `default` account and the collector's
+       pod-list would be refused. Same override ingest makes for its token-init
+       Role. */ -}}
+{{- if .Values.global.serviceAccountName }}
+      serviceAccountName: {{ .Values.global.serviceAccountName }}
+{{- else if include "ui.podDiscoveryRBAC" . | trim | eq "true" }}
+      serviceAccountName: {{ include "berserk-common.fullname" . }}
+{{- end }}
       containers:
         - name: ui
           image: {{ include "berserk-common.image" . }}
@@ -85,7 +93,42 @@
             - name: CSP_NONCE_HEADER
               value: {{ .Values.config.cspNonceHeader | quote }}
             {{- end }}
-            {{- if (.Values.config.observability.otlpEnabled | default .Values.global.observability.otlpEnabled) }}
+            {{- $otlp := (.Values.config.observability.otlpEnabled | default .Values.global.observability.otlpEnabled) }}
+            {{- $collector := .Values.collector | default dict }}
+            {{- if $collector.enabled }}
+            # In-product operator-metrics collector (#4122). With discovery `static`,
+            # or when the pod-list is unauthorised, the app uses
+            # BZRK_COLLECTOR_STATIC_TARGETS instead of failing.
+            - name: BZRK_COLLECTOR_ENABLED
+              value: "true"
+            - name: BZRK_COLLECTOR_DISCOVERY
+              value: {{ ternary "kubernetes" "static" ($collector.podDiscovery | default false) | quote }}
+            - name: BZRK_COLLECTOR_INTERVAL_SECONDS
+              value: {{ $collector.intervalSeconds | default 30 | quote }}
+            - name: BZRK_COLLECTOR_WINDOW_SECONDS
+              value: {{ $collector.windowSeconds | default 3600 | quote }}
+            {{- with $collector.staticTargets }}
+            - name: BZRK_COLLECTOR_STATIC_TARGETS
+              value: {{ join "," . | quote }}
+            {{- end }}
+            {{- if not $otlp }}
+            # Discovery needs the namespace, and it comes from the downward API rather
+            # than a value so it can never disagree with where the pod actually runs.
+            # With OTLP on, the block below already provides these.
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            {{- end }}
+            {{- else }}
+            - name: BZRK_COLLECTOR_ENABLED
+              value: "false"
+            {{- end }}
+            {{- if $otlp }}
             # OpenTelemetry: export traces to the cluster OTLP collector via the
             # standard OTEL_* env vars. OTEL_RESOURCE_ATTRIBUTES (bzrk.cluster.name
             # + k8s.*) comes from the shared helper below.

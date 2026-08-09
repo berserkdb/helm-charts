@@ -12,7 +12,7 @@
 #     `bzrk_*_cpu_seconds_total`, `bzrk_cache_server_*_total`). Copy names as-is.
 #   * Histograms expose `_bucket{le=...}`, `_sum`, `_count`.
 #
-# Label model (all samples): `service` (meta|query|nursery|ingest|janitor),
+# Label model (all samples): `service` (meta|query|nursery|ingest|janitor|ui),
 # `pod`, `node`, `namespace`, `job="kubernetes-pods"`. A `cluster` label set via
 # `external_labels` is NOT queryable inside these expressions (external labels
 # attach only to outbound alerts / remote-write), so none of the rules group by
@@ -116,6 +116,28 @@ groups:
         annotations:
           summary: "S3 backend errors ({{ $labels.kind }})"
           description: "{{ $value | printf \"%.3f\" }} {{ $labels.kind }} S3 ops/s across the fleet."
+
+      # Genuine S3-side retries — the store failed a request that reached it.
+      # Deliberately separate from bzrk_s3_local_backoff_total, which counts our
+      # own rate limiter delaying a request BEFORE S3 was asked: folding the two
+      # together (as the OTLP s3.request.attempts counter does) makes the number
+      # unreadable, since local backoff can outnumber real retries by ~500x.
+      - alert: S3RetryRate
+        expr: sum by (kind) (rate(bzrk_s3_retries_total[5m])) > 0.5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "S3 retries elevated ({{ $labels.kind }})"
+          description: "{{ $value | printf \"%.3f\" }} {{ $labels.kind }} S3 retries/s across the fleet."
+
+      # No S3 LATENCY alert ships, by design. There is no threshold that holds
+      # across installations — a healthy same-region AWS path and a healthy
+      # cross-region path differ by more than an order of magnitude at p99, so a
+      # fixed bound pages continuously on the slower-but-fine store and never
+      # fires on the fast one. Use bzrk_s3_request_duration_ms /
+      # bzrk_s3_body_transfer_ms / bzrk_s3_fetch_duration_ms on a dashboard, and
+      # alert on a baseline deviation per install rather than an absolute.
 
       # S3 throughput-stall alerts are intentionally NOT active. A raw rate_below
       # on bzrk_s3_{upload,download}_bytes_total false-pages on a healthy-but-idle
@@ -257,6 +279,60 @@ groups:
         annotations:
           summary: "cache_server force-killed (wedged)"
           description: "Supervisor liveness-killed a wedged child on {{ $labels.pod }}."
+
+  # ---------------------------------------------------------------------------
+  # ui runs the in-product operator-metrics collector (#4122): it scrapes every
+  # annotated Berserk pod and keeps a short in-memory window. The bzrk_collector_*
+  # metrics are that collector watching itself, exposed on ui's own operator
+  # /metrics. They are label-less by design — pod/service come from relabeling.
+  #
+  # NO Grafana equivalent for anything in this group, and none is coming: the
+  # collector is Elixir-only, so these metrics have no Rust counterpart in
+  # metrics/*.yaml and are therefore invisible to the metrics codegen and to
+  # tools/scripts/alert_sync.py. This group is hand-maintained.
+  - name: berserk.ui
+    rules:
+      # A CHURN eviction means a series was dropped because its target left
+      # discovery — not because its samples aged out of the window (that is
+      # bzrk_collector_evictions_window_total, the retention TTL doing its job, and
+      # deliberately a separate metric so it cannot drown this one: the alert
+      # framework sums all series of a metric, and window evictions run orders of
+      # magnitude more often).
+      #
+      # The series key is {pod, metric, labels}, so every restart, reschedule and
+      # deploy mints new keys while the live set stays small. Sustained churn is the
+      # early warning for unbounded series growth — a leak that ends in an OOM weeks
+      # later with nothing looking wrong.
+      #
+      # Threshold: routine churn (a deploy, one reschedule) retires a few hundred
+      # series per replaced pod, well under 1/s averaged over 30m. Sustained >1/s
+      # for 30m is churn that routine pod lifecycle does not explain. NB `sum by
+      # (service)` adds up ui replicas; ui is replicaCount 1 today — scale the
+      # threshold with the replica count, or switch to `max by`, if that changes.
+      # Grafana: No Grafana equivalent (collector metrics are Elixir-only).
+      - alert: CollectorSeriesChurnHigh
+        expr: sum by (service) (rate(bzrk_collector_evictions_churn_total[30m])) > 1
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "ui operator-metrics collector churning series"
+          description: "{{ $value | printf \"%.2f\" }} churn evictions/s over 30m on {{ $labels.pod }} — the collector's series set is likely growing without bound. Check bzrk_collector_series and bzrk_collector_ets_memory_bytes on the same pod."
+
+
+      # A cycle that raised and was contained. The collector keeps trying and the rest
+      # of the ui is unaffected — which is exactly why this needs an alert: a failure
+      # visible only to whoever opens the operator page is a silent failure. Any
+      # sustained non-zero rate here means the window is not being maintained.
+      # Grafana: No Grafana equivalent (collector metrics are Elixir-only).
+      - alert: CollectorCyclesFailing
+        expr: sum by (service) (rate(bzrk_collector_cycle_errors_total[10m])) > 0
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "ui operator-metrics collector cycles are raising"
+          description: "The collector's scrape cycle has been failing for 15m on {{ $labels.pod }}. The in-product metrics window is stale or empty; the rest of the ui is unaffected. Check the ui logs and /settings/cluster/metrics."
 
   # ---------------------------------------------------------------------------
   # Saturation examples. No built-in Grafana equivalents; these show the pattern
