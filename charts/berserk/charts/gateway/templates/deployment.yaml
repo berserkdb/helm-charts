@@ -38,6 +38,12 @@
                 secretKeyRef:
                   name: {{ .Values.secrets.secretName }}
                   key: cookie_signing_key
+            # Strength floor gateway enforces on the key above. Keys
+            # shorter than the cookie jar's 64-byte master key are
+            # stretched to it, so this bound — not 64 — is what an
+            # operator's own generator has to clear.
+            - name: GATEWAY_COOKIE_SIGNING_KEY_MIN_LENGTH
+              value: {{ required "secrets.cookieSigningKeyMinLength must be set" .Values.secrets.cookieSigningKeyMinLength | quote }}
             - name: GATEWAY_SERVICE_TOKEN
               valueFrom:
                 secretKeyRef:

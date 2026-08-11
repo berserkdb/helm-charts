@@ -215,6 +215,14 @@ secrets:
   serviceToken: ""
   permissionsServiceToken: ""
 
+  # Length floor, in bytes, for `cookieSigningKey`. Gateway stretches
+  # shorter keys to the 64 bytes its cookie jar needs, so this is
+  # purely a strength floor — lower it (to 16 at the lowest) when the
+  # generator feeding `cookieSigningKey` caps key length below 32. A
+  # key under the floor fails the render below when pinned here, and
+  # fails gateway startup when it arrives from an external Secret.
+  cookieSigningKeyMinLength: 32
+
   # OIDC client_secret — referenced from a separate, externally-
   # managed Secret (SealedSecret in dev/valhalla). When
   # `config.oidc.enabled: true`, the deployment template wires
