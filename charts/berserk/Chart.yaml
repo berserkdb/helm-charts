@@ -2,8 +2,8 @@ apiVersion: v2
 name: berserk
 description: Berserk - High-performance observability data platform
 type: application
-version: 1.0.152-rc.2
-appVersion: 1.0.152-rc.2
+version: 1.0.152-rc.3
+appVersion: 1.0.152-rc.3
 
 dependencies:
   - name: meta

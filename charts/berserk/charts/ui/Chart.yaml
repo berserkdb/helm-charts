@@ -2,8 +2,8 @@ apiVersion: v2
 name: ui
 description: Berserk UI - Web interface for query and visualization
 type: application
-version: 1.0.152-rc.2
-appVersion: 1.0.152-rc.2
+version: 1.0.152-rc.3
+appVersion: 1.0.152-rc.3
 dependencies:
   - name: berserk-common
     version: "*"
