@@ -146,3 +146,83 @@ Config volume mount.
   mountPath: /config
   readOnly: true
 {{- end }}
+
+{{/*
+Node-identity volume, for workloads that register with meta but own no
+persistent storage to keep an identity in.
+
+An emptyDir, so the id survives a container restart within the pod — a crash
+loop re-registers the same record instead of leaving a ghost behind for each
+attempt — and is fresh for every new pod, which is what a new pod is. Workloads
+that already have a directory of their own (query, nursery, janitor) derive
+their id from that instead and do not mount this.
+
+Sized for a 36-byte UUID and the temp file it is renamed from.
+
+Usage: {{ include "berserk-common.volume.node-id" . | nindent 8 }}
+*/}}
+{{- define "berserk-common.volume.node-id" -}}
+- name: node-id
+  emptyDir:
+    sizeLimit: 1Mi
+{{- end }}
+
+{{/*
+Node-identity volume mount. The path is a directory; the file inside it is
+named by the process.
+*/}}
+{{- define "berserk-common.volumeMount.node-id" -}}
+- name: node-id
+  mountPath: /var/lib/bzrk/node-id
+{{- end }}
+
+{{/*
+Where to keep the node identity. One shared name rather than a per-service
+config key: the value is the same everywhere, and it is read by shared
+registration code rather than by any one service's config.
+*/}}
+{{- define "berserk-common.env.node-id" -}}
+- name: BZRK_NODE_ID_DIR
+  value: /var/lib/bzrk/node-id
+{{- end }}
+
+{{/*
+Object-store connection-pool socket settings, for the services that open S3 pools.
+
+Properties of the ENDPOINT rather than of any one service, so they live under
+global.storage and are rendered identically onto every workload that opens a pool.
+Shared here rather than copied per workload: four copies of the emptiness test is
+how they drift apart.
+
+An absent or empty value renders NOTHING, which is load-bearing. Keepalive and
+TCP_USER_TIMEOUT are disabled by being unset — that is their off switch, and the
+shipped default — so a template that emitted a placeholder would turn on a socket
+option nobody asked for. `poolIdleTimeout` unset likewise means "use the
+compiled-in default".
+
+Neither `with` nor `default` can express that test: sprig treats numeric 0 as
+empty, so `poolIdleTimeout: 0` would silently vanish and the process would use its
+default rather than reporting the value. Comparing the stringified form keeps "0"
+— it reaches the parser, which rounds a too-small value up to the smallest the
+kernel can represent and says so. A missing key stringifies to "<nil>", which is
+excluded explicitly for the same reason: it is absence, not a value.
+
+Usage: {{ include "berserk-common.env.s3-pool" . | nindent 12 }}
+*/}}
+{{- define "berserk-common.env.s3-pool" -}}
+{{- $idle := .Values.global.storage.poolIdleTimeout | toString -}}
+{{- $keepalive := .Values.global.storage.tcpKeepalive | toString -}}
+{{- $userTimeout := .Values.global.storage.tcpUserTimeout | toString -}}
+{{- if and (ne $idle "") (ne $idle "<nil>") }}
+- name: BZRK_S3_POOL_IDLE_TIMEOUT
+  value: {{ $idle | quote }}
+{{- end }}
+{{- if and (ne $keepalive "") (ne $keepalive "<nil>") }}
+- name: BZRK_S3_TCP_KEEPALIVE
+  value: {{ $keepalive | quote }}
+{{- end }}
+{{- if and (ne $userTimeout "") (ne $userTimeout "<nil>") }}
+- name: BZRK_S3_TCP_USER_TIMEOUT
+  value: {{ $userTimeout | quote }}
+{{- end }}
+{{- end }}

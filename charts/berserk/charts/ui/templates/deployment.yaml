@@ -5,7 +5,7 @@
        Role. */ -}}
 {{- if .Values.global.serviceAccountName }}
       serviceAccountName: {{ .Values.global.serviceAccountName }}
-{{- else if include "ui.podDiscoveryRBAC" . | trim | eq "true" }}
+{{- else if include "ui.ownServiceAccount" . | trim | eq "true" }}
       serviceAccountName: {{ include "berserk-common.fullname" . }}
 {{- end }}
       containers:
@@ -102,13 +102,17 @@
             - name: BZRK_COLLECTOR_ENABLED
               value: "true"
             - name: BZRK_COLLECTOR_DISCOVERY
-              value: {{ ternary "kubernetes" "static" ($collector.podDiscovery | default false) | quote }}
+              value: {{ include "ui.collectorDiscovery" . | quote }}
             - name: BZRK_COLLECTOR_INTERVAL_SECONDS
               value: {{ $collector.intervalSeconds | default 30 | quote }}
             - name: BZRK_COLLECTOR_WINDOW_SECONDS
               value: {{ $collector.windowSeconds | default 3600 | quote }}
             {{- with $collector.staticTargets }}
             - name: BZRK_COLLECTOR_STATIC_TARGETS
+              value: {{ join "," . | quote }}
+            {{- end }}
+            {{- with $collector.requiredServices }}
+            - name: BZRK_COLLECTOR_REQUIRED_SERVICES
               value: {{ join "," . | quote }}
             {{- end }}
             {{- if not $otlp }}
@@ -123,6 +127,10 @@
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
             {{- end }}
             {{- else }}
             - name: BZRK_COLLECTOR_ENABLED

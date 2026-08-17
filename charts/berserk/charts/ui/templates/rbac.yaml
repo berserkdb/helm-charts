@@ -17,10 +17,17 @@ pod-list call is refused and the app MUST fall back to its static target list
 Follows ingest's token-init idiom: when the install supplies
 `global.serviceAccountName` (IRSA on EKS, created out of band) that account is
 bound and no ServiceAccount is created here.
+
+The ServiceAccount and the Role are gated separately on purpose. The account is
+the pod's identity and outlives any one permission; the Role is the permission
+and disappears when the collector stops reading the Kubernetes API. Tying the
+account's existence to the permission deletes it out from under a running
+Deployment that still names it, and nothing can schedule after that.
 */}}
+{{- $ownsSA := include "ui.ownServiceAccount" . | trim | eq "true" }}
 {{- $wants := include "ui.podDiscoveryRBAC" . | trim | eq "true" }}
 {{- $hasGlobalSA := .Values.global.serviceAccountName }}
-{{- if and $wants (not $hasGlobalSA) }}
+{{- if $ownsSA }}
 apiVersion: v1
 kind: ServiceAccount
 metadata:

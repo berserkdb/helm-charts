@@ -31,6 +31,7 @@
                   fieldPath: status.podIP
             - name: RUST_BACKTRACE
               value: "1"
+            {{- include "berserk-common.env.s3-pool" . | nindent 12 }}
             {{- /* `NurseryQueryService` binds 0.0.0.0:<port> but the
                   cluster registry needs a routable URL — the pod IP.
                   Plumbed via the downward API so each nursery

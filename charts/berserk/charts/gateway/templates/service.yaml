@@ -36,3 +36,21 @@ spec:
       protocol: TCP
       name: {{ .Values.extraListener.name | default "grpc" }}
     {{- end }}
+    {{- with .Values.metricsPort }}
+    {{/*
+    The operator /metrics port, reachable through the Service rather than only
+    on the pod IP. Every other service's metrics already ride a Service port
+    because they share one with its primary listener; gateway's is separate, so
+    it has to be named here or it is addressable only by pod IP.
+
+    That matters for a collector configured with static targets — an entry can
+    only name a Service — which is how gateway is covered when the fleet
+    registry is the discovery source, since gateway does not register with meta.
+    Who may reach it is still decided by the scrape NetworkPolicy, which admits
+    only the monitoring workloads on this port.
+    */}}
+    - port: {{ . }}
+      targetPort: {{ . }}
+      protocol: TCP
+      name: metrics
+    {{- end }}

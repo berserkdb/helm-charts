@@ -135,7 +135,7 @@ groups:
       # across installations — a healthy same-region AWS path and a healthy
       # cross-region path differ by more than an order of magnitude at p99, so a
       # fixed bound pages continuously on the slower-but-fine store and never
-      # fires on the fast one. Use bzrk_s3_request_duration_ms /
+      # fires on the fast one. Use bzrk_s3_ttfb_ms /
       # bzrk_s3_body_transfer_ms / bzrk_s3_fetch_duration_ms on a dashboard, and
       # alert on a baseline deviation per install rather than an absolute.
 

@@ -56,6 +56,7 @@ config:
   # storageBucket: ""
   # storageRegion: "auto"
   # storagePath: ""  # object-key prefix within the bucket; empty = bucket root
+  # storageProvider: ""  # "s3" or "gcs"; empty inherits global.storage.provider
   observability:
     serviceName: "meta"
     logLevel: "info"

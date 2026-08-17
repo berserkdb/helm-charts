@@ -80,11 +80,13 @@
               value: {{ .Values.logLevel | quote }}
             - name: RUST_BACKTRACE
               value: "1"
+            {{- include "berserk-common.env.s3-pool" . | nindent 12 }}
             - name: POD_IP
               valueFrom:
                 fieldRef:
                   fieldPath: status.podIP
             {{- include "berserk-common.env.cluster-name" . | nindent 12 }}
+            {{- include "berserk-common.env.node-id" . | nindent 12 }}
             {{- include "berserk-common.env.s3-credentials" (dict "accessKeyEnv" "AWS_ACCESS_KEY_ID" "secretKeyEnv" "AWS_SECRET_ACCESS_KEY" "Values" .Values) | nindent 12 }}
             {{- if $secretName }}
             - name: DEFAULT_INGEST_TOKEN
@@ -118,5 +120,7 @@
             periodSeconds: 3
           volumeMounts:
             {{- include "berserk-common.volumeMount.config" . | nindent 12 }}
+            {{- include "berserk-common.volumeMount.node-id" . | nindent 12 }}
       volumes:
         {{- include "berserk-common.volume.config" . | nindent 8 }}
+        {{- include "berserk-common.volume.node-id" . | nindent 8 }}

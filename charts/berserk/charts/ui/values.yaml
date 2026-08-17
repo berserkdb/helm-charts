@@ -167,10 +167,53 @@ secrets:
 # charts/README.md, "Operator metrics: two views".
 collector:
   enabled: true
-  # Kubernetes pod discovery. Needs `list` on pods in this namespace — the chart
-  # creates a ServiceAccount + namespaced Role for it (see `rbac` below and
-  # templates/rbac.yaml). Set false for a non-Kubernetes install; the app then uses
-  # `staticTargets`.
+  # Where the scrape target list comes from. Empty derives it from
+  # `podDiscovery` below, which is what every install had before this key
+  # existed.
+  #
+  #   kubernetes  list pods from the Kubernetes API. Needs `rbac` and
+  #               networkPolicy.kubeApiEgress.
+  #   static      `staticTargets` only.
+  #   meta        list registered members from the meta service over gRPC. No
+  #               Kubernetes API access at all, so it works where the API
+  #               server's certificate does not carry `kubernetes.default.svc`,
+  #               or where policy refuses the pod-list role.
+  #
+  # Two things to know before choosing `meta`.
+  #
+  # It sees what each pod says about itself, not what the control plane says
+  # should exist. A pod whose registration has wedged is absent rather than
+  # stale, and the page has no way to tell the difference — so it will not tell
+  # you either. Pod discovery does not have that blind spot, which is why it
+  # stays the default.
+  #
+  # And the fleet has to have finished registering. A partially registered
+  # registry is non-empty, so on its own it looks exactly like a complete one.
+  # Two of the three ways to get there are caught for you: a meta too old to
+  # serve this is refused outright, and a meta that has restarted is refused
+  # until its registry has been up long enough for every member to have
+  # heartbeated, so a restart costs a stale cycle rather than a page showing
+  # whichever pods got back first.
+  #
+  # What is NOT caught is switching to `meta` while part of the fleet still
+  # runs a build that does not register at all — that registry is old and
+  # internally consistent, just short. Verify against `kubectl get pods` before
+  # switching, or list your services in `requiredServices` below and let the
+  # check be enforced.
+  discovery: ""
+  # App labels that MUST appear among discovered members when
+  # `discovery: meta`. A missing one makes discovery report an error, so the
+  # collector keeps its previously known targets rather than under-reporting.
+  # Empty by default: an install that disables a service or scales it to zero
+  # would otherwise pin its target list stale forever.
+  requiredServices: []
+  # - meta
+  # - query
+  # - ingest
+  # - janitor
+  #
+  # Superseded by `discovery` above, and honoured only while that is empty:
+  # true means `kubernetes`, false means `static`.
   podDiscovery: true
   # Let the chart own the ServiceAccount + Role + RoleBinding. Set false to bring
   # your own: pre-create them and point the pod at the account through
@@ -187,6 +230,12 @@ collector:
   # Fallback targets when discovery is off or unauthorised, as `host:port` or
   # `host:port/path`. These are operator /metrics ports, NOT service ports —
   # query's operator listener is 9511, not 9510.
+  #
+  # Under `discovery: meta` these are merged in rather than used as a fallback:
+  # gateway, permissions and ui do not register with meta, so this is where they
+  # come from. Note that a Service address round-robins across its pods, so a
+  # counter read through one goes up and down; give per-pod addresses where the
+  # per-pod numbers matter.
   staticTargets: []
   # - query:9511
   # - meta:9560

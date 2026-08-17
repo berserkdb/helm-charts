@@ -26,14 +26,44 @@ global:
   # 9500) so `helm install` renders out of the box — override it with
   # your real URL for any networked deployment.
   publicBaseUrl: "http://localhost:9500"
-  # S3 storage configuration
+  # Object storage configuration
   storage:
     endpoint: ""
     bucket: ""
     region: ""
     # Object-key prefix within the bucket (empty = bucket root). Lets multiple
-    # installs share one bucket with isolated prefixes (e.g. "holion", "ethira").
+    # installs share one bucket with isolated prefixes.
     path: ""
+    # Which object-store API to speak: "s3" or "gcs". These are not
+    # interchangeable — the S3 client relies on conditional-put preconditions
+    # that Google Cloud Storage only implements on its native API, not on its
+    # S3-compatible one. Point a bucket at the wrong provider and writes lose
+    # their concurrency control silently.
+    provider: "s3"
+    # HTTP connection-pool settings for the object store. Properties of the
+    # ENDPOINT rather than of any one service, so they are set once here and
+    # rendered onto every service that opens a pool — a per-service value would
+    # drift, and these only make sense uniform per endpoint.
+    #
+    # Durations are humantime ("15s", "2m30s"). Empty means "use the compiled-in
+    # default"; a value that does not parse fails the process at startup rather
+    # than being ignored.
+    #
+    # poolIdleTimeout must stay BELOW the endpoint's own idle timeout: a
+    # connection the store closed first is handed back out as live, and the
+    # resulting error reaches the caller. Default 15s. Raise it to find out what
+    # the endpoint actually tolerates — connections_closed_total{reason} shows
+    # whether the store starts closing first.
+    poolIdleTimeout: ""
+    # Kernel TCP keepalive idle time. Setting it ENABLES keepalive probing, which
+    # with tcpUserTimeout is the only thing that detects a connection silently
+    # blackholed by a NAT or firewall — no FIN arrives, so the socket looks alive
+    # and the request hangs until its timeout. Off by default: it changes when a
+    # connection dies, which is a deliberate change to make and measure.
+    tcpKeepalive: ""
+    # Linux TCP_USER_TIMEOUT: how long unacknowledged data may sit before the
+    # kernel fails the connection. Off by default, for the same reason.
+    tcpUserTimeout: ""
   # S3 credentials secret configuration
   s3Credentials:
     # Set managed: true and provide accessKeyId/secretAccessKey to have the chart manage the secret
