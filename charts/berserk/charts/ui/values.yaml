@@ -167,42 +167,53 @@ secrets:
 # charts/README.md, "Operator metrics: two views".
 collector:
   enabled: true
-  # Where the scrape target list comes from. Empty derives it from
-  # `podDiscovery` below, which is what every install had before this key
-  # existed.
+  # Where the scrape target list comes from. Empty means every source at once,
+  # which is the default and what almost every install should leave it as.
   #
-  #   kubernetes  list pods from the Kubernetes API. Needs `rbac` and
+  #   (empty)     the union: pods from the Kubernetes API, members from the meta
+  #               registry, plus `staticTargets`, merged per pod. Neither of the
+  #               two real sources is required, so this works with or without
+  #               API-server access and needs no per-cluster decision.
+  #   kubernetes  pods from the Kubernetes API only. Needs `rbac` and
   #               networkPolicy.kubeApiEgress.
-  #   static      `staticTargets` only.
-  #   meta        list registered members from the meta service over gRPC. No
-  #               Kubernetes API access at all, so it works where the API
-  #               server's certificate does not carry `kubernetes.default.svc`,
-  #               or where policy refuses the pod-list role.
+  #   static      `staticTargets` only. For an install that is not on Kubernetes.
+  #   meta        registered members over gRPC only. No Kubernetes API access at
+  #               all, so it works where the API server's certificate does not
+  #               carry `kubernetes.default.svc`, or where policy refuses the
+  #               pod-list role.
   #
-  # Two things to know before choosing `meta`.
+  # Why the union rather than one of them: the two sources answer different
+  # questions. The Kubernetes API is the control plane's record of what *should*
+  # exist, so a pod whose reporting has wedged still appears and reads as stale.
+  # The registry is each pod's own claim to be alive, so a wedged one is simply
+  # absent — which reads as "not deployed" — but it is the only source that knows
+  # what version a pod runs, and the only one that works without API access.
+  # Taking both keeps stale detection where it is available and still shows a
+  # fleet where it is not. The Collector page's "seen by" column says which
+  # source each row came from, so the caveat is visible per target rather than
+  # per cluster.
   #
-  # It sees what each pod says about itself, not what the control plane says
-  # should exist. A pod whose registration has wedged is absent rather than
-  # stale, and the page has no way to tell the difference — so it will not tell
-  # you either. Pod discovery does not have that blind spot, which is why it
-  # stays the default.
+  # Pinning a single source is for ruling one out deliberately — a cluster where
+  # the API server is known unreachable and the per-cycle warning is just noise,
+  # or one where you want the registry ignored entirely.
   #
-  # And the fleet has to have finished registering. A partially registered
-  # registry is non-empty, so on its own it looks exactly like a complete one.
-  # Two of the three ways to get there are caught for you: a meta too old to
-  # serve this is refused outright, and a meta that has restarted is refused
-  # until its registry has been up long enough for every member to have
-  # heartbeated, so a restart costs a stale cycle rather than a page showing
+  # If you do pin `meta`, know that the fleet has to have finished registering. A
+  # partially registered registry is non-empty, so on its own it looks exactly
+  # like a complete one. Two of the three ways to get there are caught for you: a
+  # meta too old to serve this is refused outright, and a meta that has restarted
+  # is refused until its registry has been up long enough for every member to
+  # have heartbeated, so a restart costs a stale cycle rather than a page showing
   # whichever pods got back first.
   #
-  # What is NOT caught is switching to `meta` while part of the fleet still
-  # runs a build that does not register at all — that registry is old and
-  # internally consistent, just short. Verify against `kubectl get pods` before
-  # switching, or list your services in `requiredServices` below and let the
-  # check be enforced.
+  # What is NOT caught is pinning `meta` while part of the fleet still runs a
+  # build that does not register at all — that registry is old and internally
+  # consistent, just short. Verify against `kubectl get pods` before switching,
+  # or list your services in `requiredServices` below and let the check be
+  # enforced. Under the default union this matters less: pod discovery still
+  # covers what has not registered yet.
   discovery: ""
-  # App labels that MUST appear among discovered members when
-  # `discovery: meta`. A missing one makes discovery report an error, so the
+  # App labels that MUST appear among discovered members when the registry is
+  # consulted (`discovery: meta`, or the default union). A missing one makes discovery report an error, so the
   # collector keeps its previously known targets rather than under-reporting.
   # Empty by default: an install that disables a service or scales it to zero
   # would otherwise pin its target list stale forever.
