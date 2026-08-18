@@ -164,6 +164,13 @@ global:
     #    ports:
     #      - port: 4317
     #        protocol: TCP
+    # Host-network collector (e.g. a node-local agent) via a port-scoped rule
+    # with no destination selector — required on CNIs (Cilium / GKE Dataplane
+    # V2) where ipBlock and podSelector never match host identities:
+    #  - anyDestination: true
+    #    ports:
+    #      - port: 4317
+    #        protocol: TCP
     # Operator `/metrics` scrape access. ONE generic rule rather than enumerating
     # every scraper -> service port pair: each service's policy opens ITS OWN
     # operator port -- read from that pod's `prometheus.io/port` annotation, so the

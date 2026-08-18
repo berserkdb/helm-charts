@@ -205,10 +205,21 @@ spec:
         - port: {{ $otlpPort | int }}
           protocol: TCP
     {{- else }}
-    {{- /* External: each otlpEgress entry must specify either {cidr} for an
-           ipBlock rule, or {namespace, podLabels} for a cross-namespace
-           in-cluster peer. */ -}}
+    {{- /* External: each otlpEgress entry must specify {cidr} for an ipBlock
+           rule, {namespace, podLabels} for a cross-namespace in-cluster peer,
+           or {anyDestination: true} for a port-scoped rule with no destination
+           selector. The last form exists for host-network collectors (e.g. a
+           node-local agent): some CNIs (Cilium / GKE Dataplane V2) never match
+           host identities with ipBlock or podSelector, and a rule without a
+           `to` clause is the only shape they apply to such destinations. */ -}}
     {{- range .Values.global.networkPolicy.otlpEgress }}
+    {{- if .anyDestination }}
+    - ports:
+        {{- range .ports }}
+        - port: {{ .port }}
+          protocol: {{ .protocol | default "TCP" }}
+        {{- end }}
+    {{- else }}
     - to:
         {{- if .cidr }}
         - ipBlock:
@@ -223,13 +234,14 @@ spec:
               {{ $k }}: {{ $v | quote }}
               {{- end }}
         {{- else }}
-        {{- fail "otlpEgress entry must set either 'cidr' or 'namespace' + 'podLabels'" }}
+        {{- fail "otlpEgress entry must set 'cidr', 'namespace' + 'podLabels', or 'anyDestination: true'" }}
         {{- end }}
       ports:
         {{- range .ports }}
         - port: {{ .port }}
           protocol: {{ .protocol | default "TCP" }}
         {{- end }}
+    {{- end }}
     {{- end }}
     {{- end }}
     {{- end }}
