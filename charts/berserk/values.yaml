@@ -282,6 +282,12 @@ meta:
     storageEndpoint: ""
     storageBucket: ""
     storageRegion: ""
+    # Merge planner: per-table task limit = clamp(live janitors × tasksPerJanitor,
+    # minMergeTasksPerTable, maxMergeTasksPerTable). Unset keys use the binary defaults.
+    # merge:
+    #   tasksPerJanitor: 2
+    #   minMergeTasksPerTable: 3
+    #   maxMergeTasksPerTable: 100
     # Observability settings
     observability:
       serviceName: "meta"

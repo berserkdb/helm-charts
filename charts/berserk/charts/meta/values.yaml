@@ -60,6 +60,12 @@ config:
   # storageRegion: "auto"
   # storagePath: ""  # object-key prefix within the bucket; empty = bucket root
   # storageProvider: ""  # "s3" or "gcs"; empty inherits global.storage.provider
+  # Merge planner: per-table task limit = clamp(live janitors × tasksPerJanitor,
+  # minMergeTasksPerTable, maxMergeTasksPerTable). Unset keys use the binary defaults.
+  # merge:
+  #   tasksPerJanitor: 2
+  #   minMergeTasksPerTable: 3
+  #   maxMergeTasksPerTable: 100
   observability:
     serviceName: "meta"
     logLevel: "info"

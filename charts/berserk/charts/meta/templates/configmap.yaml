@@ -19,6 +19,19 @@ data:
     storage_provider: {{ $storageProvider | quote }}
     {{- end }}
     {{- end }}
+    {{- $merge := .Values.config.merge | default dict }}
+    {{- if or $merge.tasksPerJanitor $merge.minMergeTasksPerTable $merge.maxMergeTasksPerTable }}
+    merge:
+      {{- with $merge.tasksPerJanitor }}
+      tasks_per_janitor: {{ int . }}
+      {{- end }}
+      {{- with $merge.minMergeTasksPerTable }}
+      min_merge_tasks_per_table: {{ int . }}
+      {{- end }}
+      {{- with $merge.maxMergeTasksPerTable }}
+      max_merge_tasks_per_table: {{ int . }}
+      {{- end }}
+    {{- end }}
     {{- include "berserk-common.observability-config" . | nindent 4 }}
 {{- end }}
 {{- include "berserk-common.configmap" . }}
