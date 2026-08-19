@@ -40,6 +40,9 @@ networkPolicy:
       ports: [{port: 9560}]
     - app: nursery
       ports: [{port: 9560}]
+    # fleet registration only — permissions asks meta nothing else
+    - app: permissions
+      ports: [{port: 9560}]
     # post-install setup job creates the default table via meta
     - app: setup
       ports: [{port: 9560}]

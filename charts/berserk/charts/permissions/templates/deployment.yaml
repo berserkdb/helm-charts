@@ -14,6 +14,12 @@
               name: http
               protocol: TCP
           env:
+            # Registration needs an address other pods can dial, and the bind is
+            # a wildcard.
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
             - name: PERMISSIONS_BIND
               value: "0.0.0.0:{{ .Values.service.port }}"
             - name: PERMISSIONS_DATABASE_URL
@@ -34,6 +40,9 @@
             - name: RUST_BACKTRACE
               value: "1"
             {{- include "berserk-common.env.cluster-name" . | nindent 12 }}
+            {{- if .Values.config.metaEndpoint }}
+            {{- include "berserk-common.env.node-id" . | nindent 12 }}
+            {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           livenessProbe:
@@ -56,5 +65,11 @@
             periodSeconds: 3
           volumeMounts:
             {{- include "berserk-common.volumeMount.config" . | nindent 12 }}
+            {{- if .Values.config.metaEndpoint }}
+            {{- include "berserk-common.volumeMount.node-id" . | nindent 12 }}
+            {{- end }}
       volumes:
         {{- include "berserk-common.volume.config" . | nindent 8 }}
+        {{- if .Values.config.metaEndpoint }}
+        {{- include "berserk-common.volume.node-id" . | nindent 8 }}
+        {{- end }}

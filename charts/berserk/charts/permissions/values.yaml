@@ -24,7 +24,11 @@ networkPolicy:
       ports: [{port: 9580}]
     - app: ui
       ports: [{port: 9580}]
-  egressTo: []
+  egressTo:
+    # Fleet registration only (config.metaEndpoint) — no authorization decision
+    # leaves this pod. Drop the rule if you clear that.
+    - app: meta
+      ports: [{ port: 9560 }]
   additionalIngress: []
   additionalEgress: []
 
@@ -37,6 +41,13 @@ resources:
     cpu: "500m"
 
 config:
+  # Meta, for fleet registration only: permissions publishes its pod IP and port
+  # there so the in-product collector can scrape it without asking the Kubernetes
+  # API. No authorization decision touches meta — clear it and permissions simply
+  # stops appearing in the fleet, which also removes it from the collector's
+  # default (`meta`) discovery, so add `permissions:9580` to
+  # `ui.collector.staticTargets` if you do.
+  metaEndpoint: "http://meta:9560"
   observability:
     serviceName: "permissions"
     logLevel: "info,permissions=debug"

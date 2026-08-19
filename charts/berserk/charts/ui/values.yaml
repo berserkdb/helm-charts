@@ -63,12 +63,16 @@ networkPolicy:
       ports: [{port: 9580}]
   additionalIngress: []
   additionalEgress: []
-  # The in-product operator-metrics collector (#4122) scrapes every annotated
-  # Berserk pod's operator /metrics and lists pods from the Kubernetes API. Both are
-  # generic rules driven by global.networkPolicy.scrape / .kubeApiEgress —
-  # deliberately not a per-peer port list here, so adding a service or moving an
-  # operator port needs no edit on this side. Turn both off together with
-  # collector.enabled.
+  # The in-product operator-metrics collector (#4122) scrapes every discovered
+  # Berserk pod's operator /metrics, and under `collector.discovery`
+  # kubernetes|union also lists pods from the Kubernetes API. Both are generic
+  # rules driven by global.networkPolicy.scrape / .kubeApiEgress — deliberately
+  # not a per-peer port list here, so adding a service or moving an operator port
+  # needs no edit on this side. Turn both off together with collector.enabled.
+  #
+  # kubeApiEgress goes unused under the default `meta` discovery, which never
+  # calls the API server; it stays on so switching modes is one edit rather than
+  # two. Turn it off to hold the collector to the registry by policy as well.
   #
   # Verification after a rollout is `bzrk_collector_targets_stale` and
   # `bzrk_collector_scrapes_failed_total` on this pod's own /metrics: a policy that
@@ -155,10 +159,10 @@ secrets:
   # the gateway uses).
   permissionsServiceTokenKey: "permissions_service_token"
 
-# In-product operator-metrics collector (#4122). Scrapes every pod annotated
-# `prometheus.io/scrape: "true"` in this namespace on its operator /metrics port
-# every `intervalSeconds`, and keeps a `windowSeconds` rolling window IN MEMORY
-# (one ring buffer per series). No time-series database, no PromQL, no retention
+# In-product operator-metrics collector (#4122). Scrapes every pod in this
+# namespace that discovery finds — by default the ones registered with meta — on
+# its operator /metrics port every `intervalSeconds`, and keeps a
+# `windowSeconds` rolling window IN MEMORY (one ring buffer per series). No time-series database, no PromQL, no retention
 # beyond the window, and it is lost on restart.
 #
 # This is the in-product health view, NOT a replacement for the bundled Prometheus
@@ -167,37 +171,33 @@ secrets:
 # charts/README.md, "Operator metrics: two views".
 collector:
   enabled: true
-  # Where the scrape target list comes from. Empty means every source at once,
+  # Where the scrape target list comes from. Empty means the fleet registry,
   # which is the default and what almost every install should leave it as.
   #
-  #   (empty)     the union: pods from the Kubernetes API, members from the meta
-  #               registry, plus `staticTargets`, merged per pod. Neither of the
-  #               two real sources is required, so this works with or without
-  #               API-server access and needs no per-cluster decision.
+  #   (empty)     `meta`, below.
+  #   meta        members registered with meta over gRPC, plus `staticTargets`.
+  #               No Kubernetes API access at all, so it works where the API
+  #               server's certificate does not carry `kubernetes.default.svc`,
+  #               or where policy refuses the pod-list role.
   #   kubernetes  pods from the Kubernetes API only. Needs `rbac` and
   #               networkPolicy.kubeApiEgress.
   #   static      `staticTargets` only. For an install that is not on Kubernetes.
-  #   meta        registered members over gRPC only. No Kubernetes API access at
-  #               all, so it works where the API server's certificate does not
-  #               carry `kubernetes.default.svc`, or where policy refuses the
-  #               pod-list role.
+  #   union       every source at once, merged per pod.
   #
-  # Why the union rather than one of them: the two sources answer different
-  # questions. The Kubernetes API is the control plane's record of what *should*
-  # exist, so a pod whose reporting has wedged still appears and reads as stale.
-  # The registry is each pod's own claim to be alive, so a wedged one is simply
-  # absent — which reads as "not deployed" — but it is the only source that knows
-  # what version a pod runs, and the only one that works without API access.
-  # Taking both keeps stale detection where it is available and still shows a
-  # fleet where it is not. The Collector page's "seen by" column says which
-  # source each row came from, so the caveat is visible per target rather than
-  # per cluster.
+  # Why the registry rather than the Kubernetes API: every Berserk service
+  # declares its pod IP and named ports when it registers, which is the whole
+  # answer, and it is the only source that knows what version each pod runs. It
+  # also asks nothing of the cluster, so it needs no per-cluster decision and no
+  # permission an operator has to grant.
   #
-  # Pinning a single source is for ruling one out deliberately — a cluster where
-  # the API server is known unreachable and the per-cycle warning is just noise,
-  # or one where you want the registry ignored entirely.
+  # What it gives up is a pod that has stopped registering. The Kubernetes API
+  # is the control plane's record of what *should* exist, so a pod whose
+  # reporting has wedged still appears there and reads as stale; the registry
+  # simply lacks it, which reads as "not deployed". `union` gets that back — it
+  # takes both sources and records on each target which of them saw it, shown in
+  # the Collector page's "seen by" column — at the cost of the pod-list role.
   #
-  # If you do pin `meta`, know that the fleet has to have finished registering. A
+  # Under `meta` (and `union`) the fleet has to have finished registering. A
   # partially registered registry is non-empty, so on its own it looks exactly
   # like a complete one. Two of the three ways to get there are caught for you: a
   # meta too old to serve this is refused outright, and a meta that has restarted
@@ -205,16 +205,18 @@ collector:
   # have heartbeated, so a restart costs a stale cycle rather than a page showing
   # whichever pods got back first.
   #
-  # What is NOT caught is pinning `meta` while part of the fleet still runs a
-  # build that does not register at all — that registry is old and internally
-  # consistent, just short. Verify against `kubectl get pods` before switching,
-  # or list your services in `requiredServices` below and let the check be
-  # enforced. Under the default union this matters less: pod discovery still
-  # covers what has not registered yet.
+  # What is NOT caught is part of the fleet still running a build that does not
+  # register at all — that registry is old and internally consistent, just short.
+  # List your services in `requiredServices` below and the check is enforced.
+  #
+  # ui does not register — it is the consumer of the registry rather than a
+  # member of it — and covers itself over loopback. Anything else outside the
+  # fleet goes in `staticTargets`, which this mode merges in.
   discovery: ""
   # App labels that MUST appear among discovered members when the registry is
-  # consulted (`discovery: meta`, or the default union). A missing one makes discovery report an error, so the
-  # collector keeps its previously known targets rather than under-reporting.
+  # consulted (the default `meta`, or `union`). A missing one makes discovery
+  # report an error, so the collector keeps its previously known targets rather
+  # than under-reporting.
   # Empty by default: an install that disables a service or scales it to zero
   # would otherwise pin its target list stale forever.
   requiredServices: []
@@ -223,9 +225,11 @@ collector:
   # - ingest
   # - janitor
   #
-  # Superseded by `discovery` above, and honoured only while that is empty:
-  # true means `kubernetes`, false means `static`.
-  podDiscovery: true
+  # The older boolean, from before `discovery` existed. Unset by default so the
+  # default above applies; set it and it still wins while `discovery` is empty,
+  # so an install that asked for pod discovery before the default changed keeps
+  # getting it. true means `kubernetes`, false means `static`.
+  # podDiscovery: true
   # Let the chart own the ServiceAccount + Role + RoleBinding. Set false to bring
   # your own: pre-create them and point the pod at the account through
   # `global.serviceAccountName`. With discovery unauthorised the app falls back to
@@ -242,9 +246,9 @@ collector:
   # `host:port/path`. These are operator /metrics ports, NOT service ports —
   # query's operator listener is 9511, not 9510.
   #
-  # Under `discovery: meta` these are merged in rather than used as a fallback:
-  # gateway, permissions and ui do not register with meta, so this is where they
-  # come from. Note that a Service address round-robins across its pods, so a
+  # Under the default `discovery: meta` these are merged in rather than used as a
+  # fallback, for anything outside the fleet registry — a sidecar, a non-Berserk
+  # exporter. Note that a Service address round-robins across its pods, so a
   # counter read through one goes up and down; give per-pod addresses where the
   # per-pod numbers matter.
   staticTargets: []

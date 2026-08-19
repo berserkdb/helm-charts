@@ -5,21 +5,26 @@
 {{- define "ui.selectorLabels" -}}{{ include "berserk-common.selectorLabels" . }}{{- end }}
 {{- define "ui.image" -}}{{ include "berserk-common.image" . }}{{- end }}
 
-{{/* Where the collector gets its scrape targets: kubernetes | static | meta.
+{{/* Where the collector gets its scrape targets: meta | kubernetes | static |
+     union.
 
-     `collector.discovery` names it outright. Left empty it derives from the
-     older `collector.podDiscovery` boolean, so an install that predates the
-     third mode keeps rendering exactly what it rendered before. */}}
+     `collector.discovery` names it outright. Left empty it is the fleet
+     registry, which needs nothing of the cluster — no pod-list role, no
+     API-server certificate carrying the in-cluster name. `collector.podDiscovery`
+     is the older boolean and still wins when set explicitly, so an install that
+     asked for pod discovery before this default changed keeps getting it. */}}
 {{- define "ui.collectorDiscovery" -}}
 {{- $c := .Values.collector | default dict -}}
 {{- $explicit := $c.discovery | default "" -}}
 {{- if $explicit -}}
-{{-   if not (has $explicit (list "kubernetes" "static" "meta")) -}}
-{{-     fail (printf "ui: collector.discovery must be one of kubernetes|static|meta, got %q" $explicit) -}}
+{{-   if not (has $explicit (list "kubernetes" "static" "meta" "union")) -}}
+{{-     fail (printf "ui: collector.discovery must be one of meta|kubernetes|static|union, got %q" $explicit) -}}
 {{-   end -}}
 {{-   $explicit -}}
+{{- else if hasKey $c "podDiscovery" -}}
+{{-   ternary "kubernetes" "static" $c.podDiscovery -}}
 {{- else -}}
-{{-   ternary "kubernetes" "static" ($c.podDiscovery | default false) -}}
+{{-   "meta" -}}
 {{- end -}}
 {{- end -}}
 
@@ -40,9 +45,10 @@
 {{/* "true" when that account should also be allowed to list pods. This is the
      permission half, and it IS gated on the discovery mode: a collector reading
      the fleet registry never calls the Kubernetes API, so granting it would be
-     handing out access nothing uses. */}}
+     handing out access nothing uses. `union` reads both sources, so it needs the
+     role exactly as `kubernetes` does. */}}
 {{- define "ui.podDiscoveryRBAC" -}}
 {{- $c := .Values.collector | default dict -}}
-{{- $usesKubeApi := eq (include "ui.collectorDiscovery" .) "kubernetes" -}}
+{{- $usesKubeApi := has (include "ui.collectorDiscovery" .) (list "kubernetes" "union") -}}
 {{- and $c.enabled $usesKubeApi $c.rbac | ternary "true" "" -}}
 {{- end -}}

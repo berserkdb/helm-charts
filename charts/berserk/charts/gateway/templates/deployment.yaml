@@ -99,6 +99,9 @@
             - name: RUST_BACKTRACE
               value: "1"
             {{- include "berserk-common.env.cluster-name" . | nindent 12 }}
+            {{- if .Values.config.metaEndpoint }}
+            {{- include "berserk-common.env.node-id" . | nindent 12 }}
+            {{- end }}
             {{- with .Values.extraEnv }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
@@ -128,5 +131,11 @@
             periodSeconds: 3
           volumeMounts:
             {{- include "berserk-common.volumeMount.config" . | nindent 12 }}
+            {{- if .Values.config.metaEndpoint }}
+            {{- include "berserk-common.volumeMount.node-id" . | nindent 12 }}
+            {{- end }}
       volumes:
         {{- include "berserk-common.volume.config" . | nindent 8 }}
+        {{- if .Values.config.metaEndpoint }}
+        {{- include "berserk-common.volume.node-id" . | nindent 8 }}
+        {{- end }}

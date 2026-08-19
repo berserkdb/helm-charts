@@ -2,6 +2,11 @@
 data:
   config.yaml: |
     bind: "0.0.0.0:{{ .Values.service.port }}"
+    {{- with .Values.config.metaEndpoint }}
+    # Fleet registration only — inventory, not traffic. Cleared ⇒ this service
+    # does not register, and nothing else about it changes.
+    meta_endpoint: {{ . | quote }}
+    {{- end }}
     {{- include "berserk-common.observability-config" . | nindent 4 }}
 {{- end }}
 {{- include "berserk-common.configmap" . }}

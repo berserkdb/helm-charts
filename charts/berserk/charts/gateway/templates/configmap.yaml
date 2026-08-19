@@ -16,6 +16,11 @@ data:
     # metricsPort cleared → gateway leaves the operator /metrics listener off.
     metrics_bind: ""
     {{- end }}
+    {{- with .Values.config.metaEndpoint }}
+    # Fleet registration only — inventory, not traffic. Cleared ⇒ the gateway
+    # does not register, and nothing else about it changes.
+    meta_endpoint: {{ . | quote }}
+    {{- end }}
     public_base_url: {{ .Values.config.publicBaseUrl | default .Values.global.publicBaseUrl | required "publicBaseUrl is required — set global.publicBaseUrl (or gateway.config.publicBaseUrl)" | quote }}
     {{- with .Values.config.upstreamBaseUrl }}
     upstream_base_url: {{ . | quote }}

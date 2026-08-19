@@ -96,9 +96,10 @@
             {{- $otlp := (.Values.config.observability.otlpEnabled | default .Values.global.observability.otlpEnabled) }}
             {{- $collector := .Values.collector | default dict }}
             {{- if $collector.enabled }}
-            # In-product operator-metrics collector (#4122). With discovery `static`,
-            # or when the pod-list is unauthorised, the app uses
-            # BZRK_COLLECTOR_STATIC_TARGETS instead of failing.
+            # In-product operator-metrics collector (#4122). The default discovery
+            # reads meta's fleet registry and merges BZRK_COLLECTOR_STATIC_TARGETS
+            # for the services that do not register; with discovery `static`, or
+            # when the pod-list is unauthorised, that list is all there is.
             - name: BZRK_COLLECTOR_ENABLED
               value: "true"
             - name: BZRK_COLLECTOR_DISCOVERY
