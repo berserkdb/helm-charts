@@ -1,5 +1,6 @@
 {{- include "berserk-common.deployment.header" . }}
 {{- include "berserk-common.serviceAccountName" . }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
       containers:
         - name: janitor
           image: {{ include "berserk-common.image" . }}

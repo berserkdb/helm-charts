@@ -9,8 +9,11 @@
 #   # 1) Grab the one-time admin setup URL from the gateway logs:
 #   docker compose logs gateway | grep -A1 "Initial admin setup"
 #
-#   # 2) Open it in a browser (the URL points at 127.0.0.1:9500 — the
-#   # auth-edge gateway is the single public entry point):
+#   # 2) Open it in a browser (the URL points at localhost:9500 — the
+#   # auth-edge gateway is the single public entry point, and
+#   # public_base_url is http://localhost:9500). Host ports are published
+#   # on 127.0.0.1 only so a git worktree on 127.1.x.y can bind the same
+#   # canonical ports; localhost still reaches that IPv4 bind:
 #   open http://localhost:9500
 #
 #   # 3) Authenticate the CLI through the gateway:
@@ -129,11 +132,10 @@ configs:
         log_level: "info"
         otlp_enabled: true
         otlp_endpoint: "ingest:4317"
-      probe_jobs:
-        - name: "default_take_one"
-          query: "default | take 1"
-          interval_seconds: 60
-          since: "1h ago"
+      # Probe canary off, matching the Helm chart default. Explicit [] rather
+      # than an absent key: the pinned image predates the empty compiled-in
+      # default, and omitting the key there re-enables one probe.
+      probe_jobs: []
 
   nursery-config:
     content: |
@@ -150,6 +152,13 @@ configs:
       # /qws_bin in the nursery image; the member endpoint advertises the
       # compose service name where the chart uses the pod IP. force_merge keeps
       # the un-merged tail short. Mirrors the nursery helm chart values.
+      #
+      # NOTE: this file runs the *released* images pinned above, not the working
+      # tree, so every key here has to be one those binaries understand. This
+      # one is `merge_age_trigger_secs` on and after the release that carries
+      # #4529; renaming it before then is silently ignored, the trigger falls
+      # back to its five-minute default, and the stack's own smoke test — which
+      # allows sixty seconds for data to become queryable — fails.
       query_grpc_bind: "0.0.0.0:9531"
       qws_bin: "/qws_bin"
       query_grpc_member_endpoint: "http://nursery:9531"
@@ -263,8 +272,12 @@ services:
       POSTGRES_USER: berserk
       POSTGRES_PASSWORD: berserk
       POSTGRES_DB: berserk
+    # Host publishes bind 127.0.0.1 only. Implied 0.0.0.0 occupies every
+    # interface — including a git worktree's 127.1.x.y — so `mise run dev`
+    # in a linked worktree cannot bind the same canonical ports. Inside the
+    # container, services still listen on 0.0.0.0.
     ports:
-      - "15432:5432"
+      - "127.0.0.1:15432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql
     healthcheck:
@@ -284,8 +297,8 @@ services:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
     ports:
-      - "19000:9000"
-      - "19001:9001"  # MinIO Console
+      - "127.0.0.1:19000:9000"
+      - "127.0.0.1:19001:9001"  # MinIO Console
     volumes:
       - minio-data:/data
     healthcheck:
@@ -328,7 +341,7 @@ services:
 
   meta:
     <<: *common
-    image: ghcr.io/berserkdb/meta:v1.1.0
+    image: ghcr.io/berserkdb/meta:v1.1.1-rc.1
     depends_on:
       postgres:
         condition: service_healthy
@@ -337,7 +350,7 @@ services:
       META_DATABASE_URL: "postgres://berserk:berserk@postgres:5432/berserk"
     command: ["-c", "/config/config.yaml"]
     ports:
-      - "9560:9560"
+      - "127.0.0.1:9560:9560"
     configs:
       - source: meta-config
         target: /config/config.yaml
@@ -351,7 +364,7 @@ services:
 
   query:
     <<: *common
-    image: ghcr.io/berserkdb/query:v1.1.0
+    image: ghcr.io/berserkdb/query:v1.1.1-rc.1
     depends_on:
       meta:
         condition: service_healthy
@@ -365,7 +378,7 @@ services:
       AWS_SECRET_ACCESS_KEY: minioadmin
     command: ["-c", "/config/config.yaml"]
     ports:
-      - "9510:9510"
+      - "127.0.0.1:9510:9510"
     configs:
       - source: query-config
         target: /config/config.yaml
@@ -384,7 +397,7 @@ services:
   # reads at startup. Talks to meta over gRPC directly (no bearer
   # token → ClientChannel::direct, see apps/cli/src/network/meta_client.rs).
   ingest-token-init:
-    image: ghcr.io/berserkdb/cli:v1.1.0
+    image: ghcr.io/berserkdb/cli:v1.1.1-rc.1
     logging: *logging
     networks:
       - berserk
@@ -404,7 +417,7 @@ services:
 
   ingest:
     <<: *common
-    image: ghcr.io/berserkdb/ingest:v1.1.0
+    image: ghcr.io/berserkdb/ingest:v1.1.1-rc.1
     depends_on:
       meta:
         condition: service_healthy
@@ -421,9 +434,9 @@ services:
       AWS_ACCESS_KEY_ID: minioadmin
       AWS_SECRET_ACCESS_KEY: minioadmin
     ports:
-      - "14317:4317"   # OTLP gRPC
-      - "14318:4318"   # OTLP HTTP
-      - "19550:9550"   # Health
+      - "127.0.0.1:14317:4317"   # OTLP gRPC
+      - "127.0.0.1:14318:4318"   # OTLP HTTP
+      - "127.0.0.1:19550:9550"   # Health
     configs:
       - source: ingest-config
         target: /config/config.yaml
@@ -442,7 +455,7 @@ services:
 
   janitor:
     <<: *common
-    image: ghcr.io/berserkdb/janitor:v1.1.0
+    image: ghcr.io/berserkdb/janitor:v1.1.1-rc.1
     depends_on:
       meta:
         condition: service_healthy
@@ -472,7 +485,7 @@ services:
 
   nursery:
     <<: *common
-    image: ghcr.io/berserkdb/nursery:v1.1.0
+    image: ghcr.io/berserkdb/nursery:v1.1.1-rc.1
     depends_on:
       meta:
         condition: service_healthy
@@ -500,7 +513,7 @@ services:
 
   ui:
     <<: *common
-    image: ghcr.io/berserkdb/ui:v1.1.0
+    image: ghcr.io/berserkdb/ui:v1.1.1-rc.1
     depends_on:
       postgres:
         condition: service_healthy
@@ -550,7 +563,7 @@ services:
 
   permissions:
     <<: *common
-    image: ghcr.io/berserkdb/permissions:v1.1.0
+    image: ghcr.io/berserkdb/permissions:v1.1.1-rc.1
     depends_on:
       postgres:
         condition: service_healthy
@@ -568,7 +581,7 @@ services:
 
   gateway:
     <<: *common
-    image: ghcr.io/berserkdb/gateway:v1.1.0
+    image: ghcr.io/berserkdb/gateway:v1.1.1-rc.1
     depends_on:
       postgres:
         condition: service_healthy
@@ -587,7 +600,7 @@ services:
       GATEWAY_COOKIE_SIGNING_KEY: "local-dev-gateway-cookie-signing-key-must-be-at-least-64-bytes-long!!"
     command: ["-c", "/config/config.yaml"]
     ports:
-      - "9500:9500"
+      - "127.0.0.1:9500:9500"
     configs:
       - source: gateway-config
         target: /config/config.yaml

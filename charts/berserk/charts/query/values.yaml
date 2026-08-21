@@ -148,7 +148,7 @@ config:
   # `MemberKind::QwsNursery` registered in the cluster registry —
   # picking up locally-staged baby segments before they merge to S3.
   # Paired with `nursery.config.queryGrpcBind` on the nursery side
-  # and a bumped `nursery.config.forceMergeStaleThresholdSecs` so the
+  # and a bumped `nursery.config.mergeAgeTriggerSecs` so the
   # files linger long enough for the QC fan-out to catch them.
   queryViaNursery: true
   # The coordinator injects an invisible event-time bin into otherwise-unbinned

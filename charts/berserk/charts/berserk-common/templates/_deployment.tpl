@@ -11,7 +11,11 @@ metadata:
     {{- include "berserk-common.labels" . | nindent 4 }}
     component: {{ .Values.component | default "backend" }}
 spec:
+  {{- /* With autoscaling the HPA owns the scale — emitting replicas here would
+        reset it on every helm/ArgoCD sync. */}}
+  {{- if not ((.Values.autoscaling | default dict).enabled) }}
   replicas: {{ .Values.replicaCount }}
+  {{- end }}
   revisionHistoryLimit: {{ .Values.revisionHistoryLimit | default 2 }}
   {{- with .Values.strategy }}
   strategy:

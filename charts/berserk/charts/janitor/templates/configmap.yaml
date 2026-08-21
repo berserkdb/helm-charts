@@ -8,6 +8,7 @@ data:
     cloud_storage_secret_key: ${JANITOR_STORAGE_SECRET_KEY:}
     cache_dir: {{ .Values.config.cacheDir | quote }}
     merger_interval_seconds: {{ .Values.config.mergerIntervalSeconds }}
+    shutdown_grace_seconds: {{ .Values.terminationGracePeriodSeconds }}
     max_segments_per_batch: {{ .Values.config.maxSegmentsPerBatch }}
     min_segments: {{ .Values.config.minSegments }}
     max_segment_age_days: {{ .Values.config.maxSegmentAgeDays }}
@@ -17,11 +18,11 @@ data:
     target_tables: []
     {{- end }}
     {{- include "berserk-common.observability-config" . | nindent 4 }}
-    {{- $defaultTable := .Values.global.defaultTable | default "default" }}
+    {{- if .Values.config.probeJobs }}
     probe_jobs:
-      - name: "default_take_one"
-        query: "{{ $defaultTable }} | take 1"
-        interval_seconds: 60
-        since: "1h ago"
+      {{- toYaml .Values.config.probeJobs | nindent 6 }}
+    {{- else }}
+    probe_jobs: []
+    {{- end }}
 {{- end }}
 {{- include "berserk-common.configmap" . }}

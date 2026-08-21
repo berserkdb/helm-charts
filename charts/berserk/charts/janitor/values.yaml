@@ -2,6 +2,42 @@
 replicaCount: 1
 component: backend
 
+# CPU-based horizontal autoscaling (autoscaling/v2, needs only metrics-server).
+# Works because the meta planner keeps ~2 merge tasks per live janitor queued
+# whenever more work exists, so "all janitors busy" means "backlog exists".
+# When enabled, the Deployment omits `replicas:` and the HPA owns the scale.
+autoscaling:
+  enabled: false
+  # Never 0 — the janitor also runs tombstone deletion.
+  minReplicas: 1
+  # Each replica can materialize cache.size of merge scratch and burns ~1 CPU
+  # while merging — size this ceiling to the node pool.
+  maxReplicas: 20
+  # Average ACTUAL CPU per janitor pod (not % of request). Must stay BELOW the
+  # ~1.0 core a merging pod uses (idle is ~0.04), or the HPA cannot grow: a
+  # fully-busy fleet reports exactly the target and sits still. The gap sets
+  # spare capacity, so 800m keeps a free pod per four busy ones — two merging
+  # janitors become three.
+  targetCPUAverageValue: 800m
+  behavior:
+    scaleDown:
+      # Killing a janitor discards its in-flight merge progress (the task is
+      # released and retried elsewhere), and big merges can run ~30 min — so
+      # shrink reluctantly: only after desired has been lower for 30 min
+      # straight, then at most one pod per 15 min.
+      stabilizationWindowSeconds: 1800
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 900
+
+# On SIGTERM the janitor stops claiming new merge tasks and finishes the
+# in-flight merge; it hard-aborts (cleanup + release) ~60s before this
+# deadline, so SIGKILL is never relied on. The same value feeds the janitor's
+# `shutdown_grace_seconds` config via the ConfigMap. Grace is a ceiling, not a
+# wait: an idle janitor still terminates instantly.
+terminationGracePeriodSeconds: 1500
+
 image:
   repository: janitor
   pullPolicy: Always
@@ -15,9 +51,9 @@ networkPolicy:
   ingressFrom: []
   egressTo:
     - app: meta
-      ports: [{port: 9560}]
+      ports: [{ port: 9560 }]
     - app: query
-      ports: [{port: 9510}]
+      ports: [{ port: 9510 }]
   additionalIngress: []
   additionalEgress: []
 
@@ -28,10 +64,10 @@ resources:
   # self-contradictory repo.
   requests:
     memory: "512Mi"
-    cpu: "1500m"
+    cpu: "200m"
   limits:
     memory: "4Gi"
-    cpu: "4000m"
+    cpu: "2000m"
 
 cache:
   # Standalone-subchart fallback; the umbrella overrides this (see
@@ -60,6 +96,11 @@ config:
   minSegments: 3
   maxSegmentAgeDays: 7
   targetTables: []
+  # Recurring KQL queries fired at the query service to produce a synthetic
+  # liveness signal for the read path. Off by default. Each entry takes name,
+  # query, since, interval_seconds and optionally database; unknown keys are
+  # rejected, so a misspelled one fails janitor startup.
+  probeJobs: []
   # Merge scratch dir. Janitor builds multi-GiB transient files here during
   # cloud-segment merges, so this MUST be the large pod-internal `cache`
   # volume (emptyDir mounted at /tmp/segment-cache) — NOT the container's

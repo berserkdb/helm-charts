@@ -85,6 +85,10 @@ ingest:
       cpu: "500m"
 
 janitor:
+  # Enabled here so CI's helm template + kubeconform validates the rendered
+  # HPA and the replicas-omitted Deployment path.
+  autoscaling:
+    enabled: true
   resources:
     requests:
       memory: "128Mi"

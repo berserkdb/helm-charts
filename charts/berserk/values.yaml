@@ -415,7 +415,21 @@ janitor:
       # (burstable). NB: keep ≥ ~2x the writer pool — a tighter 2Gi previously
       # OOMed.
       memory: "4Gi"
-      cpu: "4000m"
+      # Merge is single-threaded: measured ceiling ~1.0 core across slow- and
+      # fast-S3 clusters (7d, per-pod max 1.03 sustained). 2000m is 2× headroom;
+      # a bigger limit adds no merge throughput — add replicas instead (see
+      # autoscaling below).
+      cpu: "2000m"
+
+  # CPU-based HPA + graceful drain — defaults live in the janitor subchart
+  # (charts/berserk/charts/janitor/values.yaml, with the sizing rationale).
+  # Uncomment to override per install:
+  # autoscaling:
+  #   enabled: false
+  #   minReplicas: 1
+  #   maxReplicas: 20
+  #   targetCPUAverageValue: 800m
+  # terminationGracePeriodSeconds: 1500
 
   cache:
     # Merge scratch lives on this pod-internal emptyDir (mounted at

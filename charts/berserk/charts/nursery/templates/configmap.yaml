@@ -8,8 +8,31 @@ data:
     working_dir: "/var/cache/nursery"
     meta_default_poll_interval_secs: {{ .Values.config.metaPollIntervalSecs }}
     stream_timeout_secs: {{ .Values.config.streamTimeoutSecs }}
-    {{- if hasKey .Values.config "forceMergeStaleThresholdSecs" }}
-    force_merge_stale_threshold_secs: {{ .Values.config.forceMergeStaleThresholdSecs }}
+    {{- /* int64: Helm reads every number as float64, so anything past ~1e7
+           renders as scientific notation and no integer field parses it. */}}
+    {{- if hasKey .Values.config "mergeAgeTriggerSecs" }}
+    merge_age_trigger_secs: {{ int64 .Values.config.mergeAgeTriggerSecs }}
+    {{- end }}
+    {{- if hasKey .Values.config "mergeMinBytes" }}
+    merge_min_bytes: {{ int64 .Values.config.mergeMinBytes }}
+    {{- end }}
+    {{- if hasKey .Values.config "mergeMaxSizeBytes" }}
+    merge_max_size_bytes: {{ int64 .Values.config.mergeMaxSizeBytes }}
+    {{- end }}
+    {{- if hasKey .Values.config "mergeWriterMemoryBudget" }}
+    merge_writer_memory_budget: {{ int64 .Values.config.mergeWriterMemoryBudget }}
+    {{- end }}
+    {{- if hasKey .Values.config "combineMinRun" }}
+    combine_min_run: {{ int64 .Values.config.combineMinRun }}
+    {{- end }}
+    {{- if hasKey .Values.config "combineMaxBytes" }}
+    combine_max_bytes: {{ int64 .Values.config.combineMaxBytes }}
+    {{- end }}
+    {{- if hasKey .Values.config "combineMaxConcurrent" }}
+    combine_max_concurrent: {{ int64 .Values.config.combineMaxConcurrent }}
+    {{- end }}
+    {{- if hasKey .Values.config "combineBackoffSecs" }}
+    combine_backoff_secs: {{ int64 .Values.config.combineBackoffSecs }}
     {{- end }}
     {{- if .Values.config.queryGrpcBind }}
     query_grpc_bind: {{ .Values.config.queryGrpcBind | quote }}

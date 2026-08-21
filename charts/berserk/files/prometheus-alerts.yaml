@@ -232,31 +232,6 @@ groups:
           summary: "janitor merge failures"
           description: "{{ $value | printf \"%.3f\" }} merge failures/s."
 
-      # Grafana: avg_above p75 5000ms — probe queries slow.
-      - alert: JanitorProbeLatencyP75High
-        expr: |
-          histogram_quantile(
-            0.75,
-            sum by (le) (rate(bzrk_janitor_probe_duration_bucket[5m]))
-          ) > 5000
-        for: 5m
-        labels:
-          severity: warning
-        annotations:
-          summary: "janitor probe p75 latency > 5s"
-          description: "p75 probe query latency is {{ $value | printf \"%.0f\" }} ms."
-
-      # Grafana: rate_below nominal (expected ~0.0167 probes/s/pod, alerts under
-      # ~34% of that). Probes stopping means the query path is likely unreachable.
-      - alert: JanitorProbesStopped
-        expr: sum (rate(bzrk_janitor_probes_completed[10m])) < 0.005
-        for: 5m
-        labels:
-          severity: critical
-        annotations:
-          summary: "janitor probe queries stopped"
-          description: "Probe completion rate {{ $value | printf \"%.4f\" }}/s — query path may be down."
-
   # ---------------------------------------------------------------------------
   # cache_server runs under the query supervisor. The matching Grafana alerts
   # ship PAUSED (tuning in progress); enable these once you've calibrated.
