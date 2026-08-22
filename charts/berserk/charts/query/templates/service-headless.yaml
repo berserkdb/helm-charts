@@ -1,0 +1,38 @@
+{{- /*
+Headless companion to the primary `query` Service. Forked from the shared
+`berserk-common.service` helper because the helper renders no `clusterIP`, and
+headless-ness is the whole point here. Keep the non-port stanzas in sync with
+the shared helper.
+
+A ClusterIP Service load-balances per TCP connection, so a gRPC client — which
+multiplexes every RPC over one long-lived HTTP/2 connection — pins to whichever
+pod it first dialled, for the process lifetime. This Service resolves to one A
+record per Ready pod instead of a single VIP, letting a client hold one
+connection per pod and spread requests across them.
+
+Rendered unconditionally: with no proxying and no VIP it costs nothing but DNS
+records. Which callers actually use it is decided by the endpoint they are
+configured with (e.g. the gateway's `grpc_routes` upstream), which keeps this
+template out of the rollout decision.
+
+Deliberately NOT the StatefulSet's `serviceName` — that field is immutable on a
+live object, so repointing it would be a delete-with-`--cascade=orphan`
+migration per namespace. Nothing that resolves `query` today changes.
+*/ -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ printf "%s-headless" (include "berserk-common.fullname" .) }}
+  labels:
+    {{- include "berserk-common.labels" . | nindent 4 }}
+    component: {{ .Values.component | default "backend" }}
+spec:
+  type: ClusterIP
+  clusterIP: None
+  selector:
+    {{- include "berserk-common.selectorLabels" . | nindent 4 }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: {{ .Values.service.targetPort | default .Values.service.port }}
+      protocol: TCP
+      name: {{ .Values.service.portName | default "http" }}

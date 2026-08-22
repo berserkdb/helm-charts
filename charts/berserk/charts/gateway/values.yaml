@@ -112,10 +112,22 @@ config:
   # The default fans out gRPC traffic to meta + query + ingest inside
   # the same namespace. Override to add routes or point at different
   # backends.
+  #
+  # `query-headless` rather than `query` is deliberate. A ClusterIP Service
+  # balances per TCP connection, and gRPC multiplexes every request over one
+  # long-lived HTTP/2 connection — so a gateway pointed at the VIP pins all its
+  # query traffic to whichever pod it first dialled, for the process lifetime.
+  # That leaves the other replicas idle and turns any per-pod limit on the
+  # pinned one into the whole cluster's limit. The headless companion Service
+  # resolves to one address per Ready pod instead, and the gateway keeps a
+  # connection per pod and picks by load (see `grpc/upstream_pool.rs`).
+  #
+  # Safe as a default at any replica count: with one query pod the set has one
+  # endpoint and this behaves exactly like pointing at the VIP.
   grpcRoutes: |
     [
       {"package_prefix": "meta", "upstream": "http://meta:9560"},
-      {"package_prefix": "query", "upstream": "http://query:9510"},
+      {"package_prefix": "query", "upstream": "http://query-headless:9510"},
       {"package_prefix": "opentelemetry", "upstream": "http://ingest:4317"}
     ]
   permissions:
