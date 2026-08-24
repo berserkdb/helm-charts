@@ -48,6 +48,12 @@
                 secretKeyRef:
                   name: {{ include "berserk-common.fullname" . }}-secrets
                   key: secret_key_base
+            # AES-GCM key for workflow connection secrets (Cloak).
+            - name: WORKFLOW_CLOAK_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "berserk-common.fullname" . }}-secrets
+                  key: workflow_cloak_key
             # Shared workspace database (same one meta uses).
             - name: DATABASE_URL
               valueFrom:
@@ -87,6 +93,28 @@
               value: {{ .Values.config.gatewayInternalBaseUrl | quote }}
             - name: PERMISSIONS_HTTP_ENDPOINT
               value: {{ .Values.config.permissions.baseUrl | quote }}
+            # Explore workflow builder + Settings → Integrations. The app
+            # only treats 1/true/yes/on as on; any other value stays off.
+            - name: WORKFLOWS_UI_ENABLED
+              value: {{ .Values.config.workflowsUiEnabled | default false | quote }}
+            {{- $ingest := .Values.config.ingest | default dict }}
+            {{- if $ingest.host }}
+            # The public OTLP endpoint shown on Settings -> Ingest. Stated, not
+            # discovered: a sender dials the ingress entrypoint, never a port
+            # bound in-cluster.
+            - name: BZRK_INGEST_HOST
+              value: {{ $ingest.host | quote }}
+            {{- with $ingest.grpcPort }}
+            - name: BZRK_INGEST_GRPC_PORT
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with $ingest.httpPort }}
+            - name: BZRK_INGEST_HTTP_PORT
+              value: {{ . | quote }}
+            {{- end }}
+            - name: BZRK_INGEST_TLS
+              value: {{ $ingest.tls | default false | quote }}
+            {{- end }}
             {{- if .Values.config.cspNonceHeader }}
             # When set, the app requires this request header (minted and injected
             # by the front proxy) and uses its value as the CSP nonce.

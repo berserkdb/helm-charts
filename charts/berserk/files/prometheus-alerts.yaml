@@ -177,6 +177,19 @@ groups:
           summary: "nursery ingest lag > 5m"
           description: "Most-stale stream lag is {{ $value | humanizeDuration }}."
 
+      # Grafana: value_above 600 — the completeness watermark is stale, so the
+      # map-reduce state cache can capture no slice and query reuse collapses
+      # (#4659). Distinct from ingest lag above: this one carries meta's poll
+      # bound and the skew margin, and it holds while ingest itself is healthy.
+      - alert: NurseryCompletenessWatermarkStalled
+        expr: bzrk_nursery_completeness_watermark_lag_seconds > 600
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "nursery completeness watermark > 10m stale"
+          description: "Published watermark is {{ $value | humanizeDuration }} behind; no slice is capturable while this holds."
+
       # Grafana: rate_below 1 byte/s over 180s (pending 2m) — ingest has stopped.
       # NOTE: if the nursery pod dies the series disappears and this cannot fire;
       # BerserkTargetDown covers that case.
@@ -209,14 +222,14 @@ groups:
           summary: "nursery infra errors sustained"
           description: "{{ $value | printf \"%.3f\" }} infra errors/s (S3/I/O)."
 
-      # Grafana: value_above 120 — merge threshold is ~30s.
+      # Grafana: value_above 1500 — merge age trigger is 600s.
       - alert: NurseryUnmergedDataAgeHigh
-        expr: bzrk_nursery_oldest_unmerged_data_age_seconds > 120
+        expr: bzrk_nursery_oldest_unmerged_data_age_seconds > 1500
         for: 2m
         labels:
           severity: warning
         annotations:
-          summary: "nursery unmerged data > 2m old"
+          summary: "nursery unmerged data > 25m old"
           description: "Oldest unmerged baby segment is {{ $value | humanizeDuration }}."
 
   # ---------------------------------------------------------------------------

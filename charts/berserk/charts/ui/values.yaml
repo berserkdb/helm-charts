@@ -63,6 +63,21 @@ networkPolicy:
       ports: [{port: 9580}]
   additionalIngress: []
   additionalEgress: []
+  # Workflow outbound hooks (webhook HTTPS + tenant SMTP) when
+  # allowExternalEgress is false. Ports: 443 (webhooks), 25/465/587 (SMTP).
+  # additionalEgress:
+  #   - to:
+  #       - ipBlock:
+  #           cidr: 0.0.0.0/0
+  #     ports:
+  #       - port: 443
+  #         protocol: TCP
+  #       - port: 25
+  #         protocol: TCP
+  #       - port: 465
+  #         protocol: TCP
+  #       - port: 587
+  #         protocol: TCP
   # The in-product operator-metrics collector (#4122) scrapes every discovered
   # Berserk pod's operator /metrics, and under `collector.discovery`
   # kubernetes|union also lists pods from the Kubernetes API. Both are generic
@@ -127,6 +142,25 @@ config:
   # /internal/users Members API, GATEWAY_HTTP_ENDPOINT). Keeps the call inside
   # the cluster rather than hairpinning through the public ingress.
   gatewayInternalBaseUrl: "http://gateway:9500"
+  # Explore workflow builder + Settings → Integrations. Off until the UI
+  # is ready; API, CLI, inbound hooks, and the scheduler still run.
+  # Set true (injects WORKFLOWS_UI_ENABLED=true) to show the builder.
+  workflowsUiEnabled: false
+  # The public OTLP endpoint this UI shows on Settings → Ingest, so a customer
+  # can read off where to send telemetry. Set it to what the ingress actually
+  # publishes: that is the ingress controller's entrypoint, which may differ
+  # from the ingest Service ports, so it cannot be read off the chart. An empty
+  # host makes the page report no endpoint rather than print an address nothing
+  # answers on.
+  ingest:
+    host: ""
+    # Empty means "not published", and the page then does not offer it. HTTP is
+    # revealed only behind a disclosure, so senders reach for gRPC first.
+    grpcPort: 4317
+    httpPort: ""
+    # Whether the endpoint terminates TLS: decides the scheme shown and whether
+    # a sender has to disable certificate verification.
+    tls: true
   # OpenTelemetry export. When otlpEnabled (here or via global.observability),
   # the deployment injects the standard OTEL_* env so the UI exports traces to
   # the collector at otlpEndpoint (host:port; scheme added by the template).
@@ -153,6 +187,10 @@ config:
 secrets:
   managed: true
   secretKeyBase: ""
+  # 32-byte AES-GCM key for workflow connection secrets (WORKFLOW_CLOAK_KEY).
+  # Empty ⇒ the chart mints a stable random 32-char value, preserved via lookup.
+  # Set to pin (32 raw bytes, or standard base64 of 32 bytes).
+  workflowCloakKey: ""
   secretName: "gateway-secrets"
   gatewayServiceTokenKey: "service_token"
   # Token the app presents to apps/permissions /v1/check (same shared secret

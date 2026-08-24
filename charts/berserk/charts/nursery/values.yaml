@@ -69,12 +69,6 @@ config:
   metaPollIntervalSecs: 5
   # Stream inactivity timeout in seconds
   streamTimeoutSecs: 300
-  # A merge fires for a table once the oldest data it holds locally is this
-  # old (seconds), whatever the byte bar says. Raising it keeps `.ttseg`
-  # files local longer so the query-in-nursery lane has something fresh to
-  # serve before the cloud-lane round-trip completes. 60s matches the
-  # "~1 minute retention" that pairs with `query.config.queryViaNursery=true`.
-
   # The merge cadence and the combine policy are unset here on purpose: the
   # compiled defaults are the values we intend everywhere, so an environment
   # that sets one of these is stating that it differs, not filling in a blank.
@@ -90,6 +84,7 @@ config:
   # fetch backlog room. It is charged against the same memory the backpressure
   # tiers derive from, so setting it lowers the resident bytes at which ingest
   # is throttled.
+
   # gRPC bind for the per-nursery `NurseryQueryService` that
   # apps/query's coordinator fans out to when `queryViaNursery` is on.
   # Empty disables (legacy HTTP-only nursery). `qws_bin` is bundled at
