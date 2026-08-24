@@ -187,10 +187,6 @@ config:
 secrets:
   managed: true
   secretKeyBase: ""
-  # 32-byte AES-GCM key for workflow connection secrets (WORKFLOW_CLOAK_KEY).
-  # Empty ⇒ the chart mints a stable random 32-char value, preserved via lookup.
-  # Set to pin (32 raw bytes, or standard base64 of 32 bytes).
-  workflowCloakKey: ""
   secretName: "gateway-secrets"
   gatewayServiceTokenKey: "service_token"
   # Token the app presents to apps/permissions /v1/check (same shared secret

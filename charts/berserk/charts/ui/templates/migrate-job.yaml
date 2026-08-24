@@ -59,11 +59,6 @@ spec:
             # sync phase (after hooks) and so wouldn't exist yet on a fresh install.
             - name: SECRET_KEY_BASE
               value: {{ printf "%s-ui-migrate" .Release.Name | sha256sum | quote }}
-            # runtime.exs (:prod) requires WORKFLOW_CLOAK_KEY; this Job never
-            # encrypts connection secrets, so a throwaway 32-byte value is enough
-            # and avoids depending on ui-secrets (created after hooks).
-            - name: WORKFLOW_CLOAK_KEY
-              value: {{ printf "%s-ui-migrate-cloak" .Release.Name | sha256sum | trunc 32 | quote }}
             - name: POOL_SIZE
               value: {{ .Values.config.poolSize | default 10 | quote }}
 {{- end }}

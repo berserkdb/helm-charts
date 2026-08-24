@@ -48,12 +48,6 @@
                 secretKeyRef:
                   name: {{ include "berserk-common.fullname" . }}-secrets
                   key: secret_key_base
-            # AES-GCM key for workflow connection secrets (Cloak).
-            - name: WORKFLOW_CLOAK_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "berserk-common.fullname" . }}-secrets
-                  key: workflow_cloak_key
             # Shared workspace database (same one meta uses).
             - name: DATABASE_URL
               valueFrom:
