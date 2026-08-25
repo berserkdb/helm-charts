@@ -109,6 +109,11 @@
             - name: BZRK_INGEST_TLS
               value: {{ $ingest.tls | default false | quote }}
             {{- end }}
+            {{- with .Values.config.publicUrlBase }}
+            # Public origin for workflow result links. Unset ⇒ Endpoint URL.
+            - name: BZRK_PUBLIC_URL_BASE
+              value: {{ . | quote }}
+            {{- end }}
             {{- if .Values.config.cspNonceHeader }}
             # When set, the app requires this request header (minted and injected
             # by the front proxy) and uses its value as the CSP nonce.

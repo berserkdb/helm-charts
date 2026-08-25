@@ -161,6 +161,10 @@ config:
     # Whether the endpoint terminates TLS: decides the scheme shown and whether
     # a sender has to disable certificate verification.
     tls: true
+  # Absolute https origin used when minting result links in workflow emails
+  # and webhooks (BZRK_PUBLIC_URL_BASE). Empty ⇒ the Phoenix Endpoint URL.
+  # Emitted only when set; an invalid explicit value fails UI boot.
+  publicUrlBase: ""
   # OpenTelemetry export. When otlpEnabled (here or via global.observability),
   # the deployment injects the standard OTEL_* env so the UI exports traces to
   # the collector at otlpEndpoint (host:port; scheme added by the template).
