@@ -2,8 +2,8 @@ apiVersion: v2
 name: ingest
 description: Berserk Ingest Service - OTLP HTTP/gRPC ingest collector
 type: application
-version: 1.1.1-rc.9
-appVersion: 1.1.1-rc.9
+version: 1.1.1-rc.10
+appVersion: 1.1.1-rc.10
 dependencies:
   - name: berserk-common
     version: "*"
