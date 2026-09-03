@@ -19,6 +19,18 @@ data:
     {{- if hasKey .Values.config "queryViaNursery" }}
     query_via_nursery: {{ .Values.config.queryViaNursery }}
     {{- end }}
+    {{- /* Second destination for the anonymized query-usage stream. Unset
+          leaves the records in the service log stream only — see
+          docs → Operations → Query Usage Reporting. */}}
+    {{- if .Values.config.usageReportEndpoint }}
+    usage_report_endpoint: {{ .Values.config.usageReportEndpoint | quote }}
+    {{- end }}
+    {{- if .Values.config.usageReportEndpoint }}
+    {{- /* Token via env interpolation: an ingest token is a secret and has
+          no business in a ConfigMap. Sourced from the secret named by
+          `config.usageReportTokenSecret`. */}}
+    usage_report_token: ${QUERY_USAGE_REPORT_TOKEN:}
+    {{- end }}
     {{- if .Values.cache.enabled }}
     cache:
       dir: "/segment_cache"

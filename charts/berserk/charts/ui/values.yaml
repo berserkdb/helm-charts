@@ -165,6 +165,13 @@ config:
   # and webhooks (BZRK_PUBLIC_URL_BASE). Empty ⇒ the Phoenix Endpoint URL.
   # Emitted only when set; an invalid explicit value fails UI boot.
   publicUrlBase: ""
+  # Cloud inbox (apps/feedback). The UI writes locally and ships in the
+  # background; air-gapped clusters keep rows until this URL is reachable
+  # and a signing secret is set. Not part of a Berserk Helm release of
+  # the inbox itself — this only configures the client.
+  feedback:
+    url: "https://feedback.bzrk.dev/v1/feedback"
+    enabled: true
   # OpenTelemetry export. When otlpEnabled (here or via global.observability),
   # the deployment injects the standard OTEL_* env so the UI exports traces to
   # the collector at otlpEndpoint (host:port; scheme added by the template).
@@ -196,6 +203,12 @@ secrets:
   # Token the app presents to apps/permissions /v1/check (same shared secret
   # the gateway uses).
   permissionsServiceTokenKey: "permissions_service_token"
+  # Fleet-wide Standard Webhooks HMAC (`whsec_…`) the UI uses to sign
+  # POSTs to the cloud Feedback inbox. Empty name skips the env var so
+  # air-gapped installs keep rows locally. The secret is shared across
+  # every Berserk cluster and the inbox itself — not generated per release.
+  feedbackSigningSecretName: ""
+  feedbackSigningSecretKey: "feedback_signing_secret"
 
 # In-product operator-metrics collector (#4122). Scrapes every pod in this
 # namespace that discovery finds — by default the ones registered with meta — on

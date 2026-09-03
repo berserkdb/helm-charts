@@ -8,7 +8,7 @@ NOT auto-create it on startup. Operators creating ingest tokens that route to
 resolve. On `helm upgrade` this hook does not re-run, so the table is
 expected to still exist from the original install.
 */ -}}
-{{- $registry := .Values.global.imageRegistry | default "ghcr.io/berserkdb" }}
+{{- $registry := .Values.global.imageRegistry | default "images.bzrk.dev/release" }}
 {{- $repository := .Values.setup.image.repository | default "cli" }}
 {{- $tag := .Values.setup.image.tag | default .Values.global.imageTag | default (printf "v%s" .Chart.AppVersion) }}
 {{- $image := printf "%s/%s:%s" $registry $repository $tag }}

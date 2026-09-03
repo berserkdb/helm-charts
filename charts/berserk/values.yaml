@@ -1,7 +1,8 @@
 # Global configuration applied to all subcharts
 global:
-  # Image registry for all Berserk images
-  imageRegistry: ghcr.io/berserkdb
+  # Image registry for all Berserk images. Public and anonymously pullable; this is
+  # where releases are published, so an install with no overrides works.
+  imageRegistry: images.bzrk.dev/release
   # Image pull policy
   imagePullPolicy: Always
   # Override image tag for all services (defaults to Chart appVersion)

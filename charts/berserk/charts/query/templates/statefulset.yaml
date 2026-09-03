@@ -109,6 +109,14 @@ spec:
                   fieldPath: status.podIP
             - name: RUST_BACKTRACE
               value: "1"
+            {{- if .Values.config.usageReportEndpoint }}
+            - name: QUERY_USAGE_REPORT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.usageReportTokenSecret }}
+                  key: {{ .Values.config.usageReportTokenSecretKey }}
+                  optional: true
+            {{- end }}
             {{- include "berserk-common.env.s3-pool" . | nindent 12 }}
             - name: _RJEM_MALLOC_CONF
               value: "prof:true,prof_active:true,lg_prof_sample:19"

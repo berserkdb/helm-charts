@@ -114,6 +114,21 @@
             - name: BZRK_PUBLIC_URL_BASE
               value: {{ . | quote }}
             {{- end }}
+            {{- with .Values.config.feedback }}
+            # Cloud inbox client. Missing signing secret ⇒ rows stay local.
+            - name: FEEDBACK_URL
+              value: {{ .url | default "https://feedback.bzrk.dev/v1/feedback" | quote }}
+            - name: FEEDBACK_ENABLED
+              value: {{ .enabled | default true | quote }}
+            {{- end }}
+            {{- with .Values.secrets.feedbackSigningSecretName }}
+            - name: FEEDBACK_SIGNING_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ . | quote }}
+                  key: {{ $.Values.secrets.feedbackSigningSecretKey | default "feedback_signing_secret" | quote }}
+                  optional: true
+            {{- end }}
             {{- if .Values.config.cspNonceHeader }}
             # When set, the app requires this request header (minted and injected
             # by the front proxy) and uses its value as the CSP nonce.

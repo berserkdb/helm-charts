@@ -3,7 +3,7 @@
 # Pairs with `tools/scripts/kind-up.sh` to bring up the full stack
 # (meta/query/ingest/janitor/nursery/ui + gateway/admin-ui/permissions)
 # against a kind cluster, using locally-built `berserk/*-dev:dev`
-# Bazel OCI images instead of the published `ghcr.io/berserkdb/*` ones.
+# Bazel OCI images instead of the published `images.bzrk.dev/release/*` ones.
 #
 # The image-ref overrides match the `oci_load.repo_tags` declared in
 # each app's BUILD.bazel:

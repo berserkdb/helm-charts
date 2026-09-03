@@ -6,7 +6,7 @@ To access the UI:
   Open http://localhost:{{ .Values.ui.service.port }} in your browser
 {{- end }}
 
-{{- $registry := .Values.global.imageRegistry | default "ghcr.io/berserkdb" }}
+{{- $registry := .Values.global.imageRegistry | default "images.bzrk.dev/release" }}
 {{- $cliRepo := .Values.setup.image.repository | default "cli" }}
 {{- $cliTag := .Values.setup.image.tag | default .Values.global.imageTag | default (printf "v%s" .Chart.AppVersion) }}
 

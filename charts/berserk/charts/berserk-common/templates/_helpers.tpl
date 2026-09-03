@@ -43,7 +43,7 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 Image name
 */}}
 {{- define "berserk-common.image" -}}
-{{- $registry := .Values.global.imageRegistry | default "ghcr.io/berserkdb" }}
+{{- $registry := .Values.global.imageRegistry | default "images.bzrk.dev/release" }}
 {{- $repository := .Values.image.repository | default .Chart.Name }}
 {{- if .Values.image.digest }}
 {{- printf "%s/%s@%s" $registry $repository .Values.image.digest }}

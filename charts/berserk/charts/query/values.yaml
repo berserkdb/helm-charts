@@ -128,6 +128,18 @@ resources:
 config:
   metaEndpoint: "http://meta:9560"
   maxConcurrentQueries: 16
+  # Anonymized query-usage records always go to the service log stream. Set
+  # an endpoint to also ship them to a table of their own, which is what makes
+  # them separately queryable and exportable:
+  #   bzrk table create bzrk-usage
+  #   bzrk ingest-token create usage_reporting --table bzrk-usage --simple
+  #   kubectl create secret generic query-usage-report \
+  #     --from-literal=token="<the token>"
+  # Records carry no query text, field names, literals or identity — see
+  # docs → Operations → Query Usage Reporting.
+  usageReportEndpoint: ""
+  usageReportTokenSecret: "query-usage-report"
+  usageReportTokenSecretKey: "token"
   # workersPerQuery: per-query concurrent worker cap. Bumping from the engine
   # default of 2 to 4 measurably reduces wall-clock for trace-find / streaming
   # joins on multi-day windows.
