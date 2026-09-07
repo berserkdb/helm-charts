@@ -26,12 +26,6 @@
               name: metrics
               protocol: TCP
           env:
-            - name: SOURCE_CONTROL_ENABLED
-              value: {{ .Values.config.sourceControl.enabled | quote }}
-            - name: SOURCE_CONTROL_PROVIDERS
-              value: {{ join "," .Values.config.sourceControl.providers | quote }}
-            - name: SOURCE_CONTROL_ENDPOINTS
-              value: {{ .Values.config.sourceControl.endpoints | toJson | quote }}
             {{- with .Values.secrets.workflowSecretName }}
             - name: WORKFLOW_CLOAK_KEY
               valueFrom:
@@ -100,13 +94,6 @@
               value: {{ .Values.config.gatewayInternalBaseUrl | quote }}
             - name: PERMISSIONS_HTTP_ENDPOINT
               value: {{ .Values.config.permissions.baseUrl | quote }}
-            # Explore workflow builder + Settings → Integrations. The app
-            # only treats 1/true/yes/on as on; any other value stays off.
-            - name: WORKFLOWS_UI_ENABLED
-              value: {{ .Values.config.workflowsUiEnabled | default false | quote }}
-            # Dashboards in the workspace shell; same 1/true/yes/on rule.
-            - name: DASHBOARDS_UI_ENABLED
-              value: {{ .Values.config.dashboardsUiEnabled | default false | quote }}
             {{- $ingest := .Values.config.ingest | default dict }}
             {{- if $ingest.host }}
             # The public OTLP endpoint shown on Settings -> Ingest. Stated, not
