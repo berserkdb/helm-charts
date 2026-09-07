@@ -1,1 +1,9 @@
 {{ include "berserk-common.ingress" . }}
+{{- if .Values.httpIngress.enabled }}
+{{- $context := deepCopy . }}
+{{- $_ := set $context.Values "ingress" .Values.httpIngress }}
+{{- $ingress := include "berserk-common.ingress" $context | fromYaml }}
+{{- $_ := set $ingress.metadata "name" (printf "%s-http" (include "berserk-common.fullname" .)) }}
+---
+{{ toYaml $ingress }}
+{{- end }}

@@ -22,8 +22,8 @@ data:
     {{- if hasKey .Values.config "mergeWriterMemoryBudget" }}
     merge_writer_memory_budget: {{ int64 .Values.config.mergeWriterMemoryBudget }}
     {{- end }}
-    {{- if hasKey .Values.config "combineMinRun" }}
-    combine_min_run: {{ int64 .Values.config.combineMinRun }}
+    {{- if hasKey .Values.config "combineMinAgeSecs" }}
+    combine_min_age_secs: {{ int64 .Values.config.combineMinAgeSecs }}
     {{- end }}
     {{- if hasKey .Values.config "combineMaxBytes" }}
     combine_max_bytes: {{ int64 .Values.config.combineMaxBytes }}

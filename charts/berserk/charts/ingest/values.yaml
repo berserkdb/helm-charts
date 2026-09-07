@@ -62,6 +62,14 @@ ingress:
   # - hosts: [ingest.example.com]
   #   secretName: ingest-tls
 
+# Separate HTTP ingress for deployments with different TLS or entrypoint settings.
+httpIngress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts: []
+  tls: []
+
 # NetworkPolicy: external telemetry sources; egress to meta and k8s API
 networkPolicy:
   allowExternal: true

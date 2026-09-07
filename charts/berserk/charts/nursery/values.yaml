@@ -75,7 +75,7 @@ config:
   # See docs/dev/nursery-combine-and-merge.md.
   #
   # mergeMinBytes / mergeMaxSizeBytes / mergeAgeTriggerSecs
-  # combineMinRun (0 disables) / combineMaxBytes / combineMaxConcurrent /
+  # combineMinAgeSecs / combineMaxBytes / combineMaxConcurrent (0 disables) /
   # combineBackoffSecs
   #
   # mergeWriterMemoryBudget has no default and is the one an operator is

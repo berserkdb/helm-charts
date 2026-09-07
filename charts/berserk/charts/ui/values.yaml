@@ -111,6 +111,10 @@ resources:
     cpu: "500m"
 
 config:
+  sourceControl:
+    enabled: false
+    providers: [github, gitlab, forgejo]
+    endpoints: []
   # Postgres schema for this service's tables in the shared workspace database
   # (search_path isolation). Empty string opts out.
   databaseSchema: "webui"
@@ -146,6 +150,11 @@ config:
   # is ready; API, CLI, inbound hooks, and the scheduler still run.
   # Set true (injects WORKFLOWS_UI_ENABLED=true) to show the builder.
   workflowsUiEnabled: false
+  # Dashboards in the workspace shell. Visible on the dev cluster
+  # (values-dev.yaml) and on local development machines
+  # (apps/ui_phoenix/config/dev.exs) only for now; REST, CLI and MCP still
+  # serve dashboards everywhere. Setting true injects DASHBOARDS_UI_ENABLED=true.
+  dashboardsUiEnabled: false
   # The public OTLP endpoint this UI shows on Settings → Ingest, so a customer
   # can read off where to send telemetry. Set it to what the ingress actually
   # publishes: that is the ingress controller's entrypoint, which may differ
@@ -197,6 +206,8 @@ config:
 # externally (it must carry the `secret_key_base` key).
 secrets:
   managed: true
+  workflowSecretName: ""
+  workflowCloakKey: "workflow_cloak_key"
   secretKeyBase: ""
   secretName: "gateway-secrets"
   gatewayServiceTokenKey: "service_token"
