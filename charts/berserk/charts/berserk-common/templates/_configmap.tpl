@@ -35,8 +35,13 @@ Renders the observability YAML block used by 5 of 6 services.
 Include with appropriate nindent inside the config.yaml data section.
 */}}
 {{- define "berserk-common.observability-config" -}}
-{{- $otlpEnabled := .Values.config.observability.otlpEnabled | default .Values.global.observability.otlpEnabled -}}
-{{- $otlpEndpoint := .Values.config.observability.otlpEndpoint | default .Values.global.observability.otlpEndpoint -}}
+{{- $obs := .Values.config.observability -}}
+{{/* `hasKey`, not `default`: Helm counts `false` as empty, so `default` made a
+     per-service `otlpEnabled: false` silently inherit a global `true` and a
+     service could not be opted out. The endpoint stays on `default`, where an
+     empty string genuinely does mean unset. */}}
+{{- $otlpEnabled := ternary (index $obs "otlpEnabled") .Values.global.observability.otlpEnabled (hasKey $obs "otlpEnabled") -}}
+{{- $otlpEndpoint := $obs.otlpEndpoint | default .Values.global.observability.otlpEndpoint -}}
 observability:
   service_name: {{ .Values.config.observability.serviceName | quote }}
   log_level: {{ .Values.config.observability.logLevel | quote }}

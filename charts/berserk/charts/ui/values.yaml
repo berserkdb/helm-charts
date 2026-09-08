@@ -173,7 +173,8 @@ config:
   # the collector at otlpEndpoint (host:port; scheme added by the template).
   # serviceName is the service identity reported in telemetry.
   observability:
-    otlpEnabled: false
+    # otlpEnabled omitted so it falls through to global.observability;
+    # set it here (or per-environment) to opt this service in or out.
     otlpEndpoint: ""
     serviceName: "ui"
 

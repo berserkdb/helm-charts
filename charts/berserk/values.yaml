@@ -19,6 +19,13 @@ global:
   # or share a Grafana backend. When empty, defaults to "default".
   # Override in per-env values files: "dev", "valhalla", etc.
   clusterName: ""
+  # Groups this install's services under one `service.namespace`, the OTel
+  # convention for "these service names belong together". Distinct from
+  # `clusterName`, which says *which install*: every install of this chart is
+  # still the Berserk platform, so the default does not vary per environment.
+  # Override to file Berserk's own services under a name that means something
+  # in your estate; empty omits the attribute entirely.
+  serviceNamespace: "berserk"
   # Public-facing base URL of this install — the gateway's externally
   # reachable URL (scheme + host [+ port], no trailing path). `gateway`
   # mints OIDC redirect URIs from it and `ui` builds absolute links against
@@ -293,7 +300,8 @@ meta:
     observability:
       serviceName: "meta"
       logLevel: "info"
-      otlpEnabled: false
+      # otlpEnabled omitted so it falls through to global.observability;
+      # set it here (or per-environment) to opt this service in or out.
       otlpEndpoint: ""
 
 # Query service configuration
@@ -332,7 +340,8 @@ query:
     observability:
       serviceName: "query"
       logLevel: "info"
-      otlpEnabled: false
+      # otlpEnabled omitted so it falls through to global.observability;
+      # set it here (or per-environment) to opt this service in or out.
       otlpEndpoint: ""
 
 # Ingest service configuration
@@ -384,8 +393,8 @@ ingest:
     observability:
       serviceName: "ingest"
       logLevel: "info"
-      # otlpEnabled / otlpEndpoint omitted — fall through to global.observability.*
-      # via Helm `default` semantics. Override per-environment in the values-*.yaml.
+      # otlpEnabled / otlpEndpoint omitted, so they fall through to
+      # global.observability.*. Override here or per-environment.
 
 # Janitor service configuration
 janitor:
@@ -464,7 +473,8 @@ janitor:
     observability:
       serviceName: "janitor"
       logLevel: "info"
-      otlpEnabled: false
+      # otlpEnabled omitted so it falls through to global.observability;
+      # set it here (or per-environment) to opt this service in or out.
       otlpEndpoint: ""
 
 # UI configuration

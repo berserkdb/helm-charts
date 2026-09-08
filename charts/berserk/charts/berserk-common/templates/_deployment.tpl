@@ -96,9 +96,16 @@ Usage: {{ include "berserk-common.env.s3-credentials" (dict "accessKeyEnv" "AWS_
 {{- end }}
 
 {{/*
-Telemetry resource attributes — stamps `bzrk.cluster.name` plus the standard
-k8s.{pod,namespace,node}.name via OTEL_RESOURCE_ATTRIBUTES, which the Rust
-SDK merges into every exported record.
+Telemetry resource attributes — stamps `bzrk.cluster.name`, `service.namespace`
+and the standard k8s.{pod,namespace,node}.name via OTEL_RESOURCE_ATTRIBUTES,
+which the Rust SDK merges into every exported record.
+
+`service.namespace` groups this install's service names, so a catalog holding
+both Berserk's own services and the applications it observes can tell them
+apart. It belongs here rather than in the Rust resource builder for two
+reasons: the SDK applies programmatic attributes *over* the env detector, so a
+value set in code could not be overridden by an operator; and grouping is a
+deployment decision, which is what everything else in this variable is.
 
 `bzrk.cluster.name` is Berserk-specific (not an OTel semantic convention)
 because a "Berserk cluster" is a Helm install / logical tenant, not a
@@ -130,7 +137,7 @@ Usage: {{ include "berserk-common.env.cluster-name" . | nindent 12 }}
     fieldRef:
       fieldPath: spec.nodeName
 - name: OTEL_RESOURCE_ATTRIBUTES
-  value: "bzrk.cluster.name={{ .Values.global.clusterName | default "default" }},k8s.pod.name=$(POD_NAME),k8s.namespace.name=$(POD_NAMESPACE),k8s.node.name=$(NODE_NAME)"
+  value: "bzrk.cluster.name={{ .Values.global.clusterName | default "default" }}{{ with .Values.global.serviceNamespace }},service.namespace={{ . }}{{ end }},k8s.pod.name=$(POD_NAME),k8s.namespace.name=$(POD_NAMESPACE),k8s.node.name=$(NODE_NAME)"
 {{- end }}
 
 {{/*

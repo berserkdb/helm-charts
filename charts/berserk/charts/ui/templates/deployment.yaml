@@ -138,7 +138,10 @@
             - name: CSP_NONCE_HEADER
               value: {{ .Values.config.cspNonceHeader | quote }}
             {{- end }}
-            {{- $otlp := (.Values.config.observability.otlpEnabled | default .Values.global.observability.otlpEnabled) }}
+            {{/* `hasKey`, not `default`: Helm counts `false` as empty, so a
+                 per-service `otlpEnabled: false` used to inherit a global
+                 `true` instead of opting the service out. */}}
+            {{- $otlp := ternary (index .Values.config.observability "otlpEnabled") .Values.global.observability.otlpEnabled (hasKey .Values.config.observability "otlpEnabled") }}
             {{- $collector := .Values.collector | default dict }}
             {{- if $collector.enabled }}
             # In-product operator-metrics collector (#4122). The default discovery

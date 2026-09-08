@@ -171,7 +171,8 @@ config:
   observability:
     serviceName: "query"
     logLevel: "info"
-    otlpEnabled: false
+    # otlpEnabled omitted so it falls through to global.observability;
+    # set it here (or per-environment) to opt this service in or out.
     otlpEndpoint: ""
     # When true, sets `BZRK_WAIT_PROFILER=1` on the query pod env.
     # `bzrk_bootstrap` honours that on every binary that uses the

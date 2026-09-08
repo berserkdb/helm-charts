@@ -154,10 +154,6 @@ config:
   observability:
     serviceName: "ingest"
     logLevel: "info"
-    # otlpEnabled / otlpEndpoint intentionally omitted here — they fall
-    # through to global.observability.* via Helm's `default` semantics in
-    # `berserk-common.observability-config`. Setting `otlpEnabled: false`
-    # locally would NOT override a global `true` (Helm `default` treats
-    # `false` as empty), so leaving them unset keeps the values model
-    # honest. To explicitly opt in/out for ingest, override at the
-    # per-environment values file level.
+    # otlpEnabled / otlpEndpoint omitted here, so they fall through to
+    # global.observability.* in `berserk-common.observability-config`. Setting
+    # `otlpEnabled: false` here now does opt ingest out, global `true` or not.
