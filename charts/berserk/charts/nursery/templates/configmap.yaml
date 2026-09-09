@@ -22,6 +22,9 @@ data:
     {{- if hasKey .Values.config "mergeWriterMemoryBudget" }}
     merge_writer_memory_budget: {{ int64 .Values.config.mergeWriterMemoryBudget }}
     {{- end }}
+    {{- with .Values.global.rowsZstdLevel }}
+    rows_zstd_level: {{ int . }}
+    {{- end }}
     {{- if hasKey .Values.config "combineMinAgeSecs" }}
     combine_min_age_secs: {{ int64 .Values.config.combineMinAgeSecs }}
     {{- end }}

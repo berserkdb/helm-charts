@@ -56,6 +56,13 @@ spec:
         runAsUser: 1000
         runAsGroup: 1000
         fsGroup: 1000
+        # Without this the kubelet recursively chowns the whole segment-cache
+        # PVC on every mount, before the container starts. That is proportional
+        # to file count, not volume size: a cache holding ~2.2M files took ~5
+        # minutes, on every deploy, invisible in the container's own logs.
+        # OnRootMismatch skips the walk when the volume root already has the
+        # right ownership, which it does on every mount after the first.
+        fsGroupChangePolicy: OnRootMismatch
 {{- include "berserk-common.scheduling" . }}
 {{- include "berserk-common.serviceAccountName" . }}
       {{- if and .Values.cache.enabled .Values.cache.hostPath }}
@@ -214,11 +221,18 @@ spec:
               port: http
             initialDelaySeconds: 5
             periodSeconds: 5
+          # Startup is dominated by rebuilding the map-reduce state-cache index,
+          # which scales with entry count; a cold instance near the cache's
+          # entry ceiling needs far longer than a warm one. Each attempt costs
+          # periodSeconds plus the 1s probe timeout, so this budget is ~4
+          # minutes. Overrunning it produces a crashloop that reads exactly like
+          # a bad build, so the headroom is deliberately generous — the probe
+          # only gates startup, and liveness still governs steady state.
           startupProbe:
             httpGet:
               path: /health/started
               port: http
-            failureThreshold: 30
+            failureThreshold: 60
             periodSeconds: 3
           volumeMounts:
             {{- include "berserk-common.volumeMount.config" . | nindent 12 }}

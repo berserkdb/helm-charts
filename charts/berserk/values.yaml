@@ -13,6 +13,13 @@ global:
   serviceAccountName: ""
   # Labels applied to all resources
   labels: {}
+  # zstd level for the ROWS chunks of every segment written to object storage
+  # (clamped to 1..9). Shared by the nursery and janitor merges, the writers
+  # whose output is uploaded; baby segments never leave the pod and stay on lz4,
+  # where the bytes buy no transfer. Measured on real segments, level 9 stores
+  # ~2.5x smaller than lz4 and decompresses at lz4 speed, for ~12% more merge
+  # CPU; lower levels write faster and read slower.
+  rowsZstdLevel: 9
   # Name of this Berserk cluster (a Helm install / logical tenant). Stamped on
   # every telemetry record as `bzrk.cluster.name` so alerts and dashboards can
   # scope queries to one install when multiple installs share a k8s cluster
