@@ -26,12 +26,12 @@
               name: metrics
               protocol: TCP
           env:
-            {{- with .Values.secrets.workflowSecretName }}
-            - name: WORKFLOW_CLOAK_KEY
+            {{- with .Values.secrets.credentialsEncryptionSecretName }}
+            - name: CREDENTIALS_ENCRYPTION_KEY
               valueFrom:
                 secretKeyRef:
                   name: {{ . | quote }}
-                  key: {{ $.Values.secrets.workflowCloakKey | quote }}
+                  key: {{ $.Values.secrets.credentialsEncryptionSecretKey | quote }}
             {{- end }}
             # The image entrypoint migrates the database, then starts the HTTP
             # server bound to 0.0.0.0:$PORT.

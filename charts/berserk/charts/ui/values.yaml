@@ -192,10 +192,16 @@ config:
 # generates a stable random value, preserved across renders via `lookup`. Set
 # `secretKeyBase` to pin a value, or `managed: false` to provision the Secret
 # externally (it must carry the `secret_key_base` key).
+#
+# `credentialsEncryptionSecretName` is a separate Secret holding the 32-byte
+# AES-GCM key used to encrypt integration / AI-provider credentials at rest
+# (`CREDENTIALS_ENCRYPTION_KEY`). Empty skips the env var; the UI boots, but
+# storing those credentials fails until the key is set. The value must be
+# stable across upgrades or ciphertext becomes unreadable.
 secrets:
   managed: true
-  workflowSecretName: ""
-  workflowCloakKey: "workflow_cloak_key"
+  credentialsEncryptionSecretName: ""
+  credentialsEncryptionSecretKey: "credentials_encryption_key"
   secretKeyBase: ""
   secretName: "gateway-secrets"
   gatewayServiceTokenKey: "service_token"

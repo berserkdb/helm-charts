@@ -25,6 +25,9 @@ data:
     {{- with .Values.global.rowsZstdLevel }}
     rows_zstd_level: {{ int . }}
     {{- end }}
+    {{- with .Values.global.mergeCacheSeeding }}
+    merge_cache_seeding: {{ . | quote }}
+    {{- end }}
     {{- if hasKey .Values.config "combineMinAgeSecs" }}
     combine_min_age_secs: {{ int64 .Values.config.combineMinAgeSecs }}
     {{- end }}

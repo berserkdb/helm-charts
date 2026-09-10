@@ -15,6 +15,9 @@ data:
     {{- with .Values.global.rowsZstdLevel }}
     rows_zstd_level: {{ int . }}
     {{- end }}
+    {{- with .Values.global.mergeCacheSeeding }}
+    merge_cache_seeding: {{ . | quote }}
+    {{- end }}
     {{- if .Values.config.targetTables }}
     target_tables: {{ .Values.config.targetTables | toJson }}
     {{- else }}

@@ -61,4 +61,13 @@ spec:
               value: {{ printf "%s-ui-migrate" .Release.Name | sha256sum | quote }}
             - name: POOL_SIZE
               value: {{ .Values.config.poolSize | default 10 | quote }}
+            {{- with .Values.secrets.credentialsEncryptionSecretName }}
+            # Same key the app uses to encrypt credentials at rest, so the
+            # migrate hook can rewrite leftover plaintext rows.
+            - name: CREDENTIALS_ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ . | quote }}
+                  key: {{ $.Values.secrets.credentialsEncryptionSecretKey | quote }}
+            {{- end }}
 {{- end }}

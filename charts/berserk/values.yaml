@@ -20,6 +20,18 @@ global:
   # ~2.5x smaller than lz4 and decompresses at lz4 speed, for ~12% more merge
   # CPU; lower levels write faster and read slower.
   rowsZstdLevel: 9
+  # How much of each merged segment the producer (nursery, janitor) pushes into
+  # the owning query node's cache before committing it, so the first query does
+  # not have to cold-fetch it from object storage.
+  #   index - push only what planning needs: the index region a merged segment
+  #           front-loads (TSEG, CIDX, MIMX, BLOM), leaving row data to be
+  #           fetched on demand and only if actually queried
+  #   full  - push the whole file
+  #   none  - push nothing
+  # `index` is the default because a whole-file push evicts hot row data where
+  # queries touch only a fraction of the corpus. See
+  # docs/dev/merge-cache-seeding.md.
+  mergeCacheSeeding: index
   # Name of this Berserk cluster (a Helm install / logical tenant). Stamped on
   # every telemetry record as `bzrk.cluster.name` so alerts and dashboards can
   # scope queries to one install when multiple installs share a k8s cluster
