@@ -339,7 +339,7 @@ services:
 
   meta:
     <<: *common
-    image: images.bzrk.dev/release/meta:v1.1.4-rc.2
+    image: images.bzrk.dev/release/meta:v1.1.4-rc.3
     depends_on:
       postgres:
         condition: service_healthy
@@ -362,7 +362,7 @@ services:
 
   query:
     <<: *common
-    image: images.bzrk.dev/release/query:v1.1.4-rc.2
+    image: images.bzrk.dev/release/query:v1.1.4-rc.3
     depends_on:
       meta:
         condition: service_healthy
@@ -395,7 +395,7 @@ services:
   # reads at startup. Talks to meta over gRPC directly (no bearer
   # token → ClientChannel::direct, see apps/cli/src/network/meta_client.rs).
   ingest-token-init:
-    image: images.bzrk.dev/release/cli:v1.1.4-rc.2
+    image: images.bzrk.dev/release/cli:v1.1.4-rc.3
     logging: *logging
     networks:
       - berserk
@@ -415,7 +415,7 @@ services:
 
   ingest:
     <<: *common
-    image: images.bzrk.dev/release/ingest:v1.1.4-rc.2
+    image: images.bzrk.dev/release/ingest:v1.1.4-rc.3
     depends_on:
       meta:
         condition: service_healthy
@@ -453,7 +453,7 @@ services:
 
   janitor:
     <<: *common
-    image: images.bzrk.dev/release/janitor:v1.1.4-rc.2
+    image: images.bzrk.dev/release/janitor:v1.1.4-rc.3
     depends_on:
       meta:
         condition: service_healthy
@@ -483,7 +483,7 @@ services:
 
   nursery:
     <<: *common
-    image: images.bzrk.dev/release/nursery:v1.1.4-rc.2
+    image: images.bzrk.dev/release/nursery:v1.1.4-rc.3
     depends_on:
       meta:
         condition: service_healthy
@@ -511,7 +511,7 @@ services:
 
   ui:
     <<: *common
-    image: images.bzrk.dev/release/ui:v1.1.4-rc.2
+    image: images.bzrk.dev/release/ui:v1.1.4-rc.3
     depends_on:
       postgres:
         condition: service_healthy
@@ -559,7 +559,7 @@ services:
 
   permissions:
     <<: *common
-    image: images.bzrk.dev/release/permissions:v1.1.4-rc.2
+    image: images.bzrk.dev/release/permissions:v1.1.4-rc.3
     depends_on:
       postgres:
         condition: service_healthy
@@ -577,7 +577,7 @@ services:
 
   gateway:
     <<: *common
-    image: images.bzrk.dev/release/gateway:v1.1.4-rc.2
+    image: images.bzrk.dev/release/gateway:v1.1.4-rc.3
     depends_on:
       postgres:
         condition: service_healthy
