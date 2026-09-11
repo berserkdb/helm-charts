@@ -6,6 +6,13 @@ IngressRoute matches only upgrade requests and forwards them with scheme http;
 all other traffic still matches the plain Ingress and stays on h2c. Traefik-only;
 opt in with ingress.websocketSplit (non-Traefik ingresses pass WS by default).
 */ -}}
+{{- if .Values.ingress.enabled }}
+{{- $schemeKey := "traefik.ingress.kubernetes.io/service.serversscheme" }}
+{{- $scheme := index (.Values.service.annotations | default dict) $schemeKey | default (index (.Values.ingress.annotations | default dict) $schemeKey) | default "" }}
+{{- if and (eq ($scheme | toString) "h2c") (kindIs "invalid" .Values.ingress.websocketSplit) }}
+{{- fail (printf "gateway: %s is h2c but gateway.ingress.websocketSplit is unset. Traefik then speaks HTTP/2 to the gateway, WebSocket upgrades cannot ride HTTP/2, and the LiveView UI fails to connect (it degrades to longpoll, or hangs on clients without that fallback). Set websocketSplit=true to add a Traefik IngressRoute forwarding upgrades over HTTP/1.1, or websocketSplit=false if WebSockets reach the gateway another way." $schemeKey) }}
+{{- end }}
+{{- end }}
 {{- if and .Values.ingress.enabled .Values.ingress.websocketSplit }}
 {{- $svc := include "berserk-common.fullname" . }}
 {{- $port := .Values.service.port }}
