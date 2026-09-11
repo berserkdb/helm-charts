@@ -1,0 +1,13 @@
+{{- /*
+Per-environment objects that belong to the release but cannot be expressed as
+chart values — in practice SealedSecrets, whose ciphertext is bound to one
+cluster's RSA key and one namespace, so it can only ever live in a
+values-<env>.yaml rather than in the shared chart.
+
+Rendered verbatim through `tpl`, so an entry may reference `.Release` /
+`.Values` if it needs to.
+*/ -}}
+{{- range .Values.extraManifests }}
+---
+{{ tpl (toYaml .) $ }}
+{{- end }}

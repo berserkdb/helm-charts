@@ -730,3 +730,11 @@ prometheus:
     tls:
       enabled: false
       secretName: ""
+
+# Extra objects rendered alongside the release, for things that are inherently
+# per-environment rather than per-chart. The motivating case is SealedSecrets:
+# the ciphertext is bound to one cluster's RSA key and one namespace, so it
+# cannot live in the shared chart and has to be supplied by values-<env>.yaml.
+# Entries are rendered verbatim (through `tpl`, so they may reference
+# `.Release` / `.Values`).
+extraManifests: []
