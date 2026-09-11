@@ -2,8 +2,51 @@ apiVersion: v1
 entries:
   berserk:
   - apiVersion: v2
+    appVersion: 1.1.4-rc.1
+    created: "2026-09-11T02:01:30.983512271+02:00"
+    dependencies:
+    - condition: meta.enabled
+      name: meta
+      repository: ""
+      version: 1.1.4-rc.1
+    - condition: query.enabled
+      name: query
+      repository: ""
+      version: 1.1.4-rc.1
+    - condition: ingest.enabled
+      name: ingest
+      repository: ""
+      version: 1.1.4-rc.1
+    - condition: janitor.enabled
+      name: janitor
+      repository: ""
+      version: 1.1.4-rc.1
+    - condition: ui.enabled
+      name: ui
+      repository: ""
+      version: 1.1.4-rc.1
+    - condition: nursery.enabled
+      name: nursery
+      repository: ""
+      version: 1.1.4-rc.1
+    - condition: gateway.enabled
+      name: gateway
+      repository: ""
+      version: 1.1.4-rc.1
+    - condition: permissions.enabled
+      name: permissions
+      repository: ""
+      version: 1.1.4-rc.1
+    description: Berserk - High-performance observability data platform
+    digest: e9f59271c77fd63f91ff9c0c19231b4f8174da4dec2c2bbd44a137aaaac4f790
+    name: berserk
+    type: application
+    urls:
+    - berserk-1.1.4-rc.1.tgz
+    version: 1.1.4-rc.1
+  - apiVersion: v2
     appVersion: 1.1.3-rc.3
-    created: "2026-09-10T18:35:46.721253932+02:00"
+    created: "2026-09-11T02:01:30.970497189+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -46,7 +89,7 @@ entries:
     version: 1.1.3-rc.3
   - apiVersion: v2
     appVersion: 1.1.3-rc.1
-    created: "2026-09-10T18:35:46.71234609+02:00"
+    created: "2026-09-11T02:01:30.959765296+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -89,7 +132,7 @@ entries:
     version: 1.1.3-rc.1
   - apiVersion: v2
     appVersion: 1.1.2-rc.10
-    created: "2026-09-10T18:35:46.672858763+02:00"
+    created: "2026-09-11T02:01:30.908291417+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -132,7 +175,7 @@ entries:
     version: 1.1.2-rc.10
   - apiVersion: v2
     appVersion: 1.1.2-rc.9
-    created: "2026-09-10T18:35:46.705644264+02:00"
+    created: "2026-09-11T02:01:30.949804619+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -175,7 +218,7 @@ entries:
     version: 1.1.2-rc.9
   - apiVersion: v2
     appVersion: 1.1.2-rc.8
-    created: "2026-09-10T18:35:46.698224972+02:00"
+    created: "2026-09-11T02:01:30.938393465+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -218,7 +261,7 @@ entries:
     version: 1.1.2-rc.8
   - apiVersion: v2
     appVersion: 1.1.2-rc.6
-    created: "2026-09-10T18:35:46.68640623+02:00"
+    created: "2026-09-11T02:01:30.92924685+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -261,7 +304,7 @@ entries:
     version: 1.1.2-rc.6
   - apiVersion: v2
     appVersion: 1.1.2-rc.5
-    created: "2026-09-10T18:35:46.679636006+02:00"
+    created: "2026-09-11T02:01:30.917538037+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -304,7 +347,7 @@ entries:
     version: 1.1.2-rc.5
   - apiVersion: v2
     appVersion: 1.1.2-gdemo-revert.1
-    created: "2026-09-10T18:35:46.66802006+02:00"
+    created: "2026-09-11T02:01:30.896961296+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -3888,4 +3931,4 @@ entries:
     urls:
     - https://github.com/berserkdb/helm-charts/releases/download/berserk-0.1.0/berserk-0.1.0.tgz
     version: 0.1.0
-generated: "2026-09-10T18:35:46.663030962+02:00"
+generated: "2026-09-11T02:01:30.884818162+02:00"
