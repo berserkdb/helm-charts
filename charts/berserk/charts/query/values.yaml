@@ -127,7 +127,22 @@ resources:
 
 config:
   metaEndpoint: "http://meta:9560"
-  maxConcurrentQueries: 16
+  # Query admission is a memory budget, not a query count:
+  #   max_concurrent_queries =
+  #     limits.memory * queryAdmissionBudgetFraction / queryBaseSizeMi
+  # so the cap tracks whatever memory an install gives its query pods
+  # (2Gi in test, 4Gi on the prod tenants, 32Gi on dev/valhalla) instead
+  # of one number that is reckless on the small ones and timid on the
+  # large. Set `maxConcurrentQueries` to override the derivation.
+  #
+  # The fraction is well under 1 because the forked qws, the cache_server
+  # child and the vsearch model mmap share the query container's cgroup.
+  #
+  # queryBaseSizeMi is the assumed footprint of one query's QC+QW pair —
+  # a flat allowance. Queries that need materially more than the base are
+  # the job of per-query reservation, not of this cap.
+  queryAdmissionBudgetFraction: 0.5
+  queryBaseSizeMi: 100
   # Anonymized query-usage records always go to the service log stream. Set
   # an endpoint to also ship them to a table of their own, which is what makes
   # them separately queryable and exportable:
