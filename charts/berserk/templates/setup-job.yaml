@@ -12,6 +12,9 @@ expected to still exist from the original install.
 {{- $repository := .Values.setup.image.repository | default "cli" }}
 {{- $tag := .Values.setup.image.tag | default .Values.global.imageTag | default (printf "v%s" .Chart.AppVersion) }}
 {{- $image := printf "%s/%s:%s" $registry $repository $tag }}
+{{- if .Values.setup.image.digest }}
+{{- $image = printf "%s/%s@%s" $registry $repository .Values.setup.image.digest }}
+{{- end }}
 apiVersion: batch/v1
 kind: Job
 metadata:

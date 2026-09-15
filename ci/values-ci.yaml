@@ -1,5 +1,5 @@
 # CI-specific values overrides for testing in Kind
-# Used by .github/workflows/ci.yml
+# Used by .forgejo/workflows/ci.yml
 
 global:
   # Public URL of the install — inherited by gateway + admin-ui.

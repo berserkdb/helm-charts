@@ -9,6 +9,10 @@ To access the UI:
 {{- $registry := .Values.global.imageRegistry | default "images.bzrk.dev/release" }}
 {{- $cliRepo := .Values.setup.image.repository | default "cli" }}
 {{- $cliTag := .Values.setup.image.tag | default .Values.global.imageTag | default (printf "v%s" .Chart.AppVersion) }}
+{{- $cliImage := printf "%s/%s:%s" $registry $cliRepo $cliTag }}
+{{- if .Values.setup.image.digest }}
+{{- $cliImage = printf "%s/%s@%s" $registry $cliRepo .Values.setup.image.digest }}
+{{- end }}
 
 {{- if .Values.global.ingestToken.managed }}
 
@@ -29,7 +33,7 @@ Secret yourself, and mint tokens with the CLI flow below.
 {{- else }}
 
 To create an ingest token for the "{{ .Values.global.defaultTable }}" table:
-  kubectl run bzrk-cli -n {{ .Release.Namespace }} --image={{ $registry }}/{{ $cliRepo }}:{{ $cliTag }} --labels=app=admin,app.kubernetes.io/instance={{ .Release.Name }} --command -- sleep 3600
+  kubectl run bzrk-cli -n {{ .Release.Namespace }} --image={{ $cliImage }} --labels=app=admin,app.kubernetes.io/instance={{ .Release.Name }} --command -- sleep 3600
   kubectl wait --for=condition=Ready pod/bzrk-cli -n {{ .Release.Namespace }}
   kubectl exec -it bzrk-cli -n {{ .Release.Namespace }} -- /cli --meta-endpoint meta:{{ .Values.meta.service.port }} table create --if-not-exists {{ .Values.global.defaultTable }}
   kubectl exec -it bzrk-cli -n {{ .Release.Namespace }} -- /cli --meta-endpoint meta:{{ .Values.meta.service.port }} ingest-token create --table {{ .Values.global.defaultTable }} my-ingest-token

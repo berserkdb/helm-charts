@@ -27,6 +27,10 @@ Repository defaults to "cli"; override via `ingest.cliImage.repository`
 {{- define "ingest.cliImage" -}}
 {{- $registry := .Values.global.imageRegistry | default "images.bzrk.dev/release" -}}
 {{- $repository := (.Values.cliImage).repository | default "cli" -}}
+{{- if (.Values.cliImage).digest -}}
+{{- printf "%s/%s@%s" $registry $repository .Values.cliImage.digest -}}
+{{- else -}}
 {{- $tag := (.Values.cliImage).tag | default .Values.global.imageTag | default (printf "v%s" .Chart.AppVersion) -}}
 {{- printf "%s/%s:%s" $registry $repository $tag -}}
+{{- end -}}
 {{- end -}}
