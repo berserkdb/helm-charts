@@ -41,17 +41,71 @@ spec:
     {{- toYaml . | nindent 4 }}
   {{- end }}
   ports:
-    {{- if .Values.service.ports }}
-    {{- range $name, $port := .Values.service.ports }}
-    - port: {{ $port }}
-      targetPort: {{ $port }}
-      protocol: TCP
-      name: {{ $name | kebabcase }}
-    {{- end }}
-    {{- else }}
-    - port: {{ .Values.service.port }}
-      targetPort: {{ .Values.service.targetPort | default .Values.service.port }}
-      protocol: TCP
-      name: {{ .Values.service.portName | default "http" }}
-    {{- end }}
+    {{- include "berserk-common.service.ports" . | trim | nindent 4 }}
+{{- end }}
+
+{{/*
+Port list shared by `berserk-common.service` and `berserk-common.service.headless`,
+rendered without indentation. Callers place it with `trim | nindent <n>`.
+*/}}
+{{- define "berserk-common.service.ports" -}}
+{{- if .Values.service.ports }}
+{{- range $name, $port := .Values.service.ports }}
+- port: {{ $port }}
+  targetPort: {{ $port }}
+  protocol: TCP
+  name: {{ $name | kebabcase }}
+{{- end }}
+{{- else }}
+- port: {{ .Values.service.port }}
+  targetPort: {{ .Values.service.targetPort | default .Values.service.port }}
+  protocol: TCP
+  name: {{ .Values.service.portName | default "http" }}
+{{- end }}
+{{- end }}
+
+{{/*
+Headless companion to a service's primary Service.
+
+A ClusterIP Service load-balances per TCP connection, so a gRPC client — which
+multiplexes every RPC over one long-lived HTTP/2 connection — pins to whichever
+pod it first dialled, for the process lifetime. This Service resolves to one A
+record per Ready pod instead of a single VIP, letting a client hold one
+connection per pod and spread requests across them.
+
+Rendered unconditionally by the subcharts that include it: with no proxying and
+no VIP it costs nothing but DNS records. Which callers actually use it is decided
+by the endpoint they are configured with (e.g. the gateway's `grpc_routes`
+upstream, or a collector's OTLP endpoint), which keeps it out of the rollout
+decision. A gRPC client also needs a load-balancing policy — one address per pod
+does nothing on its own, since the default `pick_first` still picks one.
+
+Deliberately not rendered, unlike `berserk-common.service`:
+  - `.Values.service.annotations` — proxy hints such as Traefik's
+    `service.serversscheme` must not land here, because this Service is never an
+    Ingress backend. A proxy pooling to one pod would recreate the pin it exists
+    to remove.
+  - `externalIPs` — there is no VIP to alias.
+  - `publishNotReadyAddresses` stays at its default, so membership is Ready-only;
+    that is what makes a client's endpoint set correct.
+
+Not a StatefulSet's `serviceName` either — that field is immutable on a live
+object, so repointing it would be a delete-with-`--cascade=orphan` migration per
+namespace.
+*/}}
+{{- define "berserk-common.service.headless" -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ printf "%s-headless" (include "berserk-common.fullname" .) }}
+  labels:
+    {{- include "berserk-common.labels" . | nindent 4 }}
+    component: {{ .Values.component | default "backend" }}
+spec:
+  type: ClusterIP
+  clusterIP: None
+  selector:
+    {{- include "berserk-common.selectorLabels" . | nindent 4 }}
+  ports:
+    {{- include "berserk-common.service.ports" . | trim | nindent 4 }}
 {{- end }}

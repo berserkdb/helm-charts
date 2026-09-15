@@ -1,0 +1,11 @@
+{{- /*
+Headless companion to the primary `ingest` Service, for OTLP/gRPC senders that
+would otherwise pin every request to one pod. Renders every port in
+`service.ports`; on a headless Service the port list is EndpointSlice and SRV
+metadata only, since the A records are pod IPs either way.
+
+Note this Service carries no Traefik annotation and must never become an Ingress
+backend — see the shared define. The `ingress` and `httpIngress` values point at
+the primary Service.
+*/ -}}
+{{ include "berserk-common.service.headless" . }}

@@ -8,6 +8,10 @@ component: frontend
 # out of band; the image entrypoint still migrates idempotently on boot.
 migrations:
   enabled: true
+  # Fails the migration hook instead of letting it hang the release. Covers both
+  # a migration that never finishes and an image that never pulls. Raise it if a
+  # data migration legitimately needs longer.
+  activeDeadlineSeconds: 600
 
 image:
   repository: ui

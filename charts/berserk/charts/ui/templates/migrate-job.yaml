@@ -20,6 +20,10 @@ metadata:
     helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
 spec:
   backoffLimit: 3
+  {{- /* A pod that can never start (unpullable image) stays Pending rather than
+  failing, so without a deadline the hook neither succeeds nor fails and the
+  release waits on it forever — blocking every later revision too. */}}
+  activeDeadlineSeconds: {{ .Values.migrations.activeDeadlineSeconds }}
   template:
     metadata:
       labels:
