@@ -99,19 +99,21 @@ networkPolicy:
   scrapeEgress: true
   kubeApiEgress: true
 
-# The UI runtime needs ~650 MB resident. The operator-metrics collector (#4122) adds
-# ~12-20 MB of steady-state ring buffers plus per-cycle parse transients across every
-# scraped pod, which does not fit comfortably in the ~100 MB of headroom a 768Mi limit
-# leaves — so the limit is 1Gi. (CI, kind and internal clusters have run the Phoenix ui
-# at 1Gi since it landed, so it is the better-exercised value.) Watch
-# `bzrk_collector_ets_memory_bytes` and `bzrk_collector_series` before raising
+# The UI runtime idles at ~650-800 MB resident, and a single search materialises
+# its result and timeline in the same BEAM: `query/delta.ex` admits up to
+# 100k pending rows and twice that in retained state per query. At a 1Gi limit
+# that left ~250 MB for the search, and large searches were OOM-killed mid-stream
+# (exit 137), which takes the whole pod — and every other user's session — with
+# them. The operator-metrics collector (#4122) adds ~12-20 MB of ring buffers on
+# top. Watch `k8s.pod.memory.working_set` during a large search, and
+# `bzrk_collector_ets_memory_bytes` / `bzrk_collector_series` before raising
 # collector.windowSeconds or widening its allowlist.
 resources:
   requests:
     memory: "512Mi"
     cpu: "100m"
   limits:
-    memory: "1Gi"
+    memory: "2Gi"
     cpu: "500m"
 
 config:
