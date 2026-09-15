@@ -41,6 +41,8 @@ resources:
     cpu: "500m"
 
 config:
+
+  # dbPool: {}  # pool sizing and timeouts; fields and defaults in libs/bzrk_db
   # Meta, for fleet registration only: permissions publishes its pod IP and port
   # there so the in-product collector can scrape it without asking the Kubernetes
   # API. No authorization decision touches meta — clear it and permissions simply

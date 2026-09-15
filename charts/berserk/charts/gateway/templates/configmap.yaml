@@ -87,6 +87,36 @@ data:
       {{- toYaml . | nindent 6 }}
     {{- end }}
     {{- end }}
+    {{- $dbPool := .Values.config.dbPool | default dict }}
+    {{- $keys := list "maxConnections" "minConnections" "idleTimeoutSecs"
+                      "acquireTimeoutSecs" "maxLifetimeSecs"
+                      "statementTimeoutSecs" "idleInTransactionSecs" }}
+    {{- $set := false }}
+    {{- range $keys }}{{- if hasKey $dbPool . }}{{- $set = true }}{{- end }}{{- end }}
+    {{- if $set }}
+    db_pool:
+      {{- if hasKey $dbPool "maxConnections" }}
+      max_connections: {{ int $dbPool.maxConnections }}
+      {{- end }}
+      {{- if hasKey $dbPool "minConnections" }}
+      min_connections: {{ int $dbPool.minConnections }}
+      {{- end }}
+      {{- if hasKey $dbPool "idleTimeoutSecs" }}
+      idle_timeout_secs: {{ int $dbPool.idleTimeoutSecs }}
+      {{- end }}
+      {{- if hasKey $dbPool "acquireTimeoutSecs" }}
+      acquire_timeout_secs: {{ int $dbPool.acquireTimeoutSecs }}
+      {{- end }}
+      {{- if hasKey $dbPool "maxLifetimeSecs" }}
+      max_lifetime_secs: {{ int $dbPool.maxLifetimeSecs }}
+      {{- end }}
+      {{- if hasKey $dbPool "statementTimeoutSecs" }}
+      statement_timeout_secs: {{ int $dbPool.statementTimeoutSecs }}
+      {{- end }}
+      {{- if hasKey $dbPool "idleInTransactionSecs" }}
+      idle_in_transaction_secs: {{ int $dbPool.idleInTransactionSecs }}
+      {{- end }}
+    {{- end }}
     {{- include "berserk-common.observability-config" . | nindent 4 }}
   # The gRPC route table is JSON, kept as its own key so it can be read straight
   # into GATEWAY_GRPC_ROUTES rather than parsed out of the YAML above.

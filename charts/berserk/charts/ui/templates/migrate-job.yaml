@@ -64,7 +64,12 @@ spec:
             - name: SECRET_KEY_BASE
               value: {{ printf "%s-ui-migrate" .Release.Name | sha256sum | quote }}
             - name: POOL_SIZE
-              value: {{ .Values.config.poolSize | default 10 | quote }}
+              value: {{ .Values.config.poolSize | default 5 | quote }}
+            # Migrations are allowed to take as long as they take. The app's 30s
+            # statement timeout would cancel an index build or a backfill part
+            # way and fail the deploy, so this hook lifts it — and only this hook.
+            - name: DB_STATEMENT_TIMEOUT_MS
+              value: "0"
             {{- with .Values.secrets.credentialsEncryptionSecretName }}
             # Same key the app uses to encrypt credentials at rest, so the
             # migrate hook can rewrite leftover plaintext rows.

@@ -133,8 +133,18 @@ config:
   # Override Phoenix origin checking (PHX_CHECK_ORIGIN) when the app sits behind
   # a proxy whose forwarded Host differs from phxHost. Empty ⇒ strict same-host.
   checkOrigin: ""
-  # Ecto connection pool size (POOL_SIZE).
-  poolSize: 10
+  # Ecto connection pool size (POOL_SIZE). Ecto opens these eagerly at boot and
+  # never releases them, so this is a permanent per-tenant reservation on the
+  # shared customer Postgres, not a ceiling -- six tenants multiply it. Oban's
+  # Postgres notifier holds one in LISTEN, so usable concurrency is
+  # `poolSize - 1`.
+  poolSize: 5
+  # DBConnection waits this long for a free connection before it starts
+  # shedding; the cushion that makes a smaller poolSize safe under bursts.
+  poolQueueTargetMs: 100
+  # A second Repo, reserved so workflow reconciliation cannot be starved by the
+  # main pool. Also held for the process lifetime.
+  workflowControlPoolSize: 2
   # CSP nonce source. Empty ⇒ the app mints its own nonce. Set to a request
   # header name ⇒ the app requires that header on every browser request and
   # uses its value as the CSP nonce (for deployments behind a front proxy that

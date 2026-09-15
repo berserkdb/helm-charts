@@ -1,3 +1,24 @@
+{{- /* Oban's PG notifier carries job-insert wakeups and queue control over
+       distributed Erlang, and ui runs no clustering, so a second replica is a
+       second island: each pod's queues would wait for their next poll rather
+       than being woken, with nothing logged. Cluster the nodes or move back to
+       `Oban.Notifiers.Postgres` (a connection per pod) before raising this.
+
+       A rolling update overlaps two pods for a few seconds, and that window is
+       not free. Leadership holds — `Oban.Peers.Database` elects through the
+       `oban_peers` table, so cron does not double-fire — but cancellation
+       travels by notifier, not by the database: an `Oban.cancel_job` issued on
+       one pod does not reach a job already executing on the other, and the DB
+       fence stops its later writes rather than the work itself. Deliveries are
+       on that path. The window is seconds per deploy and the alternative is
+       downtime on every deploy, so it is accepted here deliberately, not
+       because it costs nothing.
+
+       This guard also cannot see runtime scaling: an HPA (there is no template
+       for one today) or a hand-run `kubectl scale` would pass it. */ -}}
+{{- if gt (int .Values.replicaCount) 1 }}
+{{- fail (printf "ui: replicaCount is %d, but Oban's PG notifier needs Erlang clustering above one replica — see apps/ui_phoenix/config/config.exs" (int .Values.replicaCount)) }}
+{{- end }}
 {{- include "berserk-common.deployment.header" . }}
 {{- /* The shared helper only emits `global.serviceAccountName`, so without this
        override ui would run as the namespace `default` account and the collector's
@@ -66,7 +87,11 @@
             - name: UI_PHOENIX_DATABASE_SCHEMA
               value: {{ .Values.config.databaseSchema | quote }}
             - name: POOL_SIZE
-              value: {{ .Values.config.poolSize | default 10 | quote }}
+              value: {{ .Values.config.poolSize | default 5 | quote }}
+            - name: POOL_QUEUE_TARGET_MS
+              value: {{ .Values.config.poolQueueTargetMs | default 100 | quote }}
+            - name: WORKFLOW_CONTROL_POOL_SIZE
+              value: {{ .Values.config.workflowControlPoolSize | default 2 | quote }}
             # gRPC backends: bare host:port (no scheme). The values keep the
             # `http://` form operators recognise; the scheme is stripped here.
             - name: QUERY_GRPC_ENDPOINT

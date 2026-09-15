@@ -95,6 +95,8 @@ resources:
     cpu: "500m"
 
 config:
+
+  # dbPool: {}  # pool sizing and timeouts; fields and defaults in libs/bzrk_db
   # Public-facing base URL of the gateway (absolute OIDC redirect URIs
   # are minted from this). Leave empty to inherit `global.publicBaseUrl`;
   # set here only to override the install-wide URL for this service.

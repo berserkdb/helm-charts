@@ -55,6 +55,8 @@ networkPolicy:
   additionalEgress: []
 
 config:
+
+  # dbPool: {}  # pool sizing and timeouts; fields and defaults in libs/bzrk_db
   # storageEndpoint: ""
   # storageBucket: ""
   # storageRegion: "auto"
