@@ -156,6 +156,14 @@ spec:
             - name: BZRK_CACHE_UNBINNED
               value: "0"
             {{- end }}
+            {{- /* Cluster opt-out for read-path AUDT verification: chunks are
+                  then checked by their CRC32 alone, while the open-time digest
+                  check against meta stays. Forked QWS/QW/qc-child processes
+                  inherit this env. */ -}}
+            {{- if and (hasKey .Values.config "audtVerify") (not .Values.config.audtVerify) }}
+            - name: BZRK_AUDT_VERIFY_DISABLED
+              value: "1"
+            {{- end }}
             {{- /* Honour the `x-bzrk-test-now` request-metadata header, letting a
                   caller override the query's `now()` for one query (reproducible
                   historical replay by the agent eval harness). Off by default;

@@ -54,6 +54,11 @@ networkPolicy:
       ports: [{ port: 9560 }]
     - app: query
       ports: [{ port: 9510 }]
+    # Merge-side cache seeding: after producing a merged segment, push it to
+    # the query node that owns it so the first query finds it resident
+    # (`libs/cache_seeder`). Same port a peer QC dials.
+    - app: query
+      ports: [{ port: 9520 }]
   additionalIngress: []
   additionalEgress: []
 

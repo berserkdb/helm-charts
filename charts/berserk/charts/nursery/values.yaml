@@ -36,6 +36,11 @@ networkPolicy:
   egressTo:
     - app: meta
       ports: [{port: 9560}]
+    # Merge-side cache seeding: after producing a merged segment, push it to
+    # the query node that owns it so the first query finds it resident
+    # (`libs/cache_seeder`). Same port a peer QC dials.
+    - app: query
+      ports: [{port: 9520}]
   additionalIngress: []
   additionalEgress: []
 
@@ -91,6 +96,13 @@ config:
   # /qws_bin inside the nursery image whenever this is set; the
   # nursery spawns it as a child wired to NurseryLocalCache.
   queryGrpcBind: "0.0.0.0:9531"
+  # Read-path AUDT verification, the same knob as on the query chart: the
+  # spawned qws child reads segments to answer the coordinator's fan-out, and
+  # hashing every chunk it reads costs real CPU. false emits
+  # BZRK_AUDT_VERIFY_DISABLED, which the child inherits; the chunk's CRC32
+  # remains. Merges are unaffected — the switch only reaches readers serving
+  # queries.
+  audtVerify: true
   observability:
     serviceName: "nursery"
     logLevel: "info"

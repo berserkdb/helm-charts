@@ -54,6 +54,12 @@
             - name: BZRK_VSEARCH_FIELDS
               value: {{ .Values.vsearch.fields | quote }}
             {{- end }}
+            {{- /* Cluster opt-out for read-path AUDT verification. The spawned
+                  qws child inherits this env; merges never consult it. */ -}}
+            {{- if and (hasKey .Values.config "audtVerify") (not .Values.config.audtVerify) }}
+            - name: BZRK_AUDT_VERIFY_DISABLED
+              value: "1"
+            {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           livenessProbe:

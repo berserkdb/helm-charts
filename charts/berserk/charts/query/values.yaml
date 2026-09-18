@@ -40,6 +40,13 @@ qws:
 # them through the cluster registry. `additionalEgress` mirrors the
 # rule for the egress direction and adds query→nursery for the
 # `NurseryQueryService` fan-out.
+#
+# nursery and janitor reach the same port for a different reason: after
+# producing a merged segment they push it into the cache of the query node
+# that owns it, so the first query finds it resident instead of cold-fetching
+# from object storage (`libs/cache_seeder`). They discover that owner through
+# the same cluster registry, so they dial the same pod IP and port a peer QC
+# would.
 networkPolicy:
   allowExternal: true
   allowExternalEgress: true
@@ -59,6 +66,12 @@ networkPolicy:
         - podSelector:
             matchLabels:
               app: query
+        - podSelector:
+            matchLabels:
+              app: nursery
+        - podSelector:
+            matchLabels:
+              app: janitor
       ports:
         - port: 9520
           protocol: TCP
@@ -167,6 +180,13 @@ config:
   # collapsed before output (result is unchanged). On by default. Set to false
   # to opt a deployment out (emits BZRK_CACHE_UNBINNED=0 on the query pod).
   cacheUnbinned: true
+  # Every chunk a query reads is hashed and compared with the segment's AUDT
+  # record. That hashing is a measurable share of query-worker CPU, so a
+  # cluster may opt out: false emits BZRK_AUDT_VERIFY_DISABLED, leaving each
+  # chunk's CRC32 as the per-read check. The segment's AUDT digest is still
+  # verified against meta's record when the segment is opened, and merge,
+  # rewrite and `segdump` keep hashing every chunk.
+  audtVerify: true
   observability:
     serviceName: "query"
     logLevel: "info"
