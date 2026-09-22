@@ -56,7 +56,6 @@ resources:
     # here; per-merge transient stays the dominant factor and is bounded
     # by SegmentMergerConfig.
     memory: "1100Mi"
-    cpu: "1000m"
 
 # Working dir: baby segments + the disk-resident node identity (`nodeid`),
 # on a pod-scoped emptyDir. emptyDir survives container crashes (kubelet

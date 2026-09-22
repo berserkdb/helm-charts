@@ -37,10 +37,8 @@ query:
   resources:
     requests:
       memory: "1Gi"
-      cpu: "2000m"
     limits:
       memory: "4Gi"
-      cpu: "4000m"
 
 ingest:
   replicaCount: 1
@@ -50,20 +48,16 @@ janitor:
   resources:
     requests:
       memory: "512Mi"
-      cpu: "500m"
     limits:
       memory: "4Gi"
-      cpu: "2000m"
 
 nursery:
   replicaCount: 1
   resources:
     requests:
       memory: "512Mi"
-      cpu: "500m"
     limits:
       memory: "2Gi"
-      cpu: "1500m"
 
 ui:
   replicaCount: 1

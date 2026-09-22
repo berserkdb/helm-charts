@@ -1,3 +1,46 @@
+# CPU: no limits, priority by request.
+#
+# No service sets `resources.limits.cpu`. A CPU limit is a CFS quota enforced in
+# 100ms slices, so a pod that reaches it is stopped for the rest of each slice
+# while the machine sits idle — and nobody shipping a chart can size one for
+# hardware they have never seen. Relative priority comes from `requests.cpu`,
+# which reaches the kernel as the cgroup's `cpu.weight`. Weight is counted only
+# among cgroups that are *runnable*, so it costs nothing while a service is idle
+# and decides the split only when services genuinely compete:
+#
+#   tier 3  200m  nursery, meta, ui, gateway, permissions,    weight 29
+#                 ingest
+#   tier 2  100m  query                                       weight 17
+#   tier 1   50m  janitor, prometheus                         weight 11
+#
+# Three tiers, each request double the one below. Pick a service's tier; the
+# milliCPU is how Kubernetes makes us say it, not a statement about how much CPU
+# the service needs.
+#
+# The weights are not proportional to the requests. The kubelet converts
+# milliCPU to cgroup-v1 shares (`milli * 1024 / 1000`), and runc converts shares
+# to a v2 weight on a quadratic-in-log2 curve that maps one core to 100, the v2
+# default (`ConvertCPUSharesToCgroupV2Value`, runc >= 1.2). The curve is
+# compressive, which is why the tiers double rather than step evenly: doubling
+# the request is what buys a roughly even step in weight. Recompute rather than
+# extrapolate.
+#
+# The write path and the control plane share the top tier: keeping up with
+# ingest outranks query latency, and a busy query must not stop the gateway
+# authenticating either. A tier costs nothing while its services are idle, so
+# near-idle services sit high without taking anything from query in practice.
+#
+# The tiers are small on purpose: their sum is what a node must have free before
+# the install schedules, and several tenants share a node on multi-tenant
+# clusters. `limits.memory` stays everywhere: OOM is a different failure, and a
+# limit there is protective.
+#
+# An install that wants a hard ceiling — to hold a service to a size, or to tell
+# the nursery what to report to meta as its capacity — sets `limits.cpu` in its
+# own values file. A namespace whose ResourceQuota constrains `limits.cpu` needs
+# one too: such a quota rejects a pod that declares no CPU limit, and it fails at
+# admission rather than at render.
+
 # Global configuration applied to all subcharts
 global:
   # Image registry for all Berserk images. Public and anonymously pullable; this is
@@ -299,10 +342,9 @@ meta:
   resources:
     requests:
       memory: "128Mi"
-      cpu: "100m"
+      cpu: "200m"
     limits:
       memory: "256Mi"
-      cpu: "500m"
 
   config:
     # Storage configuration
@@ -349,10 +391,9 @@ query:
   resources:
     requests:
       memory: "1Gi"
-      cpu: "500m"
+      cpu: "100m"
     limits:
       memory: "4Gi"
-      cpu: "4000m"
 
   config:
     metaEndpoint: "http://meta:9560"
@@ -395,10 +436,9 @@ ingest:
   resources:
     requests:
       memory: "512Mi"
-      cpu: "500m"
+      cpu: "200m"
     limits:
       memory: "2Gi"
-      cpu: "4000m"
 
   config:
     metaEndpoint: "http://meta:9560"
@@ -431,7 +471,11 @@ janitor:
   resources:
     requests:
       memory: "512Mi"
-      cpu: "200m"
+      # Merge is single-threaded: measured ceiling ~1.0 core across slow- and
+      # fast-S3 clusters (7d, per-pod max 1.03 sustained), so a janitor that
+      # wants more throughput gets replicas (see autoscaling below) rather than
+      # a bigger share of one node.
+      cpu: "50m"
     limits:
       # One merge per pod (sequential). `WriterBudget::Auto` is 100% of this
       # limit, so writers/pass = limit / WRITER_MEMORY_ESTIMATE (4 MiB) ≈ 1024 at
@@ -444,11 +488,6 @@ janitor:
       # (burstable). NB: keep ≥ ~2x the writer pool — a tighter 2Gi previously
       # OOMed.
       memory: "4Gi"
-      # Merge is single-threaded: measured ceiling ~1.0 core across slow- and
-      # fast-S3 clusters (7d, per-pod max 1.03 sustained). 2000m is 2× headroom;
-      # a bigger limit adds no merge throughput — add replicas instead (see
-      # autoscaling below).
-      cpu: "2000m"
 
   # CPU-based HPA + graceful drain — defaults live in the janitor subchart
   # (charts/berserk/charts/janitor/values.yaml, with the sizing rationale).
@@ -533,10 +572,9 @@ ui:
   resources:
     requests:
       memory: "512Mi"
-      cpu: "100m"
+      cpu: "200m"
     limits:
       memory: "2Gi"
-      cpu: "500m"
 
   config:
     # gRPC backends (scheme stripped in the deployment template).
@@ -585,10 +623,9 @@ gateway:
   resources:
     requests:
       memory: "128Mi"
-      cpu: "100m"
+      cpu: "200m"
     limits:
       memory: "512Mi"
-      cpu: "500m"
 
   config:
     # Public-facing URL of this gateway. Inherits `global.publicBaseUrl`
@@ -630,10 +667,9 @@ permissions:
   resources:
     requests:
       memory: "64Mi"
-      cpu: "50m"
+      cpu: "200m"
     limits:
       memory: "256Mi"
-      cpu: "500m"
 
   config:
     observability:
@@ -666,7 +702,6 @@ nursery:
       cpu: "200m"
     limits:
       memory: "4Gi"
-      cpu: "4000m"
 
   # Working-dir PVC size (baby segments + disk-resident node identity)
   workingDir:
@@ -708,10 +743,9 @@ prometheus:
     storageClassName: ""
   resources:
     requests:
-      cpu: "100m"
+      cpu: "50m"
       memory: "256Mi"
     limits:
-      cpu: "500m"
       memory: "1Gi"
   nodeSelector: {}
   tolerations: []

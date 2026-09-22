@@ -111,10 +111,9 @@ networkPolicy:
 resources:
   requests:
     memory: "512Mi"
-    cpu: "100m"
+    cpu: "200m"
   limits:
     memory: "2Gi"
-    cpu: "500m"
 
 config:
   # Postgres schema for this service's tables in the shared workspace database

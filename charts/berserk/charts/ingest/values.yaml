@@ -85,10 +85,9 @@ networkPolicy:
 resources:
   requests:
     memory: "512Mi"
-    cpu: "500m"
+    cpu: "200m"
   limits:
     memory: "2Gi"
-    cpu: "2000m"
 
 config:
   metaEndpoint: "http://meta:9560"

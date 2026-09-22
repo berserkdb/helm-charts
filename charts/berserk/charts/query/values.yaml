@@ -130,13 +130,12 @@ resources:
     # +50 MB headroom over pre-vsearch baseline for model mmap +
     # per-query worker state. See docs/dev/vidx-vsearch-resources.md §4.
     memory: "1074Mi"
-    cpu: "2000m"
+    cpu: "100m"
   limits:
     # +100 MB over pre-vsearch baseline. The model RSS sits well inside
     # the 16 GiB ceiling — the bump is bookkeeping consistency with the
     # request bump, not a real cap change.
     memory: "16484Mi"
-    cpu: "8000m"
 
 config:
   metaEndpoint: "http://meta:9560"

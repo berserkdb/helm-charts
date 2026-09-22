@@ -15,10 +15,9 @@ service:
 resources:
   requests:
     memory: "128Mi"
-    cpu: "100m"
+    cpu: "200m"
   limits:
     memory: "256Mi"
-    cpu: "500m"
 
 # NetworkPolicy: all other Berserk services connect to meta
 networkPolicy:

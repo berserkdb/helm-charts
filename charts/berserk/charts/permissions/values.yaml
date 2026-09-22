@@ -35,10 +35,9 @@ networkPolicy:
 resources:
   requests:
     memory: "64Mi"
-    cpu: "50m"
+    cpu: "200m"
   limits:
     memory: "256Mi"
-    cpu: "500m"
 
 config:
 
