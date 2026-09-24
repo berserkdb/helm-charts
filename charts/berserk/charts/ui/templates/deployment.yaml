@@ -157,12 +157,6 @@
                   key: {{ $.Values.secrets.feedbackSigningSecretKey | default "feedback_signing_secret" | quote }}
                   optional: true
             {{- end }}
-            {{- if .Values.config.cspNonceHeader }}
-            # When set, the app requires this request header (minted and injected
-            # by the front proxy) and uses its value as the CSP nonce.
-            - name: CSP_NONCE_HEADER
-              value: {{ .Values.config.cspNonceHeader | quote }}
-            {{- end }}
             {{/* `hasKey`, not `default`: Helm counts `false` as empty, so a
                  per-service `otlpEnabled: false` used to inherit a global
                  `true` instead of opting the service out. */}}

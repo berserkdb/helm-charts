@@ -146,11 +146,6 @@ config:
   # A second Repo, reserved so workflow reconciliation cannot be starved by the
   # main pool. Also held for the process lifetime.
   workflowControlPoolSize: 2
-  # CSP nonce source. Empty ⇒ the app mints its own nonce. Set to a request
-  # header name ⇒ the app requires that header on every browser request and
-  # uses its value as the CSP nonce (for deployments behind a front proxy that
-  # mints the nonce and injects it into both the request and the CSP header).
-  cspNonceHeader: ""
   permissions:
     baseUrl: "http://permissions:9580"
   # In-cluster gateway Service URL for the UI's internal calls (the
