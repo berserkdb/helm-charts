@@ -40,12 +40,15 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
-Image name
+Image name. A digest pins the image; a tag set beside it is kept only as a
+readable name (repo:tag@digest).
 */}}
 {{- define "berserk-common.image" -}}
 {{- $registry := .Values.global.imageRegistry | default "images.bzrk.dev/release" }}
 {{- $repository := .Values.image.repository | default .Chart.Name }}
-{{- if .Values.image.digest }}
+{{- if and .Values.image.digest .Values.image.tag }}
+{{- printf "%s/%s:%s@%s" $registry $repository .Values.image.tag .Values.image.digest }}
+{{- else if .Values.image.digest }}
 {{- printf "%s/%s@%s" $registry $repository .Values.image.digest }}
 {{- else }}
 {{- $tag := .Values.image.tag | default .Values.global.imageTag | default (printf "v%s" .Chart.AppVersion) }}

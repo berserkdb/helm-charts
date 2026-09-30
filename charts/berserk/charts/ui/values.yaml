@@ -146,6 +146,14 @@ config:
   # A second Repo, reserved so workflow reconciliation cannot be starved by the
   # main pool. Also held for the process lifetime.
   workflowControlPoolSize: 2
+  # Workflow run concurrency (apps/ui_phoenix/docs/dev/workflow_execution.md,
+  # Admission). Unset keeps the app defaults: 10 executing runs globally, 1 per
+  # workflow unless its definition sets concurrency.max_runs, 100 queued runs
+  # per workflow.
+  workflowConcurrency: {}
+  #   maxConcurrentRuns: 10
+  #   maxConcurrentRunsPerWorkflow: 1
+  #   maxPendingRunsPerWorkflow: 100
   permissions:
     baseUrl: "http://permissions:9580"
   # In-cluster gateway Service URL for the UI's internal calls (the
@@ -319,3 +327,7 @@ collector:
   staticTargets: []
   # - query:9511
   # - meta:9560
+
+# Extra env vars — escape hatch for env we don't (yet) have first-class chart
+# support for.
+extraEnv: []

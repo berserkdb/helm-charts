@@ -105,15 +105,3 @@ config:
   observability:
     serviceName: "nursery"
     logLevel: "info"
-
-# vsearch (semantic-search) configuration. Off by default — opt in per
-# environment by setting `fields`. Empty `fields` keeps the feature
-# inactive: no model load, no template stamping at ingest, no
-# VCEN/VTPH/VTPC written at seal. Production-grade per-table opt-in lands
-# later (`docs/dev/vidx-vsearch-impl-plan.md` Deferred → "Meta tier-0
-# integration").
-#
-# The embedding model is baked into the image at a fixed path (a build
-# constant; see `embedding::baked_model_paths`) — there is no model-path knob.
-vsearch:
-  fields: ""

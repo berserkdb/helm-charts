@@ -56,6 +56,10 @@ global:
   serviceAccountName: ""
   # Labels applied to all resources
   labels: {}
+  # Lowest vector-index format level any image of this install may run. It only
+  # rises: the deploy tooling refuses images below it, and meta refuses replicas
+  # below it at runtime.
+  vidxFloor: 0
   # zstd level for the ROWS chunks of every segment written to object storage
   # (clamped to 1..9). Shared by the nursery and janitor merges, the writers
   # whose output is uploaded; baby segments never leave the pod and stay on lz4,

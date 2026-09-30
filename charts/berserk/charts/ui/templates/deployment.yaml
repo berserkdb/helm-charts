@@ -92,6 +92,19 @@
               value: {{ .Values.config.poolQueueTargetMs | default 100 | quote }}
             - name: WORKFLOW_CONTROL_POOL_SIZE
               value: {{ .Values.config.workflowControlPoolSize | default 2 | quote }}
+            {{- $concurrency := .Values.config.workflowConcurrency | default dict }}
+            {{- with $concurrency.maxConcurrentRuns }}
+            - name: WORKFLOW_MAX_CONCURRENT_RUNS
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with $concurrency.maxConcurrentRunsPerWorkflow }}
+            - name: WORKFLOW_MAX_CONCURRENT_RUNS_PER_WORKFLOW
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with $concurrency.maxPendingRunsPerWorkflow }}
+            - name: WORKFLOW_MAX_PENDING_RUNS_PER_WORKFLOW
+              value: {{ . | quote }}
+            {{- end }}
             # gRPC backends: bare host:port (no scheme). The values keep the
             # `http://` form operators recognise; the scheme is stripped here.
             - name: QUERY_GRPC_ENDPOINT
@@ -215,6 +228,9 @@
             - name: OTEL_EXPORTER_OTLP_PROTOCOL
               value: "grpc"
             {{- include "berserk-common.env.cluster-name" . | nindent 12 }}
+            {{- end }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
             {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}

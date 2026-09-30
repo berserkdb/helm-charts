@@ -78,18 +78,6 @@ cache:
   # charts/berserk/values.yaml janitor.cache for the sizing rationale).
   size: "30Gi"
 
-# vsearch (semantic-search) merger configuration. The janitor consumes
-# `BZRK_VSEARCH_FIELDS` to know which fields' VCEN/VTPH/VTPC/VIDF chunks
-# to rebuild during cloud-segment merge — same field NAMES as nursery/query
-# (order irrelevant; the merger reconciles input fields by name). It reads
-# per-template embeddings from input VTPCs and never calls Model::encode,
-# so this image deliberately does NOT bake in the model artifact
-# (`docs/dev/vidx-vsearch-impl-plan.md` §8 Cross-cutting decisions).
-# Off by default — opt in per environment by setting `fields`. Empty
-# `fields` makes the merger skip the VXXX rebuild path entirely.
-vsearch:
-  fields: ""
-
 config:
   metaEndpoint: "http://meta:9560"
   queryEndpoint: "http://query:9510"

@@ -203,18 +203,13 @@ config:
     # regression.
     waitProfilerEnabled: false
 
-# vsearch (semantic-search) configuration. Off by default — opt in per
-# environment by setting `fields`. Empty `fields` = vsearch off (the binary
-# loads no model, and `similarto` queries fail fast at request time).
-# When set, `fields` lists the field NAMES/paths the nursery indexes (the
-# queried field must be one of them); order is irrelevant — the worker resolves
-# `on=<field>` by name via each segment's VCEN directory.
+# vsearch (semantic-search) configuration. Which fields are indexed is each
+# table's configuration in meta (`bzrk table vector-fields set`), not Helm.
 #
 # The embedding model itself is baked into the image at a fixed path (a build
 # constant; see `embedding::baked_model_paths`) — there is no model-path knob.
 #
 # `disabled: true` emits BZRK_VSEARCH_DISABLED to reject every similarto query
-# at bind time cluster-wide (rollback escape hatch) without clearing `fields`.
+# at bind time cluster-wide (rollback escape hatch).
 vsearch:
-  fields: ""
   disabled: false
