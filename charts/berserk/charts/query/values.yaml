@@ -8,7 +8,6 @@ component: backend
 
 image:
   repository: query
-  pullPolicy: Always
   tag: ""
 
 service:

@@ -12,6 +12,9 @@ data:
     max_segments_per_batch: {{ .Values.config.maxSegmentsPerBatch }}
     min_segments: {{ .Values.config.minSegments }}
     max_segment_age_days: {{ .Values.config.maxSegmentAgeDays }}
+    {{- if not (eq .Values.config.vidxEmbedThreads nil) }}
+    vidx_embed_threads: {{ int .Values.config.vidxEmbedThreads }}
+    {{- end }}
     {{- with .Values.global.rowsZstdLevel }}
     rows_zstd_level: {{ int . }}
     {{- end }}

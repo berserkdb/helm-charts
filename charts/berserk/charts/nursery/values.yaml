@@ -10,7 +10,6 @@ strategy:
 
 image:
   repository: nursery
-  pullPolicy: Always
   tag: ""
 
 service:

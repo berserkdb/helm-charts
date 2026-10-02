@@ -15,7 +15,6 @@ migrations:
 
 image:
   repository: ui
-  pullPolicy: Always
   tag: ""
 
 service:

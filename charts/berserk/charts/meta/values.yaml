@@ -4,7 +4,6 @@ component: backend
 
 image:
   repository: meta
-  pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion
   tag: ""
 

@@ -17,7 +17,9 @@ autoscaling:
   # ~1.0 core a merging pod uses (idle is ~0.04), or the HPA cannot grow: a
   # fully-busy fleet reports exactly the target and sits still. The gap sets
   # spare capacity, so 800m keeps a free pod per four busy ones — two merging
-  # janitors become three.
+  # janitors become three. A merge that re-embeds many templates uses up to
+  # `config.vidxEmbedThreads` cores while it embeds, which reads as more
+  # backlog than one busy pod.
   targetCPUAverageValue: 800m
   behavior:
     scaleDown:
@@ -40,7 +42,6 @@ terminationGracePeriodSeconds: 1500
 
 image:
   repository: janitor
-  pullPolicy: Always
   tag: ""
 
 # NetworkPolicy: egress to meta and query; nothing connects to janitor
@@ -88,6 +89,13 @@ config:
   minSegments: 3
   maxSegmentAgeDays: 7
   targetTables: []
+  # Threads one merge splits template re-embedding across (vector-index
+  # fields). Unset = min(available cores, 4). Threads split one fixed-size
+  # batch; each adds a 2 MiB stack and 2 MiB of tokenizer scratch (plus
+  # one 4 MiB copy of the batch's texts once there are two), reserved inside
+  # the vector-index budget. More threads finish a merge sooner but raise per-pod CPU, which
+  # the CPU HPA (autoscaling.targetCPUAverageValue) scales on.
+  vidxEmbedThreads: null
   # Recurring KQL queries fired at the query service to produce a synthetic
   # liveness signal for the read path. Off by default. Each entry takes name,
   # query, since, interval_seconds and optionally database; unknown keys are

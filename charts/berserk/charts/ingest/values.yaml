@@ -6,7 +6,6 @@ logLevel: "info"
 
 image:
   repository: ingest
-  pullPolicy: Always
   tag: ""
 
 service:
