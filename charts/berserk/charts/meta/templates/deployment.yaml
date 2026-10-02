@@ -28,6 +28,8 @@
               value: "1"
             - name: BZRK_VIDX_FLOOR
               value: {{ .Values.global.vidxFloor | default 0 | quote }}
+            - name: BZRK_VIDX_WRITES
+              value: {{ include "meta.vidxWrites" . | quote }}
             {{- include "berserk-common.env.cluster-name" . | nindent 12 }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}

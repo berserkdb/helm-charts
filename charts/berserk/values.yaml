@@ -58,8 +58,17 @@ global:
   labels: {}
   # Lowest vector-index format level any image of this install may run. It only
   # rises: the deploy tooling refuses images below it, and meta refuses replicas
-  # below it at runtime.
-  vidxFloor: 0
+  # below it at runtime. Every image this chart ships is at level 1 or above.
+  # An environment whose images are all at level 2 can raise it to 2, so a meta
+  # restart while vector-index writes are open no longer pauses their grants.
+  vidxFloor: 1
+  # Who opens writes of the new vector-index format: `auto`, where meta opens
+  # them itself once every replica is at level 2 and the window has held, or
+  # `manual`, where only `bzrk vidx writes open` does. In either mode
+  # `bzrk vidx writes close` keeps them closed until an operator opens them.
+  # Nothing is indexed until a table has vector fields
+  # (`bzrk table vector-fields set <table> <field>`).
+  vidxWrites: auto
   # zstd level for the ROWS chunks of every segment written to object storage
   # (clamped to 1..9). Shared by the nursery and janitor merges, the writers
   # whose output is uploaded; baby segments never leave the pod and stay on lz4,
