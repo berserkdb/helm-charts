@@ -204,6 +204,10 @@ global:
   observability:
     otlpEnabled: false
     otlpEndpoint: "ingest:4317"
+    # Run the CPU (and, where enabled, wait) profiler in every service and the
+    # children it spawns. Set a service's own `config.observability.profilerEnabled`
+    # to override this for that service alone.
+    profilerEnabled: true
   # Default database that the init-ingest-token container routes its
   # table + token into. Mirrors `defaultTable` — both default to the
   # `default` database/table that meta's migration 026 seeds.

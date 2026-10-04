@@ -42,11 +42,19 @@ Include with appropriate nindent inside the config.yaml data section.
      empty string genuinely does mean unset. */}}
 {{- $otlpEnabled := ternary (index $obs "otlpEnabled") .Values.global.observability.otlpEnabled (hasKey $obs "otlpEnabled") -}}
 {{- $otlpEndpoint := $obs.otlpEndpoint | default .Values.global.observability.otlpEndpoint -}}
+{{/* Same `hasKey` rule as otlpEnabled. Rendered only when off: the binaries
+     default to on, and a config that names the key is rejected by any image
+     older than it, so the default must not depend on every service having
+     been rebuilt. */}}
+{{- $profilerEnabled := ternary (index $obs "profilerEnabled") (index .Values.global.observability "profilerEnabled") (hasKey $obs "profilerEnabled") -}}
 observability:
   service_name: {{ .Values.config.observability.serviceName | quote }}
   log_level: {{ .Values.config.observability.logLevel | quote }}
   otlp_enabled: {{ $otlpEnabled }}
   otlp_endpoint: {{ $otlpEndpoint | quote }}
+{{- if eq $profilerEnabled false }}
+  profiler_enabled: false
+{{- end }}
 {{- if .Values.config.observability.profilerSampleHz }}
   profiler_sample_hz: {{ .Values.config.observability.profilerSampleHz }}
 {{- end }}
