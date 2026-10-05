@@ -56,13 +56,9 @@ spec:
                   key: {{ .Values.global.postgresCredentials.databaseUrlKey }}
             - name: UI_PHOENIX_DATABASE_SCHEMA
               value: {{ .Values.config.databaseSchema | quote }}
-            # runtime.exs (:prod) also requires SECRET_KEY_BASE, but this Job
-            # only runs migrate() — it starts no endpoint (no PHX_SERVER), so the
-            # value signs nothing. A throwaway keeps this pre-install hook from
-            # depending on the `ui-secrets` Secret, which is created in the main
-            # sync phase (after hooks) and so wouldn't exist yet on a fresh install.
-            - name: SECRET_KEY_BASE
-              value: {{ printf "%s-ui-migrate" .Release.Name | sha256sum | quote }}
+            # This Job only runs migrate(): no endpoint, no master key. It must
+            # stay that way — as a pre-install hook it runs before the Secrets
+            # of the main sync phase exist.
             - name: POOL_SIZE
               value: {{ .Values.config.poolSize | default 5 | quote }}
             # Migrations are allowed to take as long as they take. The app's 30s
@@ -70,13 +66,4 @@ spec:
             # way and fail the deploy, so this hook lifts it — and only this hook.
             - name: DB_STATEMENT_TIMEOUT_MS
               value: "0"
-            {{- with .Values.secrets.credentialsEncryptionSecretName }}
-            # Same key the app uses to encrypt credentials at rest, so the
-            # migrate hook can rewrite leftover plaintext rows.
-            - name: CREDENTIALS_ENCRYPTION_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: {{ . | quote }}
-                  key: {{ $.Values.secrets.credentialsEncryptionSecretKey | quote }}
-            {{- end }}
 {{- end }}

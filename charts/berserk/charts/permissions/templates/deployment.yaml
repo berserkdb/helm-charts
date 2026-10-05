@@ -32,11 +32,8 @@
             # `with` would skip the block on empty.
             - name: PERMISSIONS_DATABASE_SCHEMA
               value: {{ .Values.global.authDatabaseSchema | quote }}
-            - name: PERMISSIONS_SERVICE_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.secrets.secretName }}
-                  key: {{ .Values.secrets.serviceTokenKey }}
+            # The bearer gateway and ui present derives from the master key.
+            {{- include "berserk-common.env.master-key" . | nindent 12 }}
             - name: RUST_BACKTRACE
               value: "1"
             {{- include "berserk-common.env.cluster-name" . | nindent 12 }}

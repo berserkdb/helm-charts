@@ -126,9 +126,9 @@ ui:
 
 # Auth stack — gateway + admin-ui + permissions. Enabled here so the
 # helm-integration smoke install exercises the production shape (ui
-# behind gateway, OIDC-disabled / password-only). The chart synths
-# random values into `gateway-secrets` itself via `secrets.managed:
-# true`; OIDC stays off so we don't need a real IdP, and the bootstrap
+# behind gateway, OIDC-disabled / password-only). The chart mints the
+# master key itself (`global.masterKey.managed: true`) and every internal
+# key derives from it; OIDC stays off so we don't need a real IdP, and the bootstrap
 # admin block stays empty (the smoke install never actually authenticates
 # — it just checks the pods come up Ready).
 gateway:

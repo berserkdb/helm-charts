@@ -96,6 +96,29 @@ Usage: {{ include "berserk-common.env.s3-credentials" (dict "accessKeyEnv" "AWS_
 {{- end }}
 
 {{/*
+Master key env vars (docs/dev/master-key.md). The secondary key is optional:
+present only while a rotation is staged.
+Usage: {{ include "berserk-common.env.master-key" . | nindent 12 }}
+*/}}
+{{- define "berserk-common.env.master-key" -}}
+- name: BZRK_MASTER_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.global.masterKey.secretName }}
+      key: {{ .Values.global.masterKey.key }}
+- name: BZRK_SECONDARY_MASTER_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.global.masterKey.secretName }}
+      key: {{ .Values.global.masterKey.secondaryKey }}
+      optional: true
+{{- if ne (int .Values.global.masterKey.minLength) 32 }}
+- name: BZRK_MASTER_KEY_MIN_LENGTH
+  value: {{ .Values.global.masterKey.minLength | quote }}
+{{- end }}
+{{- end }}
+
+{{/*
 Telemetry resource attributes — stamps `bzrk.cluster.name`, `service.namespace`
 and the standard k8s.{pod,namespace,node}.name via OTEL_RESOURCE_ATTRIBUTES,
 which the Rust SDK merges into every exported record.

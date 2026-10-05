@@ -184,6 +184,32 @@ global:
   # the empty string to opt out (e.g. dev cluster, which keeps the
   # historical two-DB layout with auth tables in `public`).
   authDatabaseSchema: "auth"
+  # The master key: the one internal secret. Every internal key — the gateway
+  # cookie key, the service-to-service tokens, the ui `secret_key_base`, the
+  # default ingest token and the key that wraps the ui vault's data-encryption
+  # key — is derived from it (docs/dev/master-key.md; Berserk docs → Operations
+  # → Deployment → Secrets).
+  #
+  # `managed: true` (default) renders the Secret with a random 64-character
+  # value on first install and keeps it across upgrades via `lookup`. Under
+  # ArgoCD `lookup` is empty, so add an `ignoreDifferences` entry on the
+  # Secret's `/data`, or set `managed: false` and create it yourself:
+  #   kubectl create secret generic berserk-master-key \
+  #     --from-literal=master_key="$(openssl rand -base64 32)"
+  # `secondaryKey` names an optional second entry: a key that is accepted but
+  # never used to produce anything, which is how a rotation is staged.
+  masterKey:
+    managed: true
+    secretName: "berserk-master-key"
+    key: "master_key"
+    secondaryKey: "secondary_master_key"
+    # Pin values instead of generating them; `lookup` preserves both otherwise.
+    value: ""
+    secondaryValue: ""
+    # Minimum length in bytes of the key string. Nothing is decoded — hex,
+    # base64 and alphanumeric all work as given — so lower it, to 24 at the
+    # lowest, only when your generator caps below 32.
+    minLength: 32
   # Ingest token configuration.
   # `managed: true` (default) makes the ingest service's init container create
   # the default table and a default ingest token on first install, storing the

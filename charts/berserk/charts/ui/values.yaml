@@ -195,20 +195,9 @@ config:
     otlpEndpoint: ""
     serviceName: "ui"
 
-# Service tokens + signing key.
-#
-# The gateway sits in front of `ui` and injects `X-Bzrk-*` identity headers;
-# `ui` verifies the proxy hop via the pre-shared service token. Those tokens
-# default-point at the same `gateway-secrets` Secret the gateway subchart
-# provisions — install with the umbrella chart and both halves agree out of the
-# box. Override `secrets.secretName` when running `ui` against a pre-existing
-# token.
-#
-# `secret_key_base` signs the UI's session/CSRF cookies (not an auth secret).
-# With `managed: true` the chart owns a `<release>-ui-secrets` Secret and
-# generates a stable random value, preserved across renders via `lookup`. Set
-# `secretKeyBase` to pin a value, or `managed: false` to provision the Secret
-# externally (it must carry the `secret_key_base` key).
+# Secrets. The session/CSRF `secret_key_base`, the token that proves the
+# gateway hop and the permissions bearer all derive from the master key
+# (`global.masterKey`); nothing here configures them.
 #
 # `credentialsEncryptionSecretName` is a separate Secret holding the 32-byte
 # AES-GCM key used to encrypt integration / AI-provider credentials at rest
@@ -216,15 +205,8 @@ config:
 # storing those credentials fails until the key is set. The value must be
 # stable across upgrades or ciphertext becomes unreadable.
 secrets:
-  managed: true
   credentialsEncryptionSecretName: ""
   credentialsEncryptionSecretKey: "credentials_encryption_key"
-  secretKeyBase: ""
-  secretName: "gateway-secrets"
-  gatewayServiceTokenKey: "service_token"
-  # Token the app presents to apps/permissions /v1/check (same shared secret
-  # the gateway uses).
-  permissionsServiceTokenKey: "permissions_service_token"
   # Optional per-cluster override of the compiled-in fleet write key
   # (`whsec_…`) used to sign POSTs to the cloud Feedback inbox. Leave the
   # name empty to use the default; set it to give this cluster its own key.

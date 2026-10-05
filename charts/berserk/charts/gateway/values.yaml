@@ -220,32 +220,9 @@ config:
     # YAML list of emails auto-promoted to cluster admin on first sign-in.
     adminEmails: []
 
-# Secrets — gateway needs three: cookie signing key, its own service
-# token (X-Bzrk-Service-Token to ui), and the permissions
-# service token. By default the chart manages a Secret with random
-# values; set `managed: false` to reference an existing Secret.
-#
-# Flipping `managed: true → false` on an existing release: the
-# chart-created Secret survives and blocks any external pipeline from
-# adopting it. Annotate it with `sealedsecrets.bitnami.com/managed=true`,
-# or delete it, before the external pipeline reconciles.
+# Secrets. The cookie key and every service token derive from the master
+# key (`global.masterKey`); only the OIDC client_secret is configured here.
 secrets:
-  managed: true
-  secretName: "gateway-secrets"
-  # Set these to non-empty strings to override the auto-generated
-  # random values. `lookup` preserves existing data across upgrades.
-  cookieSigningKey: ""
-  serviceToken: ""
-  permissionsServiceToken: ""
-
-  # Length floor, in bytes, for `cookieSigningKey`. Gateway stretches
-  # shorter keys to the 64 bytes its cookie jar needs, so this is
-  # purely a strength floor — lower it (to 16 at the lowest) when the
-  # generator feeding `cookieSigningKey` caps key length below 32. A
-  # key under the floor fails the render below when pinned here, and
-  # fails gateway startup when it arrives from an external Secret.
-  cookieSigningKeyMinLength: 32
-
   # OIDC client_secret — referenced from a separate, externally-
   # managed Secret (SealedSecret in dev/valhalla). When
   # `config.oidc.enabled: true`, the deployment template wires
@@ -261,12 +238,17 @@ secrets:
 # Bootstrap admin (optional). When email + password are set, gateway
 # creates the first admin user at startup instead of printing a
 # one-time setup link. Mutually exclusive with `bootstrapDisabled`.
+# The password comes either pinned here (the chart writes it to the
+# `gateway-bootstrap-admin` Secret) or from a Secret you manage.
 bootstrap:
   disabled: false
   adminEmail: ""
   adminGivenName: ""
   adminFamilyName: ""
   adminPassword: ""
+  existingSecret:
+    name: ""
+    key: "bootstrap_admin_password"
 
 # Extra env vars / envFrom — escape hatch for one-off env we don't
 # (yet) have first-class chart support for. The `oidc.*` block above

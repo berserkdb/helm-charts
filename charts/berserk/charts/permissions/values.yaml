@@ -52,12 +52,3 @@ config:
     serviceName: "permissions"
     logLevel: "info,permissions=debug"
     # otlpEnabled / otlpEndpoint fall through to global.observability.*
-
-# Service token shared with gateway + ui. By default the
-# permissions chart does NOT manage its own secret — the gateway
-# subchart already produces and rotates `permissions_service_token`,
-# and ui references the same value. Set `secretName` to the
-# gateway-provided secret so the three services agree.
-secrets:
-  secretName: "gateway-secrets"
-  serviceTokenKey: "permissions_service_token"

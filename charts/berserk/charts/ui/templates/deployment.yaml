@@ -68,14 +68,9 @@
             - name: PHX_CHECK_ORIGIN
               value: {{ . | quote }}
             {{- end }}
-            # Cookie/CSRF signing key (not authentication — auth is the
-            # gateway's trusted identity); the `ui-secrets` Secret self-manages a
-            # stable random value.
-            - name: SECRET_KEY_BASE
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "berserk-common.fullname" . }}-secrets
-                  key: secret_key_base
+            # `secret_key_base`, the token that proves the gateway hop and the
+            # permissions bearer all derive from the master key at app start.
+            {{- include "berserk-common.env.master-key" . | nindent 12 }}
             # Shared workspace database (same one meta uses).
             - name: DATABASE_URL
               valueFrom:
@@ -111,21 +106,6 @@
               value: {{ regexReplaceAll "^https?://" .Values.config.queryEndpoint "" | quote }}
             - name: META_GRPC_ENDPOINT
               value: {{ regexReplaceAll "^https?://" .Values.config.metaEndpoint "" | quote }}
-            # Gateway-side trusted-identity service token. The app constant-time
-            # compares this against the `X-Bzrk-Service-Token` header on incoming
-            # requests; only gateway should hold the value.
-            - name: GATEWAY_SERVICE_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.secrets.secretName | quote }}
-                  key: {{ .Values.secrets.gatewayServiceTokenKey | quote }}
-            # Authorization client — the app calls apps/permissions /v1/check
-            # with this service token.
-            - name: PERMISSIONS_SERVICE_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.secrets.secretName | quote }}
-                  key: {{ .Values.secrets.permissionsServiceTokenKey | quote }}
             # Admin HTTP backends (keep scheme). Gateway members API
             # (/internal/users) and permissions (/v1/check).
             - name: GATEWAY_HTTP_ENDPOINT
