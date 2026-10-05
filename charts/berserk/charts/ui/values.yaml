@@ -54,16 +54,16 @@ networkPolicy:
 
   ingressFrom:
     - app: gateway
-      ports: [{port: 9570}]
+      ports: [{ port: 9570 }]
   egressTo:
     - app: gateway
-      ports: [{port: 9500}]
+      ports: [{ port: 9500 }]
     - app: query
-      ports: [{port: 9510}]
+      ports: [{ port: 9510 }]
     - app: meta
-      ports: [{port: 9560}]
+      ports: [{ port: 9560 }]
     - app: permissions
-      ports: [{port: 9580}]
+      ports: [{ port: 9580 }]
   additionalIngress: []
   additionalEgress: []
   # Workflow outbound hooks (webhook HTTPS + tenant SMTP) when
@@ -167,8 +167,7 @@ config:
   # answers on.
   ingest:
     host: ""
-    # Empty means "not published", and the page then does not offer it. HTTP is
-    # revealed only behind a disclosure, so senders reach for gRPC first.
+    # Empty means "not published", and the page then does not offer it.
     grpcPort: 4317
     httpPort: ""
     # Whether the endpoint terminates TLS: decides the scheme shown and whether
@@ -199,11 +198,8 @@ config:
 # gateway hop and the permissions bearer all derive from the master key
 # (`global.masterKey`); nothing here configures them.
 #
-# `credentialsEncryptionSecretName` is a separate Secret holding the 32-byte
-# AES-GCM key used to encrypt integration / AI-provider credentials at rest
-# (`CREDENTIALS_ENCRYPTION_KEY`). Empty skips the env var; the UI boots, but
-# storing those credentials fails until the key is set. The value must be
-# stable across upgrades or ciphertext becomes unreadable.
+# Integration / AI-provider credentials at rest are encrypted with a data key
+# the UI generates on first start and keeps wrapped under the master key.
 secrets:
   credentialsEncryptionSecretName: ""
   credentialsEncryptionSecretKey: "credentials_encryption_key"
