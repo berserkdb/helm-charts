@@ -25,7 +25,7 @@
           # is described as "gateway endpoint" in `bzrk --help`, but the
           # `ingest-token init` subcommand specifically forwards
           # `config.endpoint` to `init_ingest_token`'s `meta_endpoint`
-          # parameter (apps/cli/src/main.rs:1955), so passing the in-cluster
+          # parameter (apps/cli/src/cli/exec_ingest_token.rs), so passing the in-cluster
           # meta gRPC URL here is the supported shape for this k8s init
           # container — gateway is not on the path.
           args:
