@@ -27,6 +27,9 @@ service:
     # Grafana Agent compatibility. Receiver code lives in apps/ingest;
     # gated by `config.lokiEnabled` below.
     loki: 3100
+    # Datadog intake port (Agent / Vector `datadog_*` sinks); gated by
+    # `config.datadogEnabled`. See the "Datadog Agent & Vector" ingest docs.
+    datadog: 9552
     # Health endpoint port. Lives on the Service alongside the OTLP ports
     # so allowExternal covers it (no additionalIngress hack needed) and
     # in-cluster monitoring tooling can reach `ingest:9550/health/live`.
@@ -63,6 +66,20 @@ ingress:
 
 # Separate HTTP ingress for deployments with different TLS or entrypoint settings.
 httpIngress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts: []
+  tls: []
+
+# Ingress for the Datadog intake (needs `config.datadogEnabled`). Either give
+# it a host of its own with `path: /` (Prefix), or share a host with Exact
+# paths — the ones Datadog clients call are:
+#   /api/v2/logs  /api/v2/series  /api/intake/metrics/v3/series  /api/beta/sketches  /api/v0.2/traces
+#   /api/v1/validate  /_health
+#   /api/v1/check_run  /intake/  /api/v1/metadata  /api/v0.2/stats
+# Route with `portName: datadog`.
+datadogIngress:
   enabled: false
   className: ""
   annotations: {}
@@ -138,16 +155,14 @@ config:
   # binary's config.
   lokiEnabled: true
 
-  ingestToken:
-    # Set managed: true to auto-create the token via an init container (requires Meta).
-    managed: false
-    # Name of the Kubernetes Secret holding the ingest token. If unset, the
-    # ingest.tokenSecretName helper falls back to global.ingestToken.secretName
-    # and then to "ingest-token".
-    secretName: "ingest-token"
-    key: "default_ingest_token"
-    # Name of the ingest token in Meta (used when managed: true).
-    tokenName: "default_ingest_token"
+  # Datadog intake: logs, metrics and traces from the Datadog Agent and
+  # Vector's `datadog_*` sinks, on `service.ports.datadog`.
+  # Clients send the ingest token as their API key (`DD-API-KEY`).
+  datadogEnabled: false
+
+  # Per-release override of `global.ingestToken.enabled`: a value set here
+  # wins, even `false`.
+  ingestToken: {}
 
   observability:
     serviceName: "ingest"

@@ -35,7 +35,7 @@ global:
   # unset, so this only needs to be overridden to "" for two-DB
   # layouts (see charts/values-dev.yaml).
   ingestToken:
-    managed: true
+    enabled: true
 
 meta:
   resources:
@@ -73,9 +73,6 @@ query:
       cpu: "500m"
 
 ingest:
-  config:
-    ingestToken:
-      secretName: ""
   resources:
     requests:
       memory: "128Mi"

@@ -54,7 +54,7 @@ global:
     databaseUrl: "postgres://postgres:testpassword@postgres-postgresql:5432/berserk?sslmode=disable"
   # authDatabaseSchema inherits the umbrella default of "auth".
   ingestToken:
-    managed: true
+    enabled: true
   observability:
     otlpEnabled: true
 
@@ -80,10 +80,6 @@ query:
 
 ingest:
   image: { pullPolicy: Never, repository: "ingest-dev" }
-  # init-ingest-token container shells out to the cli image; point at
-  # the Bazel-tagged `berserk/cli-dev:dev` instead of `cli`.
-  cliImage:
-    repository: "cli-dev"
   resources:
     requests: { memory: "128Mi", cpu: "100m" }
     limits: { memory: "512Mi", cpu: "500m" }

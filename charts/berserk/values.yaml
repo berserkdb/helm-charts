@@ -64,8 +64,8 @@ global:
   vidxFloor: 1
   # Who opens writes of the new vector-index format: `auto`, where meta opens
   # them itself once every replica is at level 2 and the window has held, or
-  # `manual`, where only `bzrk vidx writes open` does. In either mode
-  # `bzrk vidx writes close` keeps them closed until an operator opens them.
+  # `manual`, where only `bzrk admin vidx writes open` does. In either mode
+  # `bzrk admin vidx writes close` keeps them closed until an operator opens them.
   # Nothing is indexed until a table has vector fields
   # (`bzrk table vector-fields set <table> <field>`).
   vidxWrites: auto
@@ -210,21 +210,14 @@ global:
     # base64 and alphanumeric all work as given — so lower it, to 24 at the
     # lowest, only when your generator caps below 32.
     minLength: 32
-  # Ingest token configuration.
-  # `managed: true` (default) makes the ingest service's init container create
-  # the default table and a default ingest token on first install, storing the
-  # plaintext token in the `ingestToken.secretName` Secret. The quickstart in
-  # NOTES.txt assumes this mode.
-  #
-  # Set `managed: false` for production deployments that integrate with an
-  # external secret store (Vault, External Secrets Operator, SealedSecrets,
-  # etc.); in that case you must provision `ingestToken.secretName` yourself
-  # and use the `bzrk ingest-token create` CLI flow shown in NOTES.txt to
-  # mint tokens.
+  # The default ingest token is derived from the master key: meta registers
+  # it at startup (one row per configured key, named `<tokenName>-<key id>`,
+  # routed to `defaultDatabase`/`defaultTable`) and ingest presents it for
+  # in-cluster requests that carry no bearer. It never leaves the cluster;
+  # every other sender mints its own token. Set `enabled: false` on an
+  # endpoint that must refuse anonymous data; meta then retires the rows.
   ingestToken:
-    managed: true
-    secretName: "ingest-token"
-    key: "default_ingest_token"
+    enabled: true
     tokenName: "default_ingest_token"
   # Observability configuration (OTLP telemetry)
   observability:
@@ -234,9 +227,9 @@ global:
     # children it spawns. Set a service's own `config.observability.profilerEnabled`
     # to override this for that service alone.
     profilerEnabled: true
-  # Default database that the init-ingest-token container routes its
-  # table + token into. Mirrors `defaultTable` — both default to the
-  # `default` database/table that meta's migration 026 seeds.
+  # Database and table the default ingest token routes to. meta creates the
+  # table at startup when it is missing; both default to the `default`
+  # database/table that meta's migration 026 seeds.
   defaultDatabase: "default"
   # Default table name for Berserk
   defaultTable: "default"
@@ -354,9 +347,8 @@ global:
 
 # Post-install setup job configuration
 setup:
-  # The init-ingest-token init container now ensures the table exists before
-  # creating the token, so this job is only needed for installs without managed
-  # ingest tokens.
+  # meta creates the default table at startup, so this job is only needed for
+  # installs that set up more than that.
   enabled: false
   image:
     repository: cli

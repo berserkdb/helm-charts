@@ -31,6 +31,15 @@
             - name: BZRK_VIDX_WRITES
               value: {{ include "meta.vidxWrites" . | quote }}
             {{- include "berserk-common.env.cluster-name" . | nindent 12 }}
+            {{- include "berserk-common.env.master-key" . | nindent 12 }}
+            - name: META_DEFAULT_INGEST_TOKEN_ENABLED
+              value: {{ .Values.global.ingestToken.enabled | quote }}
+            - name: META_DEFAULT_INGEST_TOKEN_NAME
+              value: {{ .Values.global.ingestToken.tokenName | quote }}
+            - name: META_DEFAULT_DATABASE
+              value: {{ .Values.global.defaultDatabase | default "default" | quote }}
+            - name: META_DEFAULT_TABLE
+              value: {{ .Values.global.defaultTable | default "default" | quote }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           livenessProbe:

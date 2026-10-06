@@ -15,6 +15,11 @@ data:
     loki_bind: "0.0.0.0:{{ .Values.service.ports.loki }}"
     {{- end }}
 
+    datadog_enabled: {{ .Values.config.datadogEnabled }}
+    {{- if .Values.config.datadogEnabled }}
+    datadog_bind: "0.0.0.0:{{ .Values.service.ports.datadog }}"
+    {{- end }}
+
     {{- with .Values.config.ackMode }}
     ack_mode: {{ . }}
     {{- end }}

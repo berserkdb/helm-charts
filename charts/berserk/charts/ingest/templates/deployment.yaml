@@ -1,54 +1,10 @@
 {{- include "berserk-common.deployment.header" . }}
-{{- $managed := include "ingest.tokenManaged" . | trim | eq "true" }}
-{{- $secretName := include "ingest.tokenSecretName" . | trim }}
-{{- $secretKey := include "ingest.tokenKey" . | trim }}
       # k8s injects service-link env vars like INGEST_SERVICE_HOST / INGEST_PORT
       # into every pod in the namespace. Figment's Env::prefixed("INGEST_") would
       # pick these up as config keys and the deny_unknown_fields guard would fail.
       enableServiceLinks: false
       {{- if .Values.global.serviceAccountName }}
       serviceAccountName: {{ .Values.global.serviceAccountName }}
-      {{- else if $managed }}
-      serviceAccountName: {{ include "berserk-common.fullname" . }}
-      {{- end }}
-      {{- $existingSecret := lookup "v1" "Secret" .Release.Namespace $secretName }}
-      {{- $secretHasKey := and $existingSecret (hasKey (default dict $existingSecret.data) $secretKey) }}
-      {{- if and $managed (not $secretHasKey) }}
-      initContainers:
-        - name: init-ingest-token
-          image: {{ include "ingest.cliImage" . }}
-          imagePullPolicy: {{ .Values.global.imagePullPolicy | default "Always" }}
-          securityContext:
-            allowPrivilegeEscalation: false
-          command: ["/bzrk"]
-          # `--endpoint` replaced `--meta-endpoint` in v1.0.105. The flag
-          # is described as "gateway endpoint" in `bzrk --help`, but the
-          # `ingest-token init` subcommand specifically forwards
-          # `config.endpoint` to `init_ingest_token`'s `meta_endpoint`
-          # parameter (apps/cli/src/cli/exec_ingest_token.rs), so passing the in-cluster
-          # meta gRPC URL here is the supported shape for this k8s init
-          # container — gateway is not on the path.
-          args:
-            - "--endpoint"
-            - "meta:9560"
-            - "--database"
-            - {{ .Values.global.defaultDatabase | default "default" | quote }}
-            - "ingest-token"
-            - "init"
-            - {{ include "ingest.tokenName" . | trim | quote }}
-            - "--table"
-            - {{ .Values.global.defaultTable | default "default" | quote }}
-            - "--secret-name"
-            - {{ $secretName | quote }}
-            - "--secret-key"
-            - {{ $secretKey | quote }}
-          env:
-            - name: K8S_POD_NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
-            - name: RUST_LOG
-              value: "info"
       {{- end }}
       containers:
         - name: ingest
@@ -72,6 +28,11 @@
               name: loki
               protocol: TCP
             {{- end }}
+            {{- if .Values.config.datadogEnabled }}
+            - containerPort: {{ .Values.service.ports.datadog }}
+              name: datadog
+              protocol: TCP
+            {{- end }}
             - containerPort: {{ .Values.service.ports.health }}
               name: health
               protocol: TCP
@@ -88,14 +49,9 @@
             {{- include "berserk-common.env.cluster-name" . | nindent 12 }}
             {{- include "berserk-common.env.node-id" . | nindent 12 }}
             {{- include "berserk-common.env.s3-credentials" (dict "accessKeyEnv" "AWS_ACCESS_KEY_ID" "secretKeyEnv" "AWS_SECRET_ACCESS_KEY" "Values" .Values) | nindent 12 }}
-            {{- if $secretName }}
-            - name: DEFAULT_INGEST_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: {{ $secretName }}
-                  key: {{ $secretKey }}
-                  optional: {{ not $managed }}
-            {{- end }}
+            {{- include "berserk-common.env.master-key" . | nindent 12 }}
+            - name: DEFAULT_INGEST_TOKEN_ENABLED
+              value: {{ include "ingest.tokenEnabled" . | trim | quote }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           livenessProbe:

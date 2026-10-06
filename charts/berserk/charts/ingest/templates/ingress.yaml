@@ -7,3 +7,14 @@
 ---
 {{ toYaml $ingress }}
 {{- end }}
+{{- if .Values.datadogIngress.enabled }}
+{{- if not .Values.config.datadogEnabled }}
+{{- fail "ingest.datadogIngress.enabled needs ingest.config.datadogEnabled: nothing listens on the datadog port otherwise" }}
+{{- end }}
+{{- $context := deepCopy . }}
+{{- $_ := set $context.Values "ingress" .Values.datadogIngress }}
+{{- $ingress := include "berserk-common.ingress" $context | fromYaml }}
+{{- $_ := set $ingress.metadata "name" (printf "%s-datadog" (include "berserk-common.fullname" .)) }}
+---
+{{ toYaml $ingress }}
+{{- end }}
