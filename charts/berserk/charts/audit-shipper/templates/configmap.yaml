@@ -1,0 +1,18 @@
+{{- define "audit-shipper.config-data" -}}
+data:
+  config.yaml: |
+    meta_endpoint: {{ .Values.config.metaEndpoint | quote }}
+    archive_endpoint: {{ required "audit-shipper.config.archiveEndpoint is required" .Values.config.archiveEndpoint | quote }}
+    archive_bucket: {{ required "audit-shipper.config.archiveBucket is required" .Values.config.archiveBucket | quote }}
+    {{- with .Values.config.archiveRegion }}
+    archive_region: {{ . | quote }}
+    {{- end }}
+    {{- with .Values.config.archivePrefix }}
+    archive_prefix: {{ . | quote }}
+    {{- end }}
+    cluster: {{ .Values.config.cluster | default .Values.global.clusterName | default "default" | quote }}
+    batch_size: {{ int .Values.config.batchSize }}
+    poll_interval_secs: {{ int64 .Values.config.pollIntervalSecs }}
+    {{- include "berserk-common.observability-config" . | nindent 4 }}
+{{- end }}
+{{- include "berserk-common.configmap" . }}

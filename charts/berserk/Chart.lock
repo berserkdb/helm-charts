@@ -23,5 +23,8 @@ dependencies:
 - name: permissions
   repository: ""
   version: '>=0.0.0-0'
-digest: sha256:f580da095064b804e0ce411bf6c31b5a4e15f883081f9359ad932e43f0b0f390
-generated: "2026-06-17T12:44:38.291438367+02:00"
+- name: audit-shipper
+  repository: ""
+  version: '>=0.0.0-0'
+digest: sha256:a8bb4e4086b98f4b67e1ed0f5c84c2114947db3e2d93001bdc0c8bb58d3cb57c
+generated: "2026-10-06T11:47:36.157829584+02:00"

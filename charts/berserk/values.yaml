@@ -11,7 +11,7 @@
 #   tier 3  200m  nursery, meta, ui, gateway, permissions,    weight 29
 #                 ingest
 #   tier 2  100m  query                                       weight 17
-#   tier 1   50m  janitor, prometheus                         weight 11
+#   tier 1   50m  janitor, prometheus, audit-shipper          weight 11
 #
 # Three tiers, each request double the one below. Pick a service's tier; the
 # milliCPU is how Kubernetes makes us say it, not a statement about how much CPU
@@ -710,6 +710,30 @@ permissions:
     observability:
       serviceName: "permissions"
       logLevel: "info,permissions=debug"
+
+# Copies the audit chain to an external, write-once archive
+# (docs/audit-stream.md §"The sink"). Off by default: it needs an
+# object-locked bucket and a credential for it, which only the operator
+# can provide.
+audit-shipper:
+  enabled: false
+  replicaCount: 1
+
+  image:
+    repository: audit-shipper
+
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "50m"
+    limits:
+      memory: "256Mi"
+
+  config:
+    metaEndpoint: "http://meta:9560"
+    observability:
+      serviceName: "audit-shipper"
+      logLevel: "info"
 
 # Nursery service configuration
 nursery:

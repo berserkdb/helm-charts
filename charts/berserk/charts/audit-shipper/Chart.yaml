@@ -1,6 +1,6 @@
 apiVersion: v2
-name: query
-description: Berserk Query Service - Query engine for observability data
+name: audit-shipper
+description: Berserk Audit Shipper - Copies the audit chain to an external, write-once archive
 type: application
 version: 1.1.10-rc.4
 appVersion: 1.1.10-rc.4

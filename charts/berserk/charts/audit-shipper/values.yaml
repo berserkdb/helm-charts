@@ -1,0 +1,55 @@
+# One shipper per cluster: two would race to ship the same ranges.
+replicaCount: 1
+component: backend
+strategy:
+  type: Recreate
+
+image:
+  repository: audit-shipper
+  tag: ""
+
+# The archive credential is this pod's alone, so it never runs as the
+# global service account, which may carry the data bucket's role.
+serviceAccountName: ""
+
+archiveCredentials:
+  secretName: audit-archive-credentials
+  accessKeyIdKey: AWS_ACCESS_KEY_ID
+  secretAccessKeyKey: AWS_SECRET_ACCESS_KEY
+
+networkPolicy:
+  allowExternal: false
+  # The archive is an HTTPS endpoint outside the cluster.
+  allowExternalEgress: true
+  ingressFrom: []
+  egressTo:
+    - app: meta
+      ports:
+        - port: 9560
+  additionalIngress: []
+  additionalEgress: []
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    memory: 256Mi
+
+config:
+  metaEndpoint: "http://meta:9560"
+  # The archive bucket must have object lock with a default retention;
+  # nothing here can establish or check that (docs/audit-stream.md §"The sink").
+  archiveEndpoint: ""
+  archiveBucket: ""
+  archiveRegion: ""
+  # A bucket shared by several clusters keeps them apart by prefix and
+  # cluster name.
+  archivePrefix: ""
+  cluster: ""
+  batchSize: 5000
+  pollIntervalSecs: 300
+  observability:
+    serviceName: "audit-shipper"
+    logLevel: "info"
+    otlpEndpoint: ""

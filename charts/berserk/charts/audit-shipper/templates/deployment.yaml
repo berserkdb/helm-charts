@@ -1,0 +1,36 @@
+{{- if gt (int .Values.replicaCount) 1 }}
+{{- fail (printf "audit-shipper: replicaCount is %d; run exactly one shipper per cluster" (int .Values.replicaCount)) }}
+{{- end }}
+{{- include "berserk-common.deployment.header" . }}
+{{- with .Values.serviceAccountName }}
+      serviceAccountName: {{ . }}
+{{- end }}
+      containers:
+        - name: audit-shipper
+          image: {{ include "berserk-common.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | default .Values.global.imagePullPolicy | default "Always" }}
+          securityContext:
+            allowPrivilegeEscalation: false
+          args:
+            - "--config"
+            - "/config/config.yaml"
+          env:
+            - name: RUST_BACKTRACE
+              value: "1"
+            {{- include "berserk-common.env.cluster-name" . | nindent 12 }}
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.archiveCredentials.secretName }}
+                  key: {{ .Values.archiveCredentials.accessKeyIdKey }}
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.archiveCredentials.secretName }}
+                  key: {{ .Values.archiveCredentials.secretAccessKeyKey }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            {{- include "berserk-common.volumeMount.config" . | nindent 12 }}
+      volumes:
+        {{- include "berserk-common.volume.config" . | nindent 8 }}

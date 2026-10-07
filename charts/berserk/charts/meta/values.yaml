@@ -41,6 +41,9 @@ networkPolicy:
     # fleet registration only — permissions asks meta nothing else
     - app: permissions
       ports: [{port: 9560}]
+    # audit-shipper reads the audit chain and reports what it archived
+    - app: audit-shipper
+      ports: [{port: 9560}]
     # post-install setup job creates the default table via meta
     - app: setup
       ports: [{port: 9560}]
