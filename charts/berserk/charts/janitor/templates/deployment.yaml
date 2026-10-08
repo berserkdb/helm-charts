@@ -24,6 +24,9 @@
             {{- include "berserk-common.env.s3-pool" . | nindent 12 }}
             {{- include "berserk-common.env.cluster-name" . | nindent 12 }}
             {{- include "berserk-common.env.s3-credentials" (dict "accessKeyEnv" "JANITOR_STORAGE_ACCESS_KEY" "secretKeyEnv" "JANITOR_STORAGE_SECRET_KEY" "Values" .Values) | nindent 12 }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           livenessProbe:

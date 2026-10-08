@@ -112,3 +112,7 @@ config:
     # otlpEnabled omitted so it falls through to global.observability;
     # set it here (or per-environment) to opt this service in or out.
     otlpEndpoint: ""
+
+# Extra env vars — escape hatch for env we don't (yet) have first-class chart
+# support for.
+extraEnv: []
