@@ -2,8 +2,55 @@ apiVersion: v1
 entries:
   berserk:
   - apiVersion: v2
+    appVersion: 1.1.10-rc.5
+    created: "2026-10-08T16:38:59.605372681+02:00"
+    dependencies:
+    - condition: meta.enabled
+      name: meta
+      repository: ""
+      version: 1.1.10-rc.5
+    - condition: query.enabled
+      name: query
+      repository: ""
+      version: 1.1.10-rc.5
+    - condition: ingest.enabled
+      name: ingest
+      repository: ""
+      version: 1.1.10-rc.5
+    - condition: janitor.enabled
+      name: janitor
+      repository: ""
+      version: 1.1.10-rc.5
+    - condition: ui.enabled
+      name: ui
+      repository: ""
+      version: 1.1.10-rc.5
+    - condition: nursery.enabled
+      name: nursery
+      repository: ""
+      version: 1.1.10-rc.5
+    - condition: gateway.enabled
+      name: gateway
+      repository: ""
+      version: 1.1.10-rc.5
+    - condition: permissions.enabled
+      name: permissions
+      repository: ""
+      version: 1.1.10-rc.5
+    - condition: audit-shipper.enabled
+      name: audit-shipper
+      repository: ""
+      version: 1.1.10-rc.5
+    description: Berserk - High-performance observability data platform
+    digest: 695047ba973b5108d9e808415e6ee4bf589120b6df6468fe618685584c83bafb
+    name: berserk
+    type: application
+    urls:
+    - berserk-1.1.10-rc.5.tgz
+    version: 1.1.10-rc.5
+  - apiVersion: v2
     appVersion: 1.1.10-rc.4
-    created: "2026-10-07T10:48:09.53393831+02:00"
+    created: "2026-10-08T16:38:59.581606101+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -50,7 +97,7 @@ entries:
     version: 1.1.10-rc.4
   - apiVersion: v2
     appVersion: 1.1.10-rc.3
-    created: "2026-10-07T10:48:09.512675349+02:00"
+    created: "2026-10-08T16:38:59.556832077+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -93,7 +140,7 @@ entries:
     version: 1.1.10-rc.3
   - apiVersion: v2
     appVersion: 1.1.10-rc.2
-    created: "2026-10-07T10:48:09.495978523+02:00"
+    created: "2026-10-08T16:38:59.533396828+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -136,7 +183,7 @@ entries:
     version: 1.1.10-rc.2
   - apiVersion: v2
     appVersion: 1.1.10-rc.1
-    created: "2026-10-07T10:48:09.474178349+02:00"
+    created: "2026-10-08T16:38:59.511763921+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -179,7 +226,7 @@ entries:
     version: 1.1.10-rc.1
   - apiVersion: v2
     appVersion: 1.1.9-rc.6
-    created: "2026-10-07T10:48:10.407135861+02:00"
+    created: "2026-10-08T16:39:00.486544431+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -222,7 +269,7 @@ entries:
     version: 1.1.9-rc.6
   - apiVersion: v2
     appVersion: 1.1.9-rc.5
-    created: "2026-10-07T10:48:10.3894557+02:00"
+    created: "2026-10-08T16:39:00.463864591+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -265,7 +312,7 @@ entries:
     version: 1.1.9-rc.5
   - apiVersion: v2
     appVersion: 1.1.9-rc.4
-    created: "2026-10-07T10:48:10.368686426+02:00"
+    created: "2026-10-08T16:39:00.441652707+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -308,7 +355,7 @@ entries:
     version: 1.1.9-rc.4
   - apiVersion: v2
     appVersion: 1.1.9-rc.3
-    created: "2026-10-07T10:48:10.345751704+02:00"
+    created: "2026-10-08T16:39:00.42037994+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -351,7 +398,7 @@ entries:
     version: 1.1.9-rc.3
   - apiVersion: v2
     appVersion: 1.1.9-rc.2
-    created: "2026-10-07T10:48:10.323844626+02:00"
+    created: "2026-10-08T16:39:00.39658899+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -394,7 +441,7 @@ entries:
     version: 1.1.9-rc.2
   - apiVersion: v2
     appVersion: 1.1.9-rc.1
-    created: "2026-10-07T10:48:10.307529894+02:00"
+    created: "2026-10-08T16:39:00.373856466+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -437,7 +484,7 @@ entries:
     version: 1.1.9-rc.1
   - apiVersion: v2
     appVersion: 1.1.8-rc.6
-    created: "2026-10-07T10:48:10.285041865+02:00"
+    created: "2026-10-08T16:39:00.352351895+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -480,7 +527,7 @@ entries:
     version: 1.1.8-rc.6
   - apiVersion: v2
     appVersion: 1.1.8-rc.5
-    created: "2026-10-07T10:48:10.264223974+02:00"
+    created: "2026-10-08T16:39:00.330116915+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -523,7 +570,7 @@ entries:
     version: 1.1.8-rc.5
   - apiVersion: v2
     appVersion: 1.1.8-rc.4
-    created: "2026-10-07T10:48:10.241324082+02:00"
+    created: "2026-10-08T16:39:00.307701033+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -566,7 +613,7 @@ entries:
     version: 1.1.8-rc.4
   - apiVersion: v2
     appVersion: 1.1.8-rc.3
-    created: "2026-10-07T10:48:10.218260613+02:00"
+    created: "2026-10-08T16:39:00.286502635+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -609,7 +656,7 @@ entries:
     version: 1.1.8-rc.3
   - apiVersion: v2
     appVersion: 1.1.8-rc.2
-    created: "2026-10-07T10:48:10.195205611+02:00"
+    created: "2026-10-08T16:39:00.264219248+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -652,7 +699,7 @@ entries:
     version: 1.1.8-rc.2
   - apiVersion: v2
     appVersion: 1.1.8-rc.1
-    created: "2026-10-07T10:48:10.173684244+02:00"
+    created: "2026-10-08T16:39:00.241415391+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -695,7 +742,7 @@ entries:
     version: 1.1.8-rc.1
   - apiVersion: v2
     appVersion: 1.1.8-ai-cost.1
-    created: "2026-10-07T10:48:10.151327016+02:00"
+    created: "2026-10-08T16:39:00.219594017+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -738,7 +785,7 @@ entries:
     version: 1.1.8-ai-cost.1
   - apiVersion: v2
     appVersion: 1.1.7-rc.3
-    created: "2026-10-07T10:48:10.127677376+02:00"
+    created: "2026-10-08T16:39:00.205716487+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -781,7 +828,7 @@ entries:
     version: 1.1.7-rc.3
   - apiVersion: v2
     appVersion: 1.1.7-rc.2
-    created: "2026-10-07T10:48:10.106953242+02:00"
+    created: "2026-10-08T16:39:00.186414457+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -824,7 +871,7 @@ entries:
     version: 1.1.7-rc.2
   - apiVersion: v2
     appVersion: 1.1.7-rc.1
-    created: "2026-10-07T10:48:10.08415317+02:00"
+    created: "2026-10-08T16:39:00.163141783+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -867,7 +914,7 @@ entries:
     version: 1.1.7-rc.1
   - apiVersion: v2
     appVersion: 1.1.6-rc.9
-    created: "2026-10-07T10:48:10.061450011+02:00"
+    created: "2026-10-08T16:39:00.142559215+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -910,7 +957,7 @@ entries:
     version: 1.1.6-rc.9
   - apiVersion: v2
     appVersion: 1.1.6-rc.8
-    created: "2026-10-07T10:48:10.04058223+02:00"
+    created: "2026-10-08T16:39:00.120046971+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -953,7 +1000,7 @@ entries:
     version: 1.1.6-rc.8
   - apiVersion: v2
     appVersion: 1.1.6-rc.6
-    created: "2026-10-07T10:48:10.017523992+02:00"
+    created: "2026-10-08T16:39:00.097604135+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -996,7 +1043,7 @@ entries:
     version: 1.1.6-rc.6
   - apiVersion: v2
     appVersion: 1.1.6-rc.5
-    created: "2026-10-07T10:48:09.996092394+02:00"
+    created: "2026-10-08T16:39:00.076445856+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -1039,7 +1086,7 @@ entries:
     version: 1.1.6-rc.5
   - apiVersion: v2
     appVersion: 1.1.6-rc.4
-    created: "2026-10-07T10:48:09.975516396+02:00"
+    created: "2026-10-08T16:39:00.054059684+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -1082,7 +1129,7 @@ entries:
     version: 1.1.6-rc.4
   - apiVersion: v2
     appVersion: 1.1.6-rc.3
-    created: "2026-10-07T10:48:09.953226503+02:00"
+    created: "2026-10-08T16:39:00.031969573+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -1125,7 +1172,7 @@ entries:
     version: 1.1.6-rc.3
   - apiVersion: v2
     appVersion: 1.1.6-rc.2
-    created: "2026-10-07T10:48:09.93217246+02:00"
+    created: "2026-10-08T16:39:00.011297877+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -1168,7 +1215,7 @@ entries:
     version: 1.1.6-rc.2
   - apiVersion: v2
     appVersion: 1.1.6-rc.1
-    created: "2026-10-07T10:48:09.909961454+02:00"
+    created: "2026-10-08T16:38:59.989229529+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -1211,7 +1258,7 @@ entries:
     version: 1.1.6-rc.1
   - apiVersion: v2
     appVersion: 1.1.5-rc.3
-    created: "2026-10-07T10:48:09.887743836+02:00"
+    created: "2026-10-08T16:38:59.967173296+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -1254,7 +1301,7 @@ entries:
     version: 1.1.5-rc.3
   - apiVersion: v2
     appVersion: 1.1.5-rc.1
-    created: "2026-10-07T10:48:09.865467931+02:00"
+    created: "2026-10-08T16:38:59.944665982+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -1297,7 +1344,7 @@ entries:
     version: 1.1.5-rc.1
   - apiVersion: v2
     appVersion: 1.1.4-rc.12
-    created: "2026-10-07T10:48:09.755637431+02:00"
+    created: "2026-10-08T16:38:59.836987036+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -1340,7 +1387,7 @@ entries:
     version: 1.1.4-rc.12
   - apiVersion: v2
     appVersion: 1.1.4-rc.11
-    created: "2026-10-07T10:48:09.734947516+02:00"
+    created: "2026-10-08T16:38:59.815217887+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -1383,7 +1430,7 @@ entries:
     version: 1.1.4-rc.11
   - apiVersion: v2
     appVersion: 1.1.4-rc.7
-    created: "2026-10-07T10:48:09.844978676+02:00"
+    created: "2026-10-08T16:38:59.92455196+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -1426,7 +1473,7 @@ entries:
     version: 1.1.4-rc.7
   - apiVersion: v2
     appVersion: 1.1.4-rc.4
-    created: "2026-10-07T10:48:09.821875849+02:00"
+    created: "2026-10-08T16:38:59.901937151+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -1469,7 +1516,7 @@ entries:
     version: 1.1.4-rc.4
   - apiVersion: v2
     appVersion: 1.1.4-rc.3
-    created: "2026-10-07T10:48:09.801685952+02:00"
+    created: "2026-10-08T16:38:59.88015251+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -1512,7 +1559,7 @@ entries:
     version: 1.1.4-rc.3
   - apiVersion: v2
     appVersion: 1.1.4-rc.2
-    created: "2026-10-07T10:48:09.778547263+02:00"
+    created: "2026-10-08T16:38:59.859260203+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -1555,7 +1602,7 @@ entries:
     version: 1.1.4-rc.2
   - apiVersion: v2
     appVersion: 1.1.4-rc.1
-    created: "2026-10-07T10:48:09.713112261+02:00"
+    created: "2026-10-08T16:38:59.795528924+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -1598,7 +1645,7 @@ entries:
     version: 1.1.4-rc.1
   - apiVersion: v2
     appVersion: 1.1.3-rc.3
-    created: "2026-10-07T10:48:09.69186401+02:00"
+    created: "2026-10-08T16:38:59.773930506+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -1641,7 +1688,7 @@ entries:
     version: 1.1.3-rc.3
   - apiVersion: v2
     appVersion: 1.1.3-rc.1
-    created: "2026-10-07T10:48:09.67017094+02:00"
+    created: "2026-10-08T16:38:59.752252228+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -1684,7 +1731,7 @@ entries:
     version: 1.1.3-rc.1
   - apiVersion: v2
     appVersion: 1.1.2-rc.10
-    created: "2026-10-07T10:48:09.566836261+02:00"
+    created: "2026-10-08T16:38:59.648070551+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -1727,7 +1774,7 @@ entries:
     version: 1.1.2-rc.10
   - apiVersion: v2
     appVersion: 1.1.2-rc.9
-    created: "2026-10-07T10:48:09.649975392+02:00"
+    created: "2026-10-08T16:38:59.732883555+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -1770,7 +1817,7 @@ entries:
     version: 1.1.2-rc.9
   - apiVersion: v2
     appVersion: 1.1.2-rc.8
-    created: "2026-10-07T10:48:09.628290288+02:00"
+    created: "2026-10-08T16:38:59.710695339+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -1813,7 +1860,7 @@ entries:
     version: 1.1.2-rc.8
   - apiVersion: v2
     appVersion: 1.1.2-rc.6
-    created: "2026-10-07T10:48:09.607246264+02:00"
+    created: "2026-10-08T16:38:59.68878635+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -1856,7 +1903,7 @@ entries:
     version: 1.1.2-rc.6
   - apiVersion: v2
     appVersion: 1.1.2-rc.5
-    created: "2026-10-07T10:48:09.588257067+02:00"
+    created: "2026-10-08T16:38:59.66734744+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -1899,7 +1946,7 @@ entries:
     version: 1.1.2-rc.5
   - apiVersion: v2
     appVersion: 1.1.2-gdemo-revert.1
-    created: "2026-10-07T10:48:09.547509299+02:00"
+    created: "2026-10-08T16:38:59.625665521+02:00"
     dependencies:
     - condition: meta.enabled
       name: meta
@@ -5483,4 +5530,4 @@ entries:
     urls:
     - https://github.com/berserkdb/helm-charts/releases/download/berserk-0.1.0/berserk-0.1.0.tgz
     version: 0.1.0
-generated: "2026-10-07T10:48:09.458452253+02:00"
+generated: "2026-10-08T16:38:59.494546006+02:00"
