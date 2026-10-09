@@ -49,6 +49,14 @@ x-logging: &logging
     max-size: "10m"
     max-file: "5"
 
+# One master key for the stack. The gateway's cookie key, the service-to-service
+# tokens, the ui's secret_key_base, the default ingest token and the key that
+# wraps the ui's data key all derive from it (docs/dev/master-key.md), so every
+# service below gets the same value. Localhost placeholder: in production
+# generate one (`openssl rand -base64 32`), at least 32 bytes, and treat it as
+# a secret. Changing it logs every user out; rotating it is a two-key swap.
+x-master-key: &master-key "local-dev-master-key-0123456789abcdef0123456789abcdef"
+
 x-common: &common
   restart: unless-stopped
   logging: *logging
@@ -63,6 +71,10 @@ x-common: &common
       hard: 1048576
   environment: &common-env
     RUST_BACKTRACE: "1"
+    # Every service below also sets POD_IP to its own compose service name:
+    # services bind 0.0.0.0 and register `http://$POD_IP:<port>` in meta's
+    # fleet registry (the chart fills it from the downward API), which is how
+    # the query coordinator finds its workers and the nursery's query lane.
 
 configs:
   meta-config:
@@ -72,6 +84,13 @@ configs:
       storage_endpoint: "http://minio:9000"
       storage_bucket: "berserk"
       storage_region: "us-east-1"
+      # The vector-index write gate (docs/dev/vidx-index-implementation.md):
+      # the floor every worker must report, which the chart sets per
+      # deployment, and the settling window before writes open. The window
+      # guards rolling upgrades, which one node never has, so it is a minute
+      # here; meta refuses anything shorter than its membership TTLs.
+      vidx_floor: 1
+      vidx_window_secs: 60
       observability:
         service_name: "meta"
         log_level: "info"
@@ -87,12 +106,21 @@ configs:
       # data isn't queryable until a merge lands (minutes, not seconds).
       # Paired with the nursery's query_grpc_bind below; mirrors
       # query.config.queryViaNursery in the helm chart.
+      #
+      # The chart's production transport: the service forks a qws worker that
+      # registers `http://$$POD_IP:9520` in meta's registry, and reads through
+      # the forked cache server. The nursery lane only exists on this transport.
+      transport: "grpc"
+      cache_mode: "remote"
       query_via_nursery: true
       cloud_storage_access_key: $${AWS_ACCESS_KEY_ID:}
       cloud_storage_secret_key: $${AWS_SECRET_ACCESS_KEY:}
       cache:
         dir: "/segment_cache"
-        total_size_limit: "10Gi"
+      # One cache-disk budget the service splits between the segment and
+      # result caches, as the chart sets it; the forked cache server needs an
+      # explicit size inside a container.
+      cache_total_size: "10GiB"
       observability:
         service_name: "query"
         log_level: "info"
@@ -129,8 +157,11 @@ configs:
       query_endpoint: "http://query:9510"
       cloud_storage_access_key: $${JANITOR_STORAGE_ACCESS_KEY:}
       cloud_storage_secret_key: $${JANITOR_STORAGE_SECRET_KEY:}
+      # Idle re-poll cadence, as the chart defaults it. It is also how often
+      # the janitor polls meta for merge tasks, which the vector-index write
+      # gate must see within its grant period before it opens.
       merger:
-        interval_seconds: 300
+        interval_seconds: 10
       observability:
         service_name: "janitor"
         log_level: "info"
@@ -154,19 +185,16 @@ configs:
       # coordinator's fan-out (paired with query's query_via_nursery) so fresh
       # data is queryable before it merges to S3. qws_bin is bundled at
       # /qws_bin in the nursery image; the member endpoint advertises the
-      # compose service name where the chart uses the pod IP. force_merge keeps
-      # the un-merged tail short. Mirrors the nursery helm chart values.
+      # compose service name where the chart uses the pod IP. The merge age
+      # trigger keeps the un-merged tail short. Mirrors the nursery helm chart.
       #
       # NOTE: this file runs the *released* images pinned above, not the working
-      # tree, so every key here has to be one those binaries understand. This
-      # one is `merge_age_trigger_secs` on and after the release that carries
-      # #4529; renaming it before then is silently ignored, the trigger falls
-      # back to its five-minute default, and the stack's own smoke test — which
-      # allows sixty seconds for data to become queryable — fails.
+      # tree, so every key here has to be one those binaries understand; a key
+      # they do not know is silently ignored.
       query_grpc_bind: "0.0.0.0:9531"
       qws_bin: "/qws_bin"
       query_grpc_member_endpoint: "http://nursery:9531"
-      force_merge_stale_threshold_secs: 60
+      merge_age_trigger_secs: 60
       observability:
         service_name: "nursery"
         log_level: "info"
@@ -204,60 +232,6 @@ configs:
   # connection's search_path, so `auth._sqlx_migrations` and
   # `public._sqlx_migrations` coexist without collision.
 
-  # Idempotent bootstrap: create the `default` table and an ingest
-  # token routed to it, then write the plaintext token to a shared
-  # volume the ingest container reads at startup. The token is what
-  # tells ingest which table to route OTLP to — without it, ingest
-  # drops every incoming push regardless of `require_auth`. Mirrors
-  # the `init-ingest-token` init container in the helm chart, minus
-  # the K8s Secret API.
-  init-ingest-token-script:
-    content: |
-      #!/bin/sh
-      set -e
-      TOKEN_FILE="/token/ingest-token"
-      BZRK="/bzrk --endpoint meta:9560 --database default"
-      TOKEN_NAME="default_ingest_token"
-      # Table existence is independent of the token-file sentinel: the
-      # file lives on its own volume, the table in Postgres.
-      echo "Ensuring 'default' table exists in meta..."
-      i=0
-      while [ "$$i" -lt 10 ]; do
-        if $$BZRK table create default --if-not-exists; then
-          break
-        fi
-        i=$$((i + 1))
-        echo "table create failed (attempt $$i/10), retrying..."
-        sleep 3
-      done
-      if [ "$$i" -eq 10 ]; then
-        echo "Giving up: could not create table 'default'."
-        exit 1
-      fi
-      if [ -f "$$TOKEN_FILE" ] && [ -s "$$TOKEN_FILE" ]; then
-        echo "Ingest token already exists at $$TOKEN_FILE, skipping token creation."
-        exit 0
-      fi
-      echo "Creating default ingest token..."
-      if ! TOKEN=$$($$BZRK ingest-token create $$TOKEN_NAME --table default --simple 2>&1); then
-        echo "Token '$$TOKEN_NAME' already exists in meta, replacing..."
-        $$BZRK ingest-token delete "$$TOKEN_NAME" || true
-        TOKEN=$$($$BZRK ingest-token create $$TOKEN_NAME --table default --simple)
-      fi
-      echo "$$TOKEN" > "$$TOKEN_FILE"
-      echo "Ingest token written to $$TOKEN_FILE"
-
-  ingest-entrypoint-script:
-    content: |
-      #!/bin/sh
-      set -e
-      TOKEN_FILE="/token/ingest-token"
-      if [ -f "$$TOKEN_FILE" ] && [ -s "$$TOKEN_FILE" ]; then
-        export DEFAULT_INGEST_TOKEN=$$(cat "$$TOKEN_FILE")
-        echo "Loaded ingest token from $$TOKEN_FILE"
-      fi
-      exec /ingest_bin "$$@"
-
 services:
   # --- Infrastructure ---
 
@@ -285,8 +259,12 @@ services:
       retries: 10
     restart: unless-stopped
 
+  # MinIO stopped publishing community binaries and images in October 2025;
+  # these are the community rebuilds from the MinIO source that the dev
+  # scenario pins as well (github.com/golithus/minio-builds, AGPL-3.0). The
+  # image carries only the binary, so readiness is checked by minio-init.
   minio:
-    image: minio/minio:latest
+    image: ghcr.io/golithus/minio:RELEASE.2025-10-15T17-29-55Z
     logging: *logging
     networks:
       - berserk
@@ -299,25 +277,25 @@ services:
       - "127.0.0.1:19001:9001"  # MinIO Console
     volumes:
       - minio-data:/data
-    healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
     restart: unless-stopped
 
-  # Create the default bucket on startup
+  # Wait for MinIO, then create the default bucket. The services wait for
+  # this to finish, which is what makes MinIO's readiness matter. The alias
+  # comes from the environment because `mc alias set` connects at once and
+  # fails if MinIO is still starting.
   minio-init:
-    image: minio/mc:latest
+    image: ghcr.io/golithus/mc:RELEASE.2025-08-13T08-35-41Z
     logging: *logging
     networks:
       - berserk
     depends_on:
       minio:
-        condition: service_healthy
+        condition: service_started
+    environment:
+      MC_HOST_local: http://minioadmin:minioadmin@minio:9000
     entrypoint: >
       /bin/sh -c "
-      mc alias set local http://minio:9000 minioadmin minioadmin &&
+      until mc ready local; do sleep 1; done &&
       mc mb --ignore-existing local/berserk &&
       echo 'Bucket created successfully'
       "
@@ -330,7 +308,6 @@ services:
     entrypoint: /bin/sh -c "chown -R 1000:1000 /mnt/*"
     volumes:
       - query-cache:/mnt/query-cache
-      - ingest-token:/mnt/ingest-token
       - janitor-cache:/mnt/janitor-cache
       - nursery-workdir:/mnt/nursery-workdir
     restart: "no"
@@ -339,13 +316,17 @@ services:
 
   meta:
     <<: *common
-    image: images.bzrk.dev/release/meta:v1.1.10-rc.5
+    image: images.bzrk.dev/release/meta:v1.1.10-rc.6
     depends_on:
       postgres:
         condition: service_healthy
     environment:
       <<: *common-env
+      POD_IP: meta
       META_DATABASE_URL: "postgres://berserk:berserk@postgres:5432/berserk"
+      # Registers the default ingest token (derived from the key) and creates
+      # the `default` table on first boot; ingest derives the same token.
+      BZRK_MASTER_KEY: *master-key
     command: ["-c", "/config/config.yaml"]
     ports:
       - "127.0.0.1:9560:9560"
@@ -362,7 +343,7 @@ services:
 
   query:
     <<: *common
-    image: images.bzrk.dev/release/query:v1.1.10-rc.5
+    image: images.bzrk.dev/release/query:v1.1.10-rc.6
     depends_on:
       meta:
         condition: service_healthy
@@ -372,8 +353,16 @@ services:
         condition: service_completed_successfully
     environment:
       <<: *common-env
+      POD_IP: query
       AWS_ACCESS_KEY_ID: minioadmin
       AWS_SECRET_ACCESS_KEY: minioadmin
+      # The forked qws worker inherits this env and reads segments itself, so
+      # it needs the object store the way the chart's query container has it.
+      BZRK_QWS_EMBEDDED_BIND: "0.0.0.0:9520"
+      BZRK_QWS_CLOUD_STORAGE_ENDPOINT: "http://minio:9000"
+      BZRK_QWS_CLOUD_STORAGE_USE_SSL: "false"
+      BZRK_QWS_CLOUD_STORAGE_ACCESS_KEY: minioadmin
+      BZRK_QWS_CLOUD_STORAGE_SECRET_KEY: minioadmin
     command: ["-c", "/config/config.yaml"]
     ports:
       - "127.0.0.1:9510:9510"
@@ -390,47 +379,28 @@ services:
       start_period: 10s
       retries: 10
 
-  # Create the `default` table + an ingest token routed to it, then
-  # write the plaintext token to a shared volume the ingest container
-  # reads at startup. Talks to meta over gRPC directly (no bearer
-  # token → ClientChannel::direct, see apps/cli/src/network/meta_client.rs).
-  ingest-token-init:
-    image: images.bzrk.dev/release/cli:v1.1.10-rc.5
-    logging: *logging
-    networks:
-      - berserk
-    depends_on:
-      meta:
-        condition: service_healthy
-      volume-init:
-        condition: service_completed_successfully
-    entrypoint: ["/bin/sh", "/scripts/init-ingest-token.sh"]
-    configs:
-      - source: init-ingest-token-script
-        target: /scripts/init-ingest-token.sh
-        mode: 0555
-    volumes:
-      - ingest-token:/token
-    restart: "no"
-
+  # Pushes without a bearer token land in the `default` table through the
+  # default ingest token, which meta registers at boot and ingest derives
+  # from the same master key (`require_auth: false` above keeps that path
+  # open). Senders with a token of their own are routed by that token.
   ingest:
     <<: *common
-    image: images.bzrk.dev/release/ingest:v1.1.10-rc.5
+    image: images.bzrk.dev/release/ingest:v1.1.10-rc.6
     depends_on:
       meta:
         condition: service_healthy
       minio-init:
         condition: service_completed_successfully
-      ingest-token-init:
-        condition: service_completed_successfully
       volume-init:
         condition: service_completed_successfully
-    entrypoint: ["/bin/sh", "/scripts/ingest-entrypoint.sh"]
     command: ["-c", "/config/config.yaml"]
     environment:
       RUST_LOG: info
+      POD_IP: ingest
       AWS_ACCESS_KEY_ID: minioadmin
       AWS_SECRET_ACCESS_KEY: minioadmin
+      BZRK_MASTER_KEY: *master-key
+      DEFAULT_INGEST_TOKEN_ENABLED: "true"
     ports:
       - "127.0.0.1:14317:4317"   # OTLP gRPC
       - "127.0.0.1:14318:4318"   # OTLP HTTP
@@ -439,11 +409,6 @@ services:
       - source: ingest-config
         target: /config/config.yaml
         mode: 0444
-      - source: ingest-entrypoint-script
-        target: /scripts/ingest-entrypoint.sh
-        mode: 0555
-    volumes:
-      - ingest-token:/token:ro
     healthcheck:
       test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/9550'"]
       interval: 5s
@@ -453,7 +418,7 @@ services:
 
   janitor:
     <<: *common
-    image: images.bzrk.dev/release/janitor:v1.1.10-rc.5
+    image: images.bzrk.dev/release/janitor:v1.1.10-rc.6
     depends_on:
       meta:
         condition: service_healthy
@@ -465,6 +430,7 @@ services:
         condition: service_completed_successfully
     environment:
       <<: *common-env
+      POD_IP: janitor
       JANITOR_STORAGE_ACCESS_KEY: minioadmin
       JANITOR_STORAGE_SECRET_KEY: minioadmin
     command: ["-c", "/config/config.yaml"]
@@ -483,7 +449,7 @@ services:
 
   nursery:
     <<: *common
-    image: images.bzrk.dev/release/nursery:v1.1.10-rc.5
+    image: images.bzrk.dev/release/nursery:v1.1.10-rc.6
     depends_on:
       meta:
         condition: service_healthy
@@ -493,6 +459,7 @@ services:
         condition: service_completed_successfully
     environment:
       <<: *common-env
+      POD_IP: nursery
       NURSERY_STORAGE_ACCESS_KEY: minioadmin
       NURSERY_STORAGE_SECRET_KEY: minioadmin
     command: ["-c", "/config/config.yaml"]
@@ -511,7 +478,7 @@ services:
 
   ui:
     <<: *common
-    image: images.bzrk.dev/release/ui:v1.1.10-rc.5
+    image: images.bzrk.dev/release/ui:v1.1.10-rc.6
     depends_on:
       postgres:
         condition: service_healthy
@@ -530,9 +497,7 @@ services:
       PHX_CHECK_ORIGIN: "http://localhost:${HOST_GATEWAY_PORT:-9500},http://127.0.0.1:${HOST_GATEWAY_PORT:-9500}"
       DATABASE_URL: "postgres://berserk:berserk@postgres:5432/berserk"
       UI_PHOENIX_DATABASE_SCHEMA: webui
-      SECRET_KEY_BASE: "local-dev-phoenix-secret-key-base-must-be-at-least-64-bytes-long!!!!"
-      GATEWAY_SERVICE_TOKEN: "local-dev-gateway-service-token"
-      PERMISSIONS_SERVICE_TOKEN: "local-dev-permissions-service-token"
+      BZRK_MASTER_KEY: *master-key
       QUERY_GRPC_ENDPOINT: "query:9510"
       META_GRPC_ENDPOINT: "meta:9560"
       GATEWAY_HTTP_ENDPOINT: "http://gateway:9500"
@@ -559,15 +524,16 @@ services:
 
   permissions:
     <<: *common
-    image: images.bzrk.dev/release/permissions:v1.1.10-rc.5
+    image: images.bzrk.dev/release/permissions:v1.1.10-rc.6
     depends_on:
       postgres:
         condition: service_healthy
     environment:
       <<: *common-env
+      POD_IP: permissions
       PERMISSIONS_BIND: "0.0.0.0:9580"
       PERMISSIONS_DATABASE_URL: "postgres://berserk:berserk@postgres:5432/berserk"
-      PERMISSIONS_SERVICE_TOKEN: "local-dev-permissions-service-token"
+      BZRK_MASTER_KEY: *master-key
     healthcheck:
       test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/9580'"]
       interval: 5s
@@ -577,7 +543,7 @@ services:
 
   gateway:
     <<: *common
-    image: images.bzrk.dev/release/gateway:v1.1.10-rc.5
+    image: images.bzrk.dev/release/gateway:v1.1.10-rc.6
     depends_on:
       postgres:
         condition: service_healthy
@@ -587,13 +553,9 @@ services:
         condition: service_healthy
     environment:
       <<: *common-env
+      POD_IP: gateway
       GATEWAY_DATABASE_URL: "postgres://berserk:berserk@postgres:5432/berserk"
-      GATEWAY_PERMISSIONS_SERVICE_TOKEN: "local-dev-permissions-service-token"
-      GATEWAY_SERVICE_TOKEN: "local-dev-gateway-service-token"
-      # 64-byte placeholder for localhost dev. In production set
-      # this to a high-entropy random string and treat as a secret —
-      # rotating it invalidates every active session.
-      GATEWAY_COOKIE_SIGNING_KEY: "local-dev-gateway-cookie-signing-key-must-be-at-least-64-bytes-long!!"
+      BZRK_MASTER_KEY: *master-key
     command: ["-c", "/config/config.yaml"]
     ports:
       - "127.0.0.1:${HOST_GATEWAY_PORT:-9500}:9500"
@@ -616,6 +578,5 @@ volumes:
   postgres-data:
   minio-data:
   query-cache:
-  ingest-token:
   janitor-cache:
   nursery-workdir:
