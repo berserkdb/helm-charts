@@ -113,22 +113,31 @@
             - name: PERMISSIONS_HTTP_ENDPOINT
               value: {{ .Values.config.permissions.baseUrl | quote }}
             {{- $ingest := .Values.config.ingest | default dict }}
-            {{- if $ingest.host }}
-            # The public OTLP endpoint shown on Settings -> Ingest. Stated, not
-            # discovered: a sender dials the ingress entrypoint, never a port
-            # bound in-cluster.
-            - name: BZRK_INGEST_HOST
-              value: {{ $ingest.host | quote }}
-            {{- with $ingest.grpcPort }}
+            # The public ingestion endpoints shown on Settings -> Endpoints.
+            # Stated, not discovered: a sender dials the ingress entrypoint,
+            # never a port bound in-cluster. An endpoint left empty is listed
+            # as unpublished.
+            {{- with $ingest.otlpGrpc }}
+            {{- if .host }}
+            - name: BZRK_INGEST_GRPC_HOST
+              value: {{ .host | quote }}
             - name: BZRK_INGEST_GRPC_PORT
+              value: {{ .port | quote }}
+            - name: BZRK_INGEST_GRPC_TLS
+              value: {{ .tls | default false | quote }}
+            {{- end }}
+            {{- end }}
+            {{- with $ingest.otlpHttp }}
+            - name: BZRK_INGEST_HTTP_URL
               value: {{ . | quote }}
             {{- end }}
-            {{- with $ingest.httpPort }}
-            - name: BZRK_INGEST_HTTP_PORT
+            {{- with $ingest.loki }}
+            - name: BZRK_INGEST_LOKI_URL
               value: {{ . | quote }}
             {{- end }}
-            - name: BZRK_INGEST_TLS
-              value: {{ $ingest.tls | default false | quote }}
+            {{- with $ingest.datadog }}
+            - name: BZRK_INGEST_DATADOG_URL
+              value: {{ . | quote }}
             {{- end }}
             {{- with .Values.config.publicUrlBase }}
             # Public origin for workflow result links. Unset ⇒ Endpoint URL.

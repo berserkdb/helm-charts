@@ -159,20 +159,24 @@ config:
   # /internal/users Members API, GATEWAY_HTTP_ENDPOINT). Keeps the call inside
   # the cluster rather than hairpinning through the public ingress.
   gatewayInternalBaseUrl: "http://gateway:9500"
-  # The public OTLP endpoint this UI shows on Settings → Ingest, so a customer
-  # can read off where to send telemetry. Set it to what the ingress actually
-  # publishes: that is the ingress controller's entrypoint, which may differ
-  # from the ingest Service ports, so it cannot be read off the chart. An empty
-  # host makes the page report no endpoint rather than print an address nothing
-  # answers on.
+  # The public ingestion endpoints this UI shows on Settings → Endpoints, so a
+  # customer can read off where to send telemetry. Set each to what the ingress
+  # actually publishes: that is the ingress controller's entrypoint, which may
+  # differ from the ingest Service ports, so none can be read off the chart. An
+  # endpoint left empty is listed as not published rather than shown with an
+  # address nothing answers on.
   ingest:
-    host: ""
-    # Empty means "not published", and the page then does not offer it.
-    grpcPort: 4317
-    httpPort: ""
-    # Whether the endpoint terminates TLS: decides the scheme shown and whether
-    # a sender has to disable certificate verification.
-    tls: true
+    # OTLP/gRPC: the authority a gRPC exporter dials. `tls` says whether that
+    # entrypoint terminates TLS, so a sender knows to keep verification on.
+    otlpGrpc:
+      host: ""
+      port: 4317
+      tls: true
+    # The HTTP endpoints take a base URL (scheme, host and port); the page
+    # appends each API's path.
+    otlpHttp: ""
+    loki: ""
+    datadog: ""
   # Absolute https origin used when minting result links in workflow emails
   # and webhooks (BZRK_PUBLIC_URL_BASE). Empty ⇒ the Phoenix Endpoint URL.
   # Emitted only when set; an invalid explicit value fails UI boot.

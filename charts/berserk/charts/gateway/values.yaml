@@ -105,11 +105,12 @@ config:
   # `apps/gateway/src/proxy.rs`). Operators don't normally touch this
   # — it follows directly from the umbrella chart's layout.
   upstreamBaseUrl: "http://ui"
-  # Meta, for fleet registration only: the gateway publishes its pod IP and
-  # named ports there so the in-product collector can scrape it without asking
-  # the Kubernetes API. Nothing the gateway serves depends on this — clear it
-  # and the gateway simply stops appearing in the fleet, which also removes it
-  # from the collector's default (`meta`) discovery, so add `gateway:9502` to
+  # Meta, for fleet registration: the gateway publishes its pod IP and named
+  # ports there, so the in-product collector can scrape it without asking the
+  # Kubernetes API, and the query service finds it to reach remote sites through
+  # (docs/dev/site-coordinator.md §6.3). Clear it and the gateway stops appearing
+  # in the fleet: queries can no longer read remote tables, and the collector's
+  # default (`meta`) discovery misses it, so add `gateway:9502` to
   # `ui.collector.staticTargets` if you do.
   metaEndpoint: "http://meta:9560"
   # gRPC routing table — JSON array of {package_prefix, upstream}.

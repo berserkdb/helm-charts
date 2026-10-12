@@ -316,7 +316,7 @@ services:
 
   meta:
     <<: *common
-    image: images.bzrk.dev/release/meta:v1.1.10-rc.6
+    image: images.bzrk.dev/release/meta:v1.1.11-rc.1
     depends_on:
       postgres:
         condition: service_healthy
@@ -343,7 +343,7 @@ services:
 
   query:
     <<: *common
-    image: images.bzrk.dev/release/query:v1.1.10-rc.6
+    image: images.bzrk.dev/release/query:v1.1.11-rc.1
     depends_on:
       meta:
         condition: service_healthy
@@ -385,7 +385,7 @@ services:
   # open). Senders with a token of their own are routed by that token.
   ingest:
     <<: *common
-    image: images.bzrk.dev/release/ingest:v1.1.10-rc.6
+    image: images.bzrk.dev/release/ingest:v1.1.11-rc.1
     depends_on:
       meta:
         condition: service_healthy
@@ -418,7 +418,7 @@ services:
 
   janitor:
     <<: *common
-    image: images.bzrk.dev/release/janitor:v1.1.10-rc.6
+    image: images.bzrk.dev/release/janitor:v1.1.11-rc.1
     depends_on:
       meta:
         condition: service_healthy
@@ -449,7 +449,7 @@ services:
 
   nursery:
     <<: *common
-    image: images.bzrk.dev/release/nursery:v1.1.10-rc.6
+    image: images.bzrk.dev/release/nursery:v1.1.11-rc.1
     depends_on:
       meta:
         condition: service_healthy
@@ -478,7 +478,7 @@ services:
 
   ui:
     <<: *common
-    image: images.bzrk.dev/release/ui:v1.1.10-rc.6
+    image: images.bzrk.dev/release/ui:v1.1.11-rc.1
     depends_on:
       postgres:
         condition: service_healthy
@@ -502,10 +502,10 @@ services:
       META_GRPC_ENDPOINT: "meta:9560"
       GATEWAY_HTTP_ENDPOINT: "http://gateway:9500"
       PERMISSIONS_HTTP_ENDPOINT: "http://permissions:9580"
-      BZRK_INGEST_HOST: localhost
+      BZRK_INGEST_GRPC_HOST: localhost
       BZRK_INGEST_GRPC_PORT: "14317"
-      BZRK_INGEST_HTTP_PORT: "14318"
-      BZRK_INGEST_TLS: "false"
+      BZRK_INGEST_GRPC_TLS: "false"
+      BZRK_INGEST_HTTP_URL: "http://localhost:14318"
       BZRK_COLLECTOR_ENABLED: "false"
     # Image entrypoint migrates, then starts the HTTP server. Do not
     # override command with a yaml config path — that is not how this
@@ -524,7 +524,7 @@ services:
 
   permissions:
     <<: *common
-    image: images.bzrk.dev/release/permissions:v1.1.10-rc.6
+    image: images.bzrk.dev/release/permissions:v1.1.11-rc.1
     depends_on:
       postgres:
         condition: service_healthy
@@ -543,7 +543,7 @@ services:
 
   gateway:
     <<: *common
-    image: images.bzrk.dev/release/gateway:v1.1.10-rc.6
+    image: images.bzrk.dev/release/gateway:v1.1.11-rc.1
     depends_on:
       postgres:
         condition: service_healthy

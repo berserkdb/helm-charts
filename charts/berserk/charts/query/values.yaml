@@ -60,6 +60,10 @@ networkPolicy:
       ports: [{port: 9560}]
     - app: nursery
       ports: [{port: 9531}]
+    # Calls to remote sites, and the listing of a database's remote tables, go through this
+    # cluster's gateway (docs/dev/site-coordinator.md §6.3).
+    - app: gateway
+      ports: [{port: 9500}]
   additionalIngress:
     - from:
         - podSelector:
