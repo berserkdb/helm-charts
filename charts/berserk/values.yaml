@@ -553,7 +553,6 @@ janitor:
 
   config:
     metaEndpoint: "http://meta:9560"
-    queryEndpoint: "http://query:9510"
     # Janitor merge scratch dir. Point this at the pod-internal `cache`
     # volume above (/tmp/segment-cache), NEVER the container's system-wide
     # /tmp — janitor scratch is many GiB and /tmp is often a small tmpfs.

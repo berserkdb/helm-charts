@@ -1,4 +1,11 @@
-{{- if .Values.query.enabled }}
+{{- /*
+Runs a query the way a user does: signed in at the gateway, which forwards it to
+query with a token query trusts. Query refuses anything the gateway did not sign,
+so the test needs a credential, and the only one a fresh install has is the
+bootstrap admin. Without a bootstrap password there is no query test.
+*/ -}}
+{{- $bootstrap := .Values.gateway.bootstrap }}
+{{- if and .Values.query.enabled .Values.gateway.enabled $bootstrap.adminEmail (or $bootstrap.adminPassword $bootstrap.existingSecret.name) }}
 apiVersion: v1
 kind: Pod
 metadata:
@@ -20,31 +27,57 @@ spec:
       image: busybox:1.37
       securityContext:
         allowPrivilegeEscalation: false
+      env:
+        - name: ADMIN_EMAIL
+          value: {{ $bootstrap.adminEmail | quote }}
+        - name: ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ $bootstrap.existingSecret.name | default "gateway-bootstrap-admin" }}
+              key: {{ $bootstrap.existingSecret.key | default "bootstrap_admin_password" }}
       command: ["/bin/sh", "-c"]
       args:
         - |
           set -e
-          QUERY_ENDPOINT="http://query:{{ .Values.query.service.port }}"
+          GATEWAY="http://gateway:{{ .Values.gateway.service.port }}"
 
-          echo "Waiting for query service to be ready..."
-          until wget -q --spider "${QUERY_ENDPOINT}/health/ready" 2>/dev/null; do
-            echo "Query not ready yet, retrying in 3s..."
+          echo "Waiting for the gateway to be ready..."
+          until wget -q --spider "${GATEWAY}/health/ready" 2>/dev/null; do
+            echo "Gateway not ready yet, retrying in 3s..."
             sleep 3
           done
 
-          echo "Running: default | take 1"
-          # `database` is the gRPC-style `DatabaseRef` oneof, accepted
-          # as `{"name": "..."}` or `{"id": "<uuid>"}`. The setup-job
-          # creates the `default` table under the `default` database,
-          # which is what we resolve against here.
-          RESPONSE=$(wget -qO- \
+          json_string() { printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'; }
+          # A file, not --post-data, keeps the password out of the process list.
+          printf '{"email": "%s", "password": "%s"}' \
+            "$(json_string "$ADMIN_EMAIL")" "$(json_string "$ADMIN_PASSWORD")" > /tmp/login.json
+
+          echo "Signing in as ${ADMIN_EMAIL}..."
+          LOGIN_STATUS=0
+          LOGIN=$(wget -S -O /dev/null \
             --header="Content-Type: application/json" \
-            --post-data='{"query": "default | take 1", "since": "1h ago", "database": {"name": "default"}}' \
-            "${QUERY_ENDPOINT}/query")
+            --post-file=/tmp/login.json \
+            "${GATEWAY}/auth/login" 2>&1) || LOGIN_STATUS=$?
+          rm /tmp/login.json
+          if [ "${LOGIN_STATUS}" -ne 0 ]; then
+            echo "FAILED: the bootstrap admin could not sign in at the gateway"
+            echo "${LOGIN}" | grep "HTTP/" || true
+            exit 1
+          fi
+          SESSION=$(echo "${LOGIN}" | sed -n 's/^ *[Ss]et-[Cc]ookie: *\([^;]*\).*/\1/p' | head -n 1)
+          if [ -z "${SESSION}" ]; then
+            echo "FAILED: the gateway signed the admin in but set no session cookie"
+            exit 1
+          fi
+
+          echo "Running through the gateway: {{ .Values.global.defaultTable }} | take 1"
+          RESPONSE=$(wget -qO- \
+            --header="Cookie: ${SESSION}" \
+            --header="Content-Type: application/json" \
+            --post-data='{"db": "{{ .Values.global.defaultDatabase | default "default" }}", "csl": "{{ .Values.global.defaultTable }} | take 1"}' \
+            "${GATEWAY}/v1/rest/query")
 
           echo "Response: ${RESPONSE}"
-
-          # Verify we got a Tables array back (successful query response)
           echo "${RESPONSE}" | grep -q '"Tables"'
-          echo "PASSED: query returned a valid response with Tables"
+          echo "PASSED: a query through the gateway returned Tables"
 {{- end }}

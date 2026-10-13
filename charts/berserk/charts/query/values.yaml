@@ -33,27 +33,28 @@ qws:
   # the query container's cgroup, no separate cap to misconfigure).
   port: 9520
 
-# NetworkPolicy: UI and janitor connect; external clients query directly.
+# NetworkPolicy: query answers only what the gateway signed
+# (docs/dev/gateway-signed-requests.md), so its API port admits the gateway and
+# the UI, which forwards the gateway's token, and no one else. The query pods
+# also reach each other's map-reduce state cache on that port.
 # `additionalIngress` adds cross-pod ingress on the QWS sibling port so
 # QCs in one pod can dial QWS siblings in other pods after discovering
-# them through the cluster registry. `additionalEgress` mirrors the
-# rule for the egress direction and adds query→nursery for the
-# `NurseryQueryService` fan-out.
+# them through the cluster registry. `additionalEgress` mirrors both
+# rules for the egress direction.
 #
-# nursery and janitor reach the same port for a different reason: after
+# nursery and janitor reach the QWS port for a different reason: after
 # producing a merged segment they push it into the cache of the query node
 # that owns it, so the first query finds it resident instead of cold-fetching
 # from object storage (`libs/cache_seeder`). They discover that owner through
 # the same cluster registry, so they dial the same pod IP and port a peer QC
 # would.
 networkPolicy:
-  allowExternal: true
   allowExternalEgress: true
 
   ingressFrom:
-    - app: ui
+    - app: gateway
       ports: [{port: 9510}]
-    - app: janitor
+    - app: ui
       ports: [{port: 9510}]
   egressTo:
     - app: meta
@@ -78,6 +79,13 @@ networkPolicy:
       ports:
         - port: 9520
           protocol: TCP
+    - from:
+        - podSelector:
+            matchLabels:
+              app: query
+      ports:
+        - port: 9510
+          protocol: TCP
   additionalEgress:
     - to:
         - podSelector:
@@ -85,6 +93,8 @@ networkPolicy:
               app: query
       ports:
         - port: 9520
+          protocol: TCP
+        - port: 9510
           protocol: TCP
 
 cache:

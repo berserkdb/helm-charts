@@ -125,11 +125,15 @@ ui:
 # helm-integration smoke install exercises the production shape (ui
 # behind gateway, OIDC-disabled / password-only). The chart mints the
 # master key itself (`global.masterKey.managed: true`) and every internal
-# key derives from it; OIDC stays off so we don't need a real IdP, and the bootstrap
-# admin block stays empty (the smoke install never actually authenticates
-# — it just checks the pods come up Ready).
+# key derives from it; OIDC stays off so we don't need a real IdP. The bootstrap
+# admin is what `helm test` signs in as to run its query through the gateway;
+# the workflow mints its password into `ci-bootstrap-admin` before install.
 gateway:
   enabled: true
+  bootstrap:
+    adminEmail: "ci-admin@example.com"
+    existingSecret:
+      name: "ci-bootstrap-admin"
   resources:
     requests:
       memory: "64Mi"

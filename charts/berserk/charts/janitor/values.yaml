@@ -53,8 +53,6 @@ networkPolicy:
   egressTo:
     - app: meta
       ports: [{ port: 9560 }]
-    - app: query
-      ports: [{ port: 9510 }]
     # Merge-side cache seeding: after producing a merged segment, push it to
     # the query node that owns it so the first query finds it resident
     # (`libs/cache_seeder`). Same port a peer QC dials.
@@ -81,7 +79,6 @@ cache:
 
 config:
   metaEndpoint: "http://meta:9560"
-  queryEndpoint: "http://query:9510"
   # Idle re-poll cadence; a cycle drains the queue back-to-back, so a backlog
   # clears at merge-speed regardless. Umbrella mirrors this.
   mergerIntervalSeconds: 10
@@ -96,11 +93,6 @@ config:
   # the vector-index budget. More threads finish a merge sooner but raise per-pod CPU, which
   # the CPU HPA (autoscaling.targetCPUAverageValue) scales on.
   vidxEmbedThreads: null
-  # Recurring KQL queries fired at the query service to produce a synthetic
-  # liveness signal for the read path. Off by default. Each entry takes name,
-  # query, since, interval_seconds and optionally database; unknown keys are
-  # rejected, so a misspelled one fails janitor startup.
-  probeJobs: []
   # Merge scratch dir. Janitor builds multi-GiB transient files here during
   # cloud-segment merges, so this MUST be the large pod-internal `cache`
   # volume (emptyDir mounted at /tmp/segment-cache) — NOT the container's

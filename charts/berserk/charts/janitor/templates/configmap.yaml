@@ -3,7 +3,6 @@ data:
   config.yaml: |
     bind: "0.0.0.0:9502"
     meta_endpoint: {{ .Values.config.metaEndpoint | quote }}
-    query_endpoint: {{ .Values.config.queryEndpoint | quote }}
     cloud_storage_access_key: ${JANITOR_STORAGE_ACCESS_KEY:}
     cloud_storage_secret_key: ${JANITOR_STORAGE_SECRET_KEY:}
     cache_dir: {{ .Values.config.cacheDir | quote }}
@@ -27,11 +26,5 @@ data:
     target_tables: []
     {{- end }}
     {{- include "berserk-common.observability-config" . | nindent 4 }}
-    {{- if .Values.config.probeJobs }}
-    probe_jobs:
-      {{- toYaml .Values.config.probeJobs | nindent 6 }}
-    {{- else }}
-    probe_jobs: []
-    {{- end }}
 {{- end }}
 {{- include "berserk-common.configmap" . }}

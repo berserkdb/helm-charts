@@ -69,9 +69,7 @@ spec:
           expect_allowed "ingest:{{ .Values.ingest.service.ports.health }}" "http://ingest:{{ .Values.ingest.service.ports.health }}/health/live"
           {{- end }}
           {{- if .Values.query.enabled }}
-          # query still sets allowExternal:true for the customer validation probe;
-          # planned to move behind the gateway, after which this becomes expect_blocked.
-          expect_allowed "query:{{ .Values.query.service.port }}" "http://query:{{ .Values.query.service.port }}/health/live"
+          expect_blocked "query:{{ .Values.query.service.port }}" "http://query:{{ .Values.query.service.port }}/health/live"
           {{- end }}
           {{- if .Values.meta.enabled }}
           expect_blocked "meta:{{ .Values.meta.service.port }}" "http://meta:{{ .Values.meta.service.port }}/health/live"
