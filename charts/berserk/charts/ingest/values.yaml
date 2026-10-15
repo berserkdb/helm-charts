@@ -145,8 +145,9 @@ config:
   # maxConcurrentRequests: 10000
   # maxTotalInflightBytes: 1073741824
 
-  # Authentication
-  requireAuth: false                # Reject requests without Bearer token
+  # Refuse requests that present no ingest token. With false they go on as
+  # anonymous, which meta accepts only with `global.ingestToken.enabled`.
+  requireAuth: true
   laxUtf8: true                     # Replace invalid UTF-8 with U+FFFD instead of rejecting
 
   # Loki push API receiver. When enabled, ingest binds an additional listener
@@ -159,10 +160,6 @@ config:
   # Vector's `datadog_*` sinks, on `service.ports.datadog`.
   # Clients send the ingest token as their API key (`DD-API-KEY`).
   datadogEnabled: false
-
-  # Per-release override of `global.ingestToken.enabled`: a value set here
-  # wins, even `false`.
-  ingestToken: {}
 
   observability:
     serviceName: "ingest"

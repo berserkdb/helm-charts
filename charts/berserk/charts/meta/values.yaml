@@ -18,6 +18,10 @@ resources:
   limits:
     memory: "256Mi"
 
+# Extra env vars — escape hatch for env we don't (yet) have first-class chart
+# support for.
+extraEnv: []
+
 # NetworkPolicy: all other Berserk services connect to meta
 networkPolicy:
   allowExternal: false

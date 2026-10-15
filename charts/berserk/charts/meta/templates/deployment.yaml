@@ -40,6 +40,9 @@
               value: {{ .Values.global.defaultDatabase | default "default" | quote }}
             - name: META_DEFAULT_TABLE
               value: {{ .Values.global.defaultTable | default "default" | quote }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           livenessProbe:

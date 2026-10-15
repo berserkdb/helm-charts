@@ -80,6 +80,9 @@ query:
 
 ingest:
   image: { pullPolicy: Never, repository: "ingest-dev" }
+  # Self-telemetry arrives without a token, into the default token above.
+  config:
+    requireAuth: false
   resources:
     requests: { memory: "128Mi", cpu: "100m" }
     limits: { memory: "512Mi", cpu: "500m" }

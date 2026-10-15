@@ -210,14 +210,15 @@ global:
     # base64 and alphanumeric all work as given — so lower it, to 24 at the
     # lowest, only when your generator caps below 32.
     minLength: 32
-  # The default ingest token is derived from the master key: meta registers
-  # it at startup (one row per configured key, named `<tokenName>-<key id>`,
-  # routed to `defaultDatabase`/`defaultTable`) and ingest presents it for
-  # in-cluster requests that carry no bearer. It never leaves the cluster;
-  # every other sender mints its own token. Set `enabled: false` on an
-  # endpoint that must refuse anonymous data; meta then retires the rows.
+  # Anonymous ingest: with `enabled: true`, meta answers a sender that
+  # presents no token with the default token, which it derives from the master
+  # key and registers at startup (one row per configured key, named
+  # `<tokenName>-<key id>`, routed to `defaultDatabase`/`defaultTable`). Ingest
+  # sends such requests on only with `ingest.config.requireAuth: false`. Off by
+  # default: every sender presents its own token, and with `enabled: false`
+  # meta retires the rows.
   ingestToken:
-    enabled: true
+    enabled: false
     tokenName: "default_ingest_token"
   # Observability configuration (OTLP telemetry)
   observability:
@@ -481,7 +482,9 @@ ingest:
       maxBatchBytes: 16777216
       maxBatchAgeSecs: 2
       keepAliveIntervalSecs: 120
-    requireAuth: false
+    # Refuse requests that present no token. With false they go on as
+    # anonymous, which meta accepts only with `global.ingestToken.enabled`.
+    requireAuth: true
     laxUtf8: true
     lokiEnabled: true
     observability:

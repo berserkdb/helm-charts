@@ -49,9 +49,6 @@
             {{- include "berserk-common.env.cluster-name" . | nindent 12 }}
             {{- include "berserk-common.env.node-id" . | nindent 12 }}
             {{- include "berserk-common.env.s3-credentials" (dict "accessKeyEnv" "AWS_ACCESS_KEY_ID" "secretKeyEnv" "AWS_SECRET_ACCESS_KEY" "Values" .Values) | nindent 12 }}
-            {{- include "berserk-common.env.master-key" . | nindent 12 }}
-            - name: DEFAULT_INGEST_TOKEN_ENABLED
-              value: {{ include "ingest.tokenEnabled" . | trim | quote }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           livenessProbe:

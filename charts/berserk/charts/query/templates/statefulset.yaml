@@ -124,6 +124,7 @@ spec:
                   key: {{ .Values.config.usageReportTokenSecretKey }}
                   optional: true
             {{- end }}
+            {{- include "berserk-common.env.master-key" . | nindent 12 }}
             {{- include "berserk-common.env.s3-pool" . | nindent 12 }}
             - name: _RJEM_MALLOC_CONF
               value: "prof:true,prof_active:true,lg_prof_sample:19"

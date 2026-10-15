@@ -16,10 +16,9 @@ To access the UI:
 
 {{- if .Values.global.ingestToken.enabled }}
 
-Data sent from inside the cluster without a bearer lands in the "{{ .Values.global.defaultTable }}"
-table under the default ingest token, which meta derives from the master key and
-registers at startup. That token never leaves the cluster; set
-`global.ingestToken.enabled=false` on an endpoint that must refuse anonymous data.
+Anonymous ingest is on: data sent without a token lands in the "{{ .Values.global.defaultTable }}"
+table, wherever ingest lets such senders through (`ingest.config.requireAuth=false`).
+Set `global.ingestToken.enabled=false` to refuse anonymous data.
 {{- end }}
 
 Every other sender gets its own token. To create one for the "{{ .Values.global.defaultTable }}" table:

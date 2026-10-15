@@ -50,6 +50,10 @@ spec:
           imagePullPolicy: {{ .Values.global.imagePullPolicy | default "Always" }}
           securityContext:
             allowPrivilegeEscalation: false
+          env:
+            {{- /* The job runs inside the cluster and calls meta directly, so it presents the
+                  cluster token, which the CLI derives from the master key. */}}
+            {{- include "berserk-common.env.master-key" . | nindent 12 }}
           command: ["/bin/sh", "-c"]
           args:
             - |

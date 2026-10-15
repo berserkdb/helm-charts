@@ -73,6 +73,9 @@ query:
       cpu: "500m"
 
 ingest:
+  # Self-telemetry arrives without a token, into the default token above.
+  config:
+    requireAuth: false
   resources:
     requests:
       memory: "128Mi"

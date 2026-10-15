@@ -50,9 +50,10 @@ x-logging: &logging
     max-file: "5"
 
 # One master key for the stack. The gateway's cookie key, the service-to-service
-# tokens, the ui's secret_key_base, the default ingest token and the key that
-# wraps the ui's data key all derive from it (docs/dev/master-key.md), so every
-# service below gets the same value. Localhost placeholder: in production
+# tokens (the cluster token every service presents to the others among them),
+# the ui's secret_key_base, the default ingest token and the key that wraps the
+# ui's data key all derive from it (docs/dev/master-key.md), so every service
+# below gets the same value. Localhost placeholder: in production
 # generate one (`openssl rand -base64 32`), at least 32 bytes, and treat it as
 # a secret. Changing it logs every user out; rotating it is a two-key swap.
 x-master-key: &master-key "local-dev-master-key-0123456789abcdef0123456789abcdef"
@@ -318,7 +319,7 @@ services:
 
   meta:
     <<: *common
-    image: images.bzrk.dev/release/meta:v1.1.12-rc.3
+    image: images.bzrk.dev/release/meta:v1.1.12-rc.4
     depends_on:
       postgres:
         condition: service_healthy
@@ -327,8 +328,10 @@ services:
       POD_IP: meta
       META_DATABASE_URL: "postgres://berserk:berserk@postgres:5432/berserk"
       # Registers the default ingest token (derived from the key) and creates
-      # the `default` table on first boot; ingest derives the same token.
+      # the `default` table on first boot.
       BZRK_MASTER_KEY: *master-key
+      # Anonymous ingest: meta answers a sender with no token with that token.
+      META_DEFAULT_INGEST_TOKEN_ENABLED: "true"
     command: ["-c", "/config/config.yaml"]
     ports:
       - "127.0.0.1:9560:9560"
@@ -345,7 +348,7 @@ services:
 
   query:
     <<: *common
-    image: images.bzrk.dev/release/query:v1.1.12-rc.3
+    image: images.bzrk.dev/release/query:v1.1.12-rc.4
     depends_on:
       meta:
         condition: service_healthy
@@ -356,6 +359,7 @@ services:
     environment:
       <<: *common-env
       POD_IP: query
+      BZRK_MASTER_KEY: *master-key
       AWS_ACCESS_KEY_ID: minioadmin
       AWS_SECRET_ACCESS_KEY: minioadmin
       # The forked qws worker inherits this env and reads segments itself, so
@@ -381,13 +385,13 @@ services:
       start_period: 10s
       retries: 10
 
-  # Pushes without a bearer token land in the `default` table through the
-  # default ingest token, which meta registers at boot and ingest derives
-  # from the same master key (`require_auth: false` above keeps that path
-  # open). Senders with a token of their own are routed by that token.
+  # Pushes without a bearer token land in the `default` table: ingest sends
+  # them on as anonymous (`require_auth: false` above), and meta answers with
+  # its default ingest token. Senders with a token of their own are routed by
+  # that token.
   ingest:
     <<: *common
-    image: images.bzrk.dev/release/ingest:v1.1.12-rc.3
+    image: images.bzrk.dev/release/ingest:v1.1.12-rc.4
     depends_on:
       meta:
         condition: service_healthy
@@ -401,6 +405,8 @@ services:
       POD_IP: ingest
       AWS_ACCESS_KEY_ID: minioadmin
       AWS_SECRET_ACCESS_KEY: minioadmin
+      # Only the pinned image reads these, deriving the default token itself.
+      # From 1.1.12 ingest holds no key; drop both with the image bump.
       BZRK_MASTER_KEY: *master-key
       DEFAULT_INGEST_TOKEN_ENABLED: "true"
     ports:
@@ -420,7 +426,7 @@ services:
 
   janitor:
     <<: *common
-    image: images.bzrk.dev/release/janitor:v1.1.12-rc.3
+    image: images.bzrk.dev/release/janitor:v1.1.12-rc.4
     depends_on:
       meta:
         condition: service_healthy
@@ -433,6 +439,7 @@ services:
     environment:
       <<: *common-env
       POD_IP: janitor
+      BZRK_MASTER_KEY: *master-key
       JANITOR_STORAGE_ACCESS_KEY: minioadmin
       JANITOR_STORAGE_SECRET_KEY: minioadmin
     command: ["-c", "/config/config.yaml"]
@@ -451,7 +458,7 @@ services:
 
   nursery:
     <<: *common
-    image: images.bzrk.dev/release/nursery:v1.1.12-rc.3
+    image: images.bzrk.dev/release/nursery:v1.1.12-rc.4
     depends_on:
       meta:
         condition: service_healthy
@@ -462,6 +469,7 @@ services:
     environment:
       <<: *common-env
       POD_IP: nursery
+      BZRK_MASTER_KEY: *master-key
       NURSERY_STORAGE_ACCESS_KEY: minioadmin
       NURSERY_STORAGE_SECRET_KEY: minioadmin
     command: ["-c", "/config/config.yaml"]
@@ -480,7 +488,7 @@ services:
 
   ui:
     <<: *common
-    image: images.bzrk.dev/release/ui:v1.1.12-rc.3
+    image: images.bzrk.dev/release/ui:v1.1.12-rc.4
     depends_on:
       postgres:
         condition: service_healthy
@@ -526,7 +534,7 @@ services:
 
   permissions:
     <<: *common
-    image: images.bzrk.dev/release/permissions:v1.1.12-rc.3
+    image: images.bzrk.dev/release/permissions:v1.1.12-rc.4
     depends_on:
       postgres:
         condition: service_healthy
@@ -545,7 +553,7 @@ services:
 
   gateway:
     <<: *common
-    image: images.bzrk.dev/release/gateway:v1.1.12-rc.3
+    image: images.bzrk.dev/release/gateway:v1.1.12-rc.4
     depends_on:
       postgres:
         condition: service_healthy
