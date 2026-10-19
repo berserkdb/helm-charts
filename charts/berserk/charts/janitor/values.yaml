@@ -98,6 +98,12 @@ config:
   # volume (emptyDir mounted at /tmp/segment-cache) — NOT the container's
   # system-wide /tmp, which is often a small tmpfs that would fill instantly.
   cacheDir: "/tmp/segment-cache"
+  # Every row a merge writes is walked before it is kept, and every row of its
+  # output again when the output is verified: each value, each length and each
+  # field-index entry. A malformed row fails the merge rather than being
+  # stored. false emits BZRK_ROW_STRUCTURE_CHECK_DISABLED; turn it off only if
+  # the check costs more merge time than the cluster can spare.
+  rowStructureCheck: true
   observability:
     serviceName: "janitor"
     logLevel: "info"

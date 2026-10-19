@@ -36,6 +36,10 @@ the gateway logs and open it in a browser:
   kubectl -n {{ .Release.Namespace }} logs deploy/gateway | grep -A2 "Initial admin setup"
 {{- end }}
 
+Query, nursery and janitor keep unencrypted copies of your telemetry on local
+disk. Encrypt those volumes (encrypted storageClass, node disks or dm-crypt);
+Berserk does not encrypt them itself.
+
 Check pod status:
   kubectl get pods -n {{ .Release.Namespace }}
 

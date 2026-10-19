@@ -139,8 +139,6 @@ config:
     baseUrl: "http://permissions:9580"
     requestTimeoutSecs: 10
     connectTimeoutSecs: 2
-  # Deployment mode: "self_hosted" (default) or "saas".
-  deploymentMode: "self_hosted"
   # Set the `Secure` flag on session/auth cookies. Default true; flip
   # to false only for plain-HTTP localhost development.
   cookieSecure: true
@@ -173,7 +171,7 @@ config:
   # `secrets.oidcClientSecret.existingSecret.{name,key}`.
   #
   # `bootstrapAdminEmails` is required for OIDC-only deployments
-  # (`deployment_mode: saas`, or `bootstrap.disabled: true`): without
+  # (`bootstrap.disabled: true`): without
   # at least one entry the first user can sign in but no one has the
   # `AdminManageInvites` permission, leaving the admin surfaces
   # locked. See docs/operations/admin/ui-setup → Path C.

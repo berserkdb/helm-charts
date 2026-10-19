@@ -209,7 +209,6 @@ configs:
       cookie_secure: false
       upstream_base_url: "http://ui:9570"
       permissions_base_url: "http://permissions:9580"
-      deployment_mode: self_hosted
       # The gateway registers its signing key here; query answers only what it signed.
       meta_endpoint: "http://meta:9560"
       grpc_routes: '[{"package_prefix":"meta","upstream":"http://meta:9560"},{"package_prefix":"query","upstream":"http://query:9510"},{"package_prefix":"opentelemetry","upstream":"http://ingest:4317"}]'
@@ -319,7 +318,7 @@ services:
 
   meta:
     <<: *common
-    image: images.bzrk.dev/release/meta:v1.1.12-rc.4
+    image: images.bzrk.dev/release/meta:v1.1.13-rc.1
     depends_on:
       postgres:
         condition: service_healthy
@@ -348,7 +347,7 @@ services:
 
   query:
     <<: *common
-    image: images.bzrk.dev/release/query:v1.1.12-rc.4
+    image: images.bzrk.dev/release/query:v1.1.13-rc.1
     depends_on:
       meta:
         condition: service_healthy
@@ -391,7 +390,7 @@ services:
   # that token.
   ingest:
     <<: *common
-    image: images.bzrk.dev/release/ingest:v1.1.12-rc.4
+    image: images.bzrk.dev/release/ingest:v1.1.13-rc.1
     depends_on:
       meta:
         condition: service_healthy
@@ -405,9 +404,9 @@ services:
       POD_IP: ingest
       AWS_ACCESS_KEY_ID: minioadmin
       AWS_SECRET_ACCESS_KEY: minioadmin
-      # Only the pinned image reads these, deriving the default token itself.
-      # From 1.1.12 ingest holds no key; drop both with the image bump.
       BZRK_MASTER_KEY: *master-key
+      # Only the pinned image reads this, deriving the default token itself.
+      # Drop it with the bump past 1.1.11.
       DEFAULT_INGEST_TOKEN_ENABLED: "true"
     ports:
       - "127.0.0.1:14317:4317"   # OTLP gRPC
@@ -426,7 +425,7 @@ services:
 
   janitor:
     <<: *common
-    image: images.bzrk.dev/release/janitor:v1.1.12-rc.4
+    image: images.bzrk.dev/release/janitor:v1.1.13-rc.1
     depends_on:
       meta:
         condition: service_healthy
@@ -458,7 +457,7 @@ services:
 
   nursery:
     <<: *common
-    image: images.bzrk.dev/release/nursery:v1.1.12-rc.4
+    image: images.bzrk.dev/release/nursery:v1.1.13-rc.1
     depends_on:
       meta:
         condition: service_healthy
@@ -488,7 +487,7 @@ services:
 
   ui:
     <<: *common
-    image: images.bzrk.dev/release/ui:v1.1.12-rc.4
+    image: images.bzrk.dev/release/ui:v1.1.13-rc.1
     depends_on:
       postgres:
         condition: service_healthy
@@ -534,7 +533,7 @@ services:
 
   permissions:
     <<: *common
-    image: images.bzrk.dev/release/permissions:v1.1.12-rc.4
+    image: images.bzrk.dev/release/permissions:v1.1.13-rc.1
     depends_on:
       postgres:
         condition: service_healthy
@@ -553,7 +552,7 @@ services:
 
   gateway:
     <<: *common
-    image: images.bzrk.dev/release/gateway:v1.1.12-rc.4
+    image: images.bzrk.dev/release/gateway:v1.1.13-rc.1
     depends_on:
       postgres:
         condition: service_healthy

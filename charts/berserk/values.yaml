@@ -419,7 +419,8 @@ query:
     type: ClusterIP
     port: 9510
 
-  # Segment cache configuration
+  # Segment cache configuration. Holds unencrypted copies of S3 data: put it
+  # on an encrypted disk (encrypted storageClass, node disk or dm-crypt).
   cache:
     enabled: true
     size: "128Gi"
@@ -552,6 +553,8 @@ janitor:
     # the query segment-cache PVC, and on the tightest node 4 × 30Gi fits well
     # inside free space. (Orphans from SIGKILLed merges are reclaimed at startup,
     # see janitor `reclaim_scratch`, so this need only cover one live merge.)
+    #
+    # Holds unencrypted telemetry: put it on an encrypted node disk.
     size: "30Gi"
 
   config:
@@ -674,7 +677,6 @@ gateway:
     # needed in normal installs.
     permissions:
       baseUrl: "http://permissions:9580"
-    deploymentMode: "self_hosted"
     cookieSecure: true
     observability:
       serviceName: "gateway"
@@ -764,7 +766,8 @@ nursery:
     limits:
       memory: "4Gi"
 
-  # Working-dir PVC size (baby segments + disk-resident node identity)
+  # Working-dir PVC size (baby segments + disk-resident node identity).
+  # Holds unencrypted telemetry: put it on an encrypted node disk.
   workingDir:
     size: "50Gi"
 

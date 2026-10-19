@@ -49,7 +49,6 @@ ingest:
 # The gateway is the service that handles User authn.
 gateway:
   config:
-    deploymentMode: "self-hosted"
     oidc:
       enabled: true
       issuer: "<IDP-provier-URL>"

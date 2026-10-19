@@ -28,7 +28,6 @@ data:
     permissions_base_url: {{ .Values.config.permissions.baseUrl | quote }}
     permissions_request_timeout_secs: {{ .Values.config.permissions.requestTimeoutSecs }}
     permissions_connect_timeout_secs: {{ .Values.config.permissions.connectTimeoutSecs }}
-    deployment_mode: {{ .Values.config.deploymentMode | quote }}
     cookie_secure: {{ .Values.config.cookieSecure }}
     {{- if not .Values.config.autoProvisionUsers }}
     # Directory mode: assertion-based methods (OIDC, trusted-proxy)

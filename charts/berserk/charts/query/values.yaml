@@ -104,6 +104,8 @@ cache:
   # The single cache-disk budget: the size of the /segment_cache volume
   # (PVC or emptyDir). The query service derives the segment-cache and
   # map-reduce-state-cache ceilings from this via the percentages below.
+  # Holds unencrypted copies of S3 data: use an encrypted storageClass, or an
+  # encrypted node disk / dm-crypt device for emptyDir and hostPath.
   size: "128Gi"
   storageClass: ""
   # hostPath: set to a path (e.g. /mnt/nvme) to use a local NVMe mount instead of emptyDir.
@@ -199,6 +201,10 @@ config:
   # verified against meta's record when the segment is opened, and merge,
   # rewrite and `segdump` keep hashing every chunk.
   audtVerify: true
+  # Every row the query service writes (datatable segments) is walked before it
+  # is kept: each value, each length and each field-index entry. false emits
+  # BZRK_ROW_STRUCTURE_CHECK_DISABLED, which forked children inherit.
+  rowStructureCheck: true
   observability:
     serviceName: "query"
     logLevel: "info"

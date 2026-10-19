@@ -165,6 +165,11 @@ spec:
             - name: BZRK_AUDT_VERIFY_DISABLED
               value: "1"
             {{- end }}
+            {{- /* Cluster opt-out for the structure check of every row written. */ -}}
+            {{- if and (hasKey .Values.config "rowStructureCheck") (not .Values.config.rowStructureCheck) }}
+            - name: BZRK_ROW_STRUCTURE_CHECK_DISABLED
+              value: "1"
+            {{- end }}
             {{- /* Honour the `x-bzrk-test-now` request-metadata header, letting a
                   caller override the query's `now()` for one query (reproducible
                   historical replay by the agent eval harness). Off by default;

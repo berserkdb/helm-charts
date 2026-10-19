@@ -101,6 +101,13 @@ config:
   # remains. Merges are unaffected — the switch only reaches readers serving
   # queries.
   audtVerify: true
+  # Every row the nursery writes, at ingest and in its merges, is walked before
+  # it is kept, and every row of a merge's or combine's output again when the
+  # output is verified: each value, each length and each field-index entry. A
+  # malformed row is refused rather than stored. false emits
+  # BZRK_ROW_STRUCTURE_CHECK_DISABLED; turn it off only if the check costs more
+  # merge time than the cluster can spare.
+  rowStructureCheck: true
   observability:
     serviceName: "nursery"
     logLevel: "info"

@@ -50,6 +50,12 @@
             - name: BZRK_AUDT_VERIFY_DISABLED
               value: "1"
             {{- end }}
+            {{- /* Cluster opt-out for the structure check of every row written
+                  and of every row a merge or combine verifies. */ -}}
+            {{- if and (hasKey .Values.config "rowStructureCheck") (not .Values.config.rowStructureCheck) }}
+            - name: BZRK_ROW_STRUCTURE_CHECK_DISABLED
+              value: "1"
+            {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           livenessProbe:

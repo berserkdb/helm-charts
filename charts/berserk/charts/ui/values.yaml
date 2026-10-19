@@ -268,11 +268,11 @@ collector:
   # fleet goes in `staticTargets`, which this mode merges in.
   discovery: ""
   # App labels that MUST appear among discovered members when the registry is
-  # consulted (the default `meta`, or `union`). A missing one makes discovery
-  # report an error, so the collector keeps its previously known targets rather
-  # than under-reporting.
+  # consulted (the default `meta`, or `union`). A missing one keeps the targets
+  # the collector last knew for that service, which then show as stale rather
+  # than vanishing; every other service is taken as registered.
   # Empty by default: an install that disables a service or scales it to zero
-  # would otherwise pin its target list stale forever.
+  # would otherwise keep scraping its last pods forever.
   requiredServices: []
   # - meta
   # - query

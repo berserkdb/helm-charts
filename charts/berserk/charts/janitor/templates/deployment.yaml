@@ -25,6 +25,12 @@
             {{- include "berserk-common.env.s3-pool" . | nindent 12 }}
             {{- include "berserk-common.env.cluster-name" . | nindent 12 }}
             {{- include "berserk-common.env.s3-credentials" (dict "accessKeyEnv" "JANITOR_STORAGE_ACCESS_KEY" "secretKeyEnv" "JANITOR_STORAGE_SECRET_KEY" "Values" .Values) | nindent 12 }}
+            {{- /* Cluster opt-out for the structure check of every row a merge
+                  writes and verifies. */ -}}
+            {{- if and (hasKey .Values.config "rowStructureCheck") (not .Values.config.rowStructureCheck) }}
+            - name: BZRK_ROW_STRUCTURE_CHECK_DISABLED
+              value: "1"
+            {{- end }}
             {{- with .Values.extraEnv }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
