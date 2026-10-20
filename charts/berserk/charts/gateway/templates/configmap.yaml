@@ -47,8 +47,10 @@ data:
     grant_outbox_batch_size: {{ int .Values.config.grantOutboxBatchSize }}
     session_cleanup_interval_secs: {{ int .Values.config.sessionCleanupIntervalSecs }}
     {{- if .Values.config.oidc.enabled }}
-    # OIDC IdP — single operator-configured provider. `client_secret`
-    # itself does NOT come from this file; it's wired as the
+    # Compatibility only: single sign-on settings an install configured here
+    # before, imported into the gateway's database at the first start with
+    # none stored and not read again. `client_secret` does NOT come from
+    # this file; it's wired as the
     # `GATEWAY_OIDC_CLIENT_SECRET` env var from
     # `secrets.oidcClientSecret.existingSecret.{name,key}` so the
     # value never lands in a checked-in YAML.

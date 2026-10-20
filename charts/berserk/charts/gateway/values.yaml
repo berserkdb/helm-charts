@@ -164,17 +164,14 @@ config:
     logLevel: "info,gateway=debug"
     # otlpEnabled / otlpEndpoint fall through to global.observability.*
 
-  # OIDC IdP — single operator-configured provider. Leave the block
-  # `enabled: false` (default) for password-only deployments. When
-  # enabled, the chart emits the `oidc_*` keys into config.yaml AND
-  # wires `GATEWAY_OIDC_CLIENT_SECRET` from
-  # `secrets.oidcClientSecret.existingSecret.{name,key}`.
-  #
-  # `bootstrapAdminEmails` is required for OIDC-only deployments
-  # (`bootstrap.disabled: true`): without
-  # at least one entry the first user can sign in but no one has the
-  # `AdminManageInvites` permission, leaving the admin surfaces
-  # locked. See docs/operations/admin/ui-setup → Path C.
+  # Compatibility only; do not set this on a new install. Single sign-on
+  # is configured by a cluster admin on the Single sign-on settings page,
+  # and the gateway keeps the settings, with the client secret sealed under
+  # the master key, in its database. An install that configured SSO here
+  # before keeps working: at the gateway's first start with no settings
+  # stored, it imports this block (switched on) and never reads it again.
+  # The block and `secrets.oidcClientSecret` go once every install has
+  # started on a release that imports.
   oidc:
     enabled: false
     issuer: ""
@@ -184,10 +181,8 @@ config:
     # extras like `offline_access` or `groups`.
     scopes: []
     requireEmailVerified: true
-    # YAML list of email addresses to auto-promote to cluster admin
-    # on first OIDC sign-in. Lower-cased + validated at gateway
-    # startup. Empty (default) = nobody gets auto-admin; existing
-    # admins keep whatever was granted via `permission_tuples`.
+    # YAML list of email addresses made cluster admin when their account
+    # is created, by SSO or by invite: the page's "Admin emails".
     bootstrapAdminEmails: []
 
   # Trusted reverse-proxy (PP) auth — trust identity headers from an
@@ -220,15 +215,13 @@ config:
     adminEmails: []
 
 # Secrets. The cookie key and every service token derive from the master
-# key (`global.masterKey`); only the OIDC client_secret is configured here.
+# key (`global.masterKey`). The one reference here is compatibility only.
 secrets:
-  # OIDC client_secret — referenced from a separate, externally-
-  # managed Secret (SealedSecret in dev/valhalla). When
-  # `config.oidc.enabled: true`, the deployment template wires
-  # `GATEWAY_OIDC_CLIENT_SECRET` from the named key on the named
-  # Secret. Must be at least 32 chars (gateway's config validator
-  # rejects shorter values to bound the leak surface of the
-  # `/admin/config` operator-view page).
+  # Compatibility only, with `config.oidc`: the client_secret an install
+  # configured here before, from a Secret you manage, wired as
+  # `GATEWAY_OIDC_CLIENT_SECRET` while `config.oidc.enabled`. Read once, at
+  # the import; afterwards it lives sealed in the gateway's database and the
+  # Secret can go. A new install enters the secret on the Single sign-on page.
   oidcClientSecret:
     existingSecret:
       name: ""

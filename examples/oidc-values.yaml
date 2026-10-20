@@ -1,4 +1,5 @@
-# An example, where have enabled OIDC and Traefik-based ingress
+# An example with Traefik-based ingress; single sign-on is set up on the
+# settings page afterwards, not in these values.
 global:
   clusterName: "prod-cluster" # Used in telemetry
   # Public URL of the install — inherited by gateway + admin-ui.
@@ -46,20 +47,15 @@ ingest:
         secretName: ingest-berserk-<your-domain>-tls
 
 # ─── Auth edge ────────────────────────────────────────────────────────
-# The gateway is the service that handles User authn.
+# The gateway is the service that signs users in. The first admin is a
+# local account: by default the gateway prints a one-time setup link at
+# its first start, or it creates the admin from `bootstrap` below. That
+# admin connects your identity provider on Settings → Single sign-on,
+# then adds SSO members by email or invites local ones on Settings →
+# Members.
 gateway:
-  config:
-    oidc:
-      enabled: true
-      issuer: "<IDP-provier-URL>"
-      clientId: "Your-client-id"
-      requireEmailVerified: false
-      bootstrapAdminEmails:
-        - user1@<your-domain>.com
-        - user2@<your-domain>.com
-        - user3@<your-domain>.com
-  secrets:
-    oidcClientSecret:
-      existingSecret:
-        name: gateway-oidc-secrets
-        key: client_secret
+  bootstrap:
+    adminEmail: "admin@<your-domain>.com"
+    adminGivenName: "Cluster"
+    adminFamilyName: "Admin"
+    # adminPassword: pass it with --set at install, so it stays out of the file.

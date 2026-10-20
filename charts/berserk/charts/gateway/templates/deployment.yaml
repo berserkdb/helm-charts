@@ -36,10 +36,11 @@
             # Cookie key and every service token derive from the master key.
             {{- include "berserk-common.env.master-key" . | nindent 12 }}
             {{- if .Values.config.oidc.enabled }}
-            # OIDC client_secret — referenced from an externally-
-            # managed (Sealed)Secret per `secrets.oidcClientSecret`.
-            # Gateway's config validator rejects values shorter than
-            # 32 chars to bound the leak surface of `/admin/config`.
+            # Compatibility only: the OIDC client_secret an install
+            # configured here before, from the Secret named by
+            # `secrets.oidcClientSecret`. Read once, at the import of
+            # `config.oidc`; afterwards it lives sealed in the gateway's
+            # database. At least 32 chars.
             - name: GATEWAY_OIDC_CLIENT_SECRET
               valueFrom:
                 secretKeyRef:
