@@ -27,8 +27,8 @@ service:
     # Grafana Agent compatibility. Receiver code lives in apps/ingest;
     # gated by `config.lokiEnabled` below.
     loki: 3100
-    # Datadog intake port (Agent / Vector `datadog_*` sinks); gated by
-    # `config.datadogEnabled`. See the "Datadog Agent & Vector" ingest docs.
+    # Datadog API port (Agent / Vector `datadog_*` sinks); gated by
+    # `config.datadogEnabled`. See docs/self-hosted/ingest → Datadog API.
     datadog: 9552
     # Health endpoint port. Lives on the Service alongside the OTLP ports
     # so allowExternal covers it (no additionalIngress hack needed) and

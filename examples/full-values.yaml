@@ -1,7 +1,7 @@
 # Full example values.yaml for a production Berserk deployment.
 # Adjust replica counts, resource limits, and cache sizes to match your workload.
 # These settings assume that secrets are managed externally and that S3 credentials are provided via environment variables or IRSA.
-# See http://docs.bzrk.dev/operations/deployment/#external-secrets
+# See https://docs.bzrk.dev/self-hosted/dependencies/
 global:
   storage:
     endpoint: "https://s3.example.com"

@@ -191,7 +191,7 @@ config:
   # Identity is trusted on network grounds alone (no cryptographic
   # verification), so the gateway must be unreachable except through the
   # proxy. When enabled, configure at least one extraction strategy below.
-  # See docs/operations/security/accounts → Trusted reverse proxy.
+  # See docs/security/accounts → Trusted reverse proxy.
   trustedProxy:
     enabled: false
     # Strategy 1 — direct email header (e.g. X-PP-USER) carrying a full
