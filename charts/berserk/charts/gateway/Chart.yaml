@@ -2,8 +2,8 @@ apiVersion: v2
 name: gateway
 description: Berserk authenticating reverse proxy (OIDC + bearer-token edge)
 type: application
-version: 1.1.13
-appVersion: 1.1.13
+version: 1.1.14
+appVersion: 1.1.14
 dependencies:
   - name: berserk-common
     version: "*"
