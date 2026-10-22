@@ -2,8 +2,8 @@ apiVersion: v2
 name: audit-shipper
 description: Berserk Audit Shipper - Copies the audit chain to an external, write-once archive
 type: application
-version: 1.1.13-rc.6
-appVersion: 1.1.13-rc.6
+version: 1.1.13
+appVersion: 1.1.13
 dependencies:
   - name: berserk-common
     version: "*"
