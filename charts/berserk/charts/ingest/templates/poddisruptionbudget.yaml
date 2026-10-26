@@ -1,0 +1,12 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "berserk-common.fullname" . }}
+  labels:
+    {{- include "berserk-common.labels" . | nindent 4 }}
+spec:
+  # A node drain takes one ingest pod at a time; with one replica it never blocks.
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      {{- include "berserk-common.selectorLabels" . | nindent 6 }}
