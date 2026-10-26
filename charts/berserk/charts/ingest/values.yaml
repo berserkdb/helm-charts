@@ -4,6 +4,14 @@ component: collector
 
 logLevel: "info"
 
+# A terminating pod leaves the Service's endpoints at once, but ingress
+# controllers and kube-proxy keep routing to it for a few more seconds. The
+# sleep keeps ingest serving those requests; SIGTERM and the drain come after.
+preStopSleepSeconds: 10
+# The preStop sleep, the drain of in-flight requests, and the router's 30s
+# shutdown timeout (SHUTDOWN_TIMEOUT_SECS) all fit inside it.
+terminationGracePeriodSeconds: 45
+
 image:
   repository: ingest
   tag: ""
@@ -123,8 +131,9 @@ config:
   # charts/values-<env>.yaml (Dev runs fast_drop).
   # ackMode: durable
 
-  # Batching knobs (see apps/ingest/src/config.rs for the full surface and
-  # the ack_timeout > max_batch_age + MAX_RETRY_AGE invariant).
+  # Batching knobs (see apps/ingest/src/config.rs for the full surface). The
+  # window a batch gets is derived from ackTimeout, and startup refuses a
+  # combination where what is left cannot hold two full upload attempts.
   batch:
     maxBatchBytes: 16777216         # 16 MiB
     maxBatchAgeSecs: 2

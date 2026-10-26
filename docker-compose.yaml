@@ -10,8 +10,8 @@
 #   docker compose logs gateway | grep -A1 "Initial admin setup"
 #
 #   # 2) Open it in a browser. Host ports are published on 127.0.0.1
-#   # only so a git worktree on 127.1.x.y can bind the same canonical
-#   # ports; localhost still reaches that IPv4 bind:
+#   # only, so the stack takes no port on any other address of the host;
+#   # localhost still reaches that IPv4 bind:
 #   open http://localhost:${HOST_GATEWAY_PORT:-9500}
 #
 #   If 9500 is already taken (a `mise run dev` worktree, another
@@ -247,9 +247,8 @@ services:
       POSTGRES_PASSWORD: berserk
       POSTGRES_DB: berserk
     # Host publishes bind 127.0.0.1 only. Implied 0.0.0.0 occupies every
-    # interface — including a git worktree's 127.1.x.y — so `mise run dev`
-    # in a linked worktree cannot bind the same canonical ports. Inside the
-    # container, services still listen on 0.0.0.0.
+    # interface of the host, so nothing else could bind the same port on
+    # another address. Inside the container, services still listen on 0.0.0.0.
     ports:
       - "127.0.0.1:15432:5432"
     volumes:
@@ -318,7 +317,7 @@ services:
 
   meta:
     <<: *common
-    image: images.bzrk.dev/release/meta:v1.1.14
+    image: images.bzrk.dev/release/meta:v1.1.15-rc.1
     depends_on:
       postgres:
         condition: service_healthy
@@ -347,7 +346,7 @@ services:
 
   query:
     <<: *common
-    image: images.bzrk.dev/release/query:v1.1.14
+    image: images.bzrk.dev/release/query:v1.1.15-rc.1
     depends_on:
       meta:
         condition: service_healthy
@@ -390,7 +389,7 @@ services:
   # that token.
   ingest:
     <<: *common
-    image: images.bzrk.dev/release/ingest:v1.1.14
+    image: images.bzrk.dev/release/ingest:v1.1.15-rc.1
     depends_on:
       meta:
         condition: service_healthy
@@ -425,7 +424,7 @@ services:
 
   janitor:
     <<: *common
-    image: images.bzrk.dev/release/janitor:v1.1.14
+    image: images.bzrk.dev/release/janitor:v1.1.15-rc.1
     depends_on:
       meta:
         condition: service_healthy
@@ -457,7 +456,7 @@ services:
 
   nursery:
     <<: *common
-    image: images.bzrk.dev/release/nursery:v1.1.14
+    image: images.bzrk.dev/release/nursery:v1.1.15-rc.1
     depends_on:
       meta:
         condition: service_healthy
@@ -487,7 +486,7 @@ services:
 
   ui:
     <<: *common
-    image: images.bzrk.dev/release/ui:v1.1.14
+    image: images.bzrk.dev/release/ui:v1.1.15-rc.1
     depends_on:
       postgres:
         condition: service_healthy
@@ -533,7 +532,7 @@ services:
 
   permissions:
     <<: *common
-    image: images.bzrk.dev/release/permissions:v1.1.14
+    image: images.bzrk.dev/release/permissions:v1.1.15-rc.1
     depends_on:
       postgres:
         condition: service_healthy
@@ -552,7 +551,7 @@ services:
 
   gateway:
     <<: *common
-    image: images.bzrk.dev/release/gateway:v1.1.14
+    image: images.bzrk.dev/release/gateway:v1.1.15-rc.1
     depends_on:
       postgres:
         condition: service_healthy

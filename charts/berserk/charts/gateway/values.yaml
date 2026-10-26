@@ -2,6 +2,11 @@
 replicaCount: 1
 component: gateway
 
+# A terminating pod leaves the Service's endpoints at once, but ingress
+# controllers and kube-proxy keep routing to it for a few more seconds. The
+# sleep keeps the gateway serving those requests until SIGTERM.
+preStopSleepSeconds: 10
+
 image:
   repository: gateway
   tag: ""

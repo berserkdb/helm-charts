@@ -6,6 +6,7 @@
       {{- if .Values.global.serviceAccountName }}
       serviceAccountName: {{ .Values.global.serviceAccountName }}
       {{- end }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
       containers:
         - name: ingest
           image: {{ include "berserk-common.image" . }}
@@ -72,6 +73,10 @@
               port: health
             failureThreshold: 30
             periodSeconds: 3
+          lifecycle:
+            preStop:
+              sleep:
+                seconds: {{ .Values.preStopSleepSeconds }}
           volumeMounts:
             {{- include "berserk-common.volumeMount.config" . | nindent 12 }}
             {{- include "berserk-common.volumeMount.node-id" . | nindent 12 }}

@@ -111,6 +111,10 @@
               port: http
             failureThreshold: 30
             periodSeconds: 3
+          lifecycle:
+            preStop:
+              sleep:
+                seconds: {{ .Values.preStopSleepSeconds }}
           volumeMounts:
             {{- include "berserk-common.volumeMount.config" . | nindent 12 }}
             {{- if .Values.config.metaEndpoint }}
