@@ -284,8 +284,10 @@ collector:
   # so an install that asked for pod discovery before the default changed keeps
   # getting it. true means `kubernetes`, false means `static`.
   # podDiscovery: true
-  # Let the chart own the ServiceAccount + Role + RoleBinding. Set false to bring
-  # your own: pre-create them and point the pod at the account through
+  # Let the chart create the ServiceAccount, Role and RoleBinding that `kubernetes`
+  # and `union` discovery need; under `meta` and `static` it creates none and ui
+  # runs as the namespace `default` account. Set false to bring your own:
+  # pre-create them and point the pod at the account through
   # `global.serviceAccountName`. With discovery unauthorised the app falls back to
   # `staticTargets` — degraded, not broken.
   rbac: true

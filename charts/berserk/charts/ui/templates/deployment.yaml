@@ -20,14 +20,12 @@
 {{- fail (printf "ui: replicaCount is %d, but Oban's PG notifier needs Erlang clustering above one replica — see apps/ui_phoenix/config/config.exs" (int .Values.replicaCount)) }}
 {{- end }}
 {{- include "berserk-common.deployment.header" . }}
-{{- /* The shared helper only emits `global.serviceAccountName`, so without this
-       override ui would run as the namespace `default` account and the collector's
-       pod-list would be refused. Same override ingest makes for its token-init
-       Role. */ -}}
-{{- if .Values.global.serviceAccountName }}
-      serviceAccountName: {{ .Values.global.serviceAccountName }}
-{{- else if include "ui.ownServiceAccount" . | trim | eq "true" }}
+{{- /* Its own account only while the collector lists pods through the Kubernetes
+       API; otherwise the one every service runs as. */ -}}
+{{- if include "ui.ownServiceAccount" . | trim | eq "true" }}
       serviceAccountName: {{ include "berserk-common.fullname" . }}
+{{- else }}
+{{- include "berserk-common.serviceAccountName" . }}
 {{- end }}
       containers:
         - name: ui

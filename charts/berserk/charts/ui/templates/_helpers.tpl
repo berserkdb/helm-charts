@@ -28,27 +28,21 @@
 {{- end -}}
 {{- end -}}
 
-{{/* "true" when the chart should own ui's ServiceAccount.
-
-     Identity, NOT permission — deliberately not gated on the discovery mode.
-     The pod names this account, so making its existence conditional on a
-     permission it happens to need would delete the account out from under a
-     running Deployment the moment that permission stopped being needed, and
-     every subsequent pod would fail to schedule with `serviceaccount not
-     found`. Which is exactly what switching to `discovery: meta` did before
-     this was split in two. */}}
-{{- define "ui.ownServiceAccount" -}}
-{{- $c := .Values.collector | default dict -}}
-{{- and $c.enabled $c.rbac (not .Values.global.serviceAccountName) | ternary "true" "" -}}
-{{- end -}}
-
-{{/* "true" when that account should also be allowed to list pods. This is the
-     permission half, and it IS gated on the discovery mode: a collector reading
-     the fleet registry never calls the Kubernetes API, so granting it would be
-     handing out access nothing uses. `union` reads both sources, so it needs the
-     role exactly as `kubernetes` does. */}}
+{{/* "true" when the chart grants ui the pod-list role: the collector reads the
+     Kubernetes API (`kubernetes`, or `union`, which reads both sources) and the
+     chart owns the RBAC. A collector reading the fleet registry never calls the
+     API, so granting it would be handing out access nothing uses. */}}
 {{- define "ui.podDiscoveryRBAC" -}}
 {{- $c := .Values.collector | default dict -}}
 {{- $usesKubeApi := has (include "ui.collectorDiscovery" .) (list "kubernetes" "union") -}}
 {{- and $c.enabled $usesKubeApi $c.rbac | ternary "true" "" -}}
+{{- end -}}
+
+{{/* "true" when the chart creates ui's own ServiceAccount: only to hold that role,
+     and only when the install names no account of its own. Otherwise ui runs as
+     the namespace `default` account, which the pod names explicitly
+     (berserk-common.serviceAccountName), so a switch to `meta` that deletes this
+     account leaves no pod naming it. */}}
+{{- define "ui.ownServiceAccount" -}}
+{{- and (include "ui.podDiscoveryRBAC" . | trim | eq "true") (not .Values.global.serviceAccountName) | ternary "true" "" -}}
 {{- end -}}

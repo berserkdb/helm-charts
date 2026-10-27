@@ -14,15 +14,13 @@ false, an admission policy that rejects it, or a non-Kubernetes install — the
 pod-list call is refused and the app MUST fall back to its static target list
 (BZRK_COLLECTOR_STATIC_TARGETS). Degraded, never a crash loop.
 
-Follows ingest's token-init idiom: when the install supplies
-`global.serviceAccountName` (IRSA on EKS, created out of band) that account is
-bound and no ServiceAccount is created here.
+When the install supplies `global.serviceAccountName` (IRSA on EKS, created out
+of band) that account is bound and no ServiceAccount is created here.
 
-The ServiceAccount and the Role are gated separately on purpose. The account is
-the pod's identity and outlives any one permission; the Role is the permission
-and disappears when the collector stops reading the Kubernetes API. Tying the
-account's existence to the permission deletes it out from under a running
-Deployment that still names it, and nothing can schedule after that.
+The ServiceAccount exists only to hold the Role. Under `meta` or `static`
+discovery neither is created and ui runs as the namespace `default` account,
+which the pod names explicitly, so switching modes never leaves the pod naming a
+deleted account.
 */}}
 {{- $ownsSA := include "ui.ownServiceAccount" . | trim | eq "true" }}
 {{- $wants := include "ui.podDiscoveryRBAC" . | trim | eq "true" }}

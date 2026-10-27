@@ -67,13 +67,13 @@ Usage: {{ include "berserk-common.scheduling" . }}
 {{- end }}
 
 {{/*
-ServiceAccount name from global config.
+ServiceAccount for the pod: `global.serviceAccountName`, else the namespace's `default`.
+Always named: a pod spec that drops the field keeps the old name through the deprecated
+`serviceAccount` field, so its new pods would ask for an account the chart has deleted.
 Usage: {{ include "berserk-common.serviceAccountName" . }}
 */}}
-{{- define "berserk-common.serviceAccountName" -}}
-{{- with .Values.global.serviceAccountName }}
-      serviceAccountName: {{ . }}
-{{- end }}
+{{- define "berserk-common.serviceAccountName" }}
+      serviceAccountName: {{ .Values.global.serviceAccountName | default "default" }}
 {{- end }}
 
 {{/*

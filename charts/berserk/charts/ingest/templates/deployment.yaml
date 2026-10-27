@@ -3,9 +3,7 @@
       # into every pod in the namespace. Figment's Env::prefixed("INGEST_") would
       # pick these up as config keys and the deny_unknown_fields guard would fail.
       enableServiceLinks: false
-      {{- if .Values.global.serviceAccountName }}
-      serviceAccountName: {{ .Values.global.serviceAccountName }}
-      {{- end }}
+{{- include "berserk-common.serviceAccountName" . }}
       terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
       containers:
         - name: ingest

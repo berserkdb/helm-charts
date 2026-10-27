@@ -2,9 +2,7 @@
 {{- fail (printf "audit-shipper: replicaCount is %d; run exactly one shipper per cluster" (int .Values.replicaCount)) }}
 {{- end }}
 {{- include "berserk-common.deployment.header" . }}
-{{- with .Values.serviceAccountName }}
-      serviceAccountName: {{ . }}
-{{- end }}
+      serviceAccountName: {{ .Values.serviceAccountName | default "default" }}
       containers:
         - name: audit-shipper
           image: {{ include "berserk-common.image" . }}
