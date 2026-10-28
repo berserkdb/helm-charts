@@ -211,7 +211,7 @@ configs:
       permissions_base_url: "http://permissions:9580"
       # The gateway registers its signing key here; query answers only what it signed.
       meta_endpoint: "http://meta:9560"
-      grpc_routes: '[{"package_prefix":"meta","upstream":"http://meta:9560"},{"package_prefix":"query","upstream":"http://query:9510"},{"package_prefix":"opentelemetry","upstream":"http://ingest:4317"}]'
+      grpc_routes: '[{"package_prefix":"meta","upstream":"http://meta:9560"},{"package_prefix":"query","upstream":"http://query:9510"}]'
       session_ttl_secs: 1209600
       invite_ttl_secs: 604800
       reset_ttl_secs: 3600
@@ -317,7 +317,7 @@ services:
 
   meta:
     <<: *common
-    image: images.bzrk.dev/release/meta:v1.1.16-rc.1
+    image: images.bzrk.dev/release/meta:v1.1.16-rc.2
     depends_on:
       postgres:
         condition: service_healthy
@@ -346,7 +346,7 @@ services:
 
   query:
     <<: *common
-    image: images.bzrk.dev/release/query:v1.1.16-rc.1
+    image: images.bzrk.dev/release/query:v1.1.16-rc.2
     depends_on:
       meta:
         condition: service_healthy
@@ -389,7 +389,7 @@ services:
   # that token.
   ingest:
     <<: *common
-    image: images.bzrk.dev/release/ingest:v1.1.16-rc.1
+    image: images.bzrk.dev/release/ingest:v1.1.16-rc.2
     depends_on:
       meta:
         condition: service_healthy
@@ -424,7 +424,7 @@ services:
 
   janitor:
     <<: *common
-    image: images.bzrk.dev/release/janitor:v1.1.16-rc.1
+    image: images.bzrk.dev/release/janitor:v1.1.16-rc.2
     depends_on:
       meta:
         condition: service_healthy
@@ -456,7 +456,7 @@ services:
 
   nursery:
     <<: *common
-    image: images.bzrk.dev/release/nursery:v1.1.16-rc.1
+    image: images.bzrk.dev/release/nursery:v1.1.16-rc.2
     depends_on:
       meta:
         condition: service_healthy
@@ -486,7 +486,7 @@ services:
 
   ui:
     <<: *common
-    image: images.bzrk.dev/release/ui:v1.1.16-rc.1
+    image: images.bzrk.dev/release/ui:v1.1.16-rc.2
     depends_on:
       postgres:
         condition: service_healthy
@@ -532,7 +532,7 @@ services:
 
   permissions:
     <<: *common
-    image: images.bzrk.dev/release/permissions:v1.1.16-rc.1
+    image: images.bzrk.dev/release/permissions:v1.1.16-rc.2
     depends_on:
       postgres:
         condition: service_healthy
@@ -551,7 +551,7 @@ services:
 
   gateway:
     <<: *common
-    image: images.bzrk.dev/release/gateway:v1.1.16-rc.1
+    image: images.bzrk.dev/release/gateway:v1.1.16-rc.2
     depends_on:
       postgres:
         condition: service_healthy

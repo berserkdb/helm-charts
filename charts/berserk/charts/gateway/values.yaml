@@ -39,7 +39,7 @@ extraListener:
 
 # Ingress (optional). The gateway is the public edge — once exposed it
 # terminates user-facing HTTPS and proxies to ui (HTTP) plus gRPC
-# routes to meta/query/ingest.
+# routes to meta/query.
 ingress:
   enabled: false
   className: ""
@@ -65,7 +65,7 @@ ingress:
   websocketEntrypoint: "websecure"
 
 # NetworkPolicy: ingress from anywhere (it IS the edge); egress to
-# permissions, ui, meta, query, ingest, plus external for OIDC
+# permissions, ui, meta, query, plus external for OIDC
 # discovery + the shared Postgres.
 networkPolicy:
   allowExternal: true
@@ -85,8 +85,6 @@ networkPolicy:
       ports: [{ port: 9560 }]
     - app: query
       ports: [{ port: 9510 }]
-    - app: ingest
-      ports: [{ port: 4317 }]
   additionalIngress: []
   additionalEgress: []
 
@@ -119,9 +117,10 @@ config:
   # `ui.collector.staticTargets` if you do.
   metaEndpoint: "http://meta:9560"
   # gRPC routing table — JSON array of {package_prefix, upstream}.
-  # The default fans out gRPC traffic to meta + query + ingest inside
-  # the same namespace. Override to add routes or point at different
-  # backends.
+  # The default fans out gRPC traffic to meta + query inside the same
+  # namespace. Override to add routes or point at different backends.
+  # No OTLP route: the proxy strips `Authorization`, the header ingest
+  # reads its token from; senders use the ingest host.
   #
   # `query-headless` rather than `query` is deliberate. A ClusterIP Service
   # balances per TCP connection, and gRPC multiplexes every request over one
@@ -137,8 +136,7 @@ config:
   grpcRoutes: |
     [
       {"package_prefix": "meta", "upstream": "http://meta:9560"},
-      {"package_prefix": "query", "upstream": "http://query-headless:9510"},
-      {"package_prefix": "opentelemetry", "upstream": "http://ingest:4317"}
+      {"package_prefix": "query", "upstream": "http://query-headless:9510"}
     ]
   permissions:
     baseUrl: "http://permissions:9580"
@@ -147,6 +145,12 @@ config:
   # Set the `Secure` flag on session/auth cookies. Default true; flip
   # to false only for plain-HTTP localhost development.
   cookieSecure: true
+  # Proxies in front of the gateway. The client address, kept on sessions and
+  # passed to the query service, is the X-Forwarded-For entry this many places
+  # from the right; entries further left came from the client. 1 is the chart's
+  # ingress alone, which writes the real client as the only entry. 0 ignores
+  # the header and uses the TCP peer.
+  forwardedForTrustedHops: 1
   # Whether assertion-based auth methods (OIDC, trusted-proxy) auto-create
   # users on first sight. Default true. Set false for "directory mode":
   # only users that already exist in the gateway authenticate; an unknown

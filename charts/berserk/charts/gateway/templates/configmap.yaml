@@ -29,6 +29,7 @@ data:
     permissions_request_timeout_secs: {{ .Values.config.permissions.requestTimeoutSecs }}
     permissions_connect_timeout_secs: {{ .Values.config.permissions.connectTimeoutSecs }}
     cookie_secure: {{ .Values.config.cookieSecure }}
+    forwarded_for_trusted_hops: {{ int .Values.config.forwardedForTrustedHops }}
     {{- if not .Values.config.autoProvisionUsers }}
     # Directory mode: assertion-based methods (OIDC, trusted-proxy)
     # authenticate only pre-existing users; unknown emails are rejected and
