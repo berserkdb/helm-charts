@@ -1,0 +1,60 @@
+# The upload API is stateless (parts are staged in object storage) and builds are claimed through
+# meta, so more than one replica is safe.
+replicaCount: 1
+component: backend
+# SIGTERM lets a build in flight finish: the extractor's 120 s deadline, then writing up to 256 MiB
+# and the commit. Killed sooner, its upload waits out the 10-minute claim before another replica
+# retries it.
+terminationGracePeriodSeconds: 300
+
+image:
+  repository: lookup-tables
+  tag: ""
+
+service:
+  type: ClusterIP
+  port: 9503
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/path: "/metrics"
+  prometheus.io/port: "9503"
+
+networkPolicy:
+  allowExternal: false
+  # Object storage is outside the cluster.
+  allowExternalEgress: true
+  ingressFrom:
+    # The gateway forwards the upload API's routes.
+    - app: gateway
+      ports: [{port: 9503}]
+  egressTo:
+    - app: meta
+      ports: [{port: 9560}]
+    # Who may change a lookup table (MetaWrite).
+    - app: permissions
+      ports: [{port: 9580}]
+  additionalIngress: []
+  additionalEgress: []
+
+# Each build holds its staged parts, the decompressed upload (at most 1 GiB) and the built file.
+scratch:
+  size: "4Gi"
+
+resources:
+  requests:
+    memory: "128Mi"
+    cpu: "100m"
+  limits:
+    memory: "2Gi"
+
+config:
+  metaEndpoint: "http://meta:9560"
+  permissionsBaseUrl: "http://permissions:9580"
+  # How the extractor child is confined: "enforce" (Landlock filesystem and, where the kernel has
+  # them, network rules) or "rlimits-only" for a kernel without Landlock. The service logs which at
+  # start; under "enforce" without Landlock every upload fails.
+  sandbox: "enforce"
+  observability:
+    serviceName: "lookup-tables"
+    logLevel: "info"

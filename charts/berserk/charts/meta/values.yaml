@@ -51,6 +51,9 @@ networkPolicy:
     # puller creates each Pub/Sub source's ingest token
     - app: puller
       ports: [{port: 9560}]
+    # lookup-tables registers uploads, claims builds and commits versions
+    - app: lookup-tables
+      ports: [{port: 9560}]
     # post-install setup job creates the default table via meta
     - app: setup
       ports: [{port: 9560}]
@@ -76,6 +79,11 @@ config:
   #   tasksPerJanitor: 2
   #   minMergeTasksPerTable: 3
   #   maxMergeTasksPerTable: 100
+  # Lookup-table uploads (docs/dev/PLAN-lookup-tables.md). Turn on together with
+  # lookup-tables.enabled and gateway.config.lookupTablesBaseUrl, once the bucket's lifecycle rule
+  # aborts abandoned multipart uploads.
+  lookupTablesEnabled: false
+  # lookupTablesMaxDatabaseBytes: 2147483648  # current versions of all lookup tables in one database
   observability:
     serviceName: "meta"
     logLevel: "info"

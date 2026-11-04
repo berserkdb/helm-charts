@@ -85,6 +85,9 @@ networkPolicy:
       ports: [{ port: 9560 }]
     - app: query
       ports: [{ port: 9510 }]
+    # The lookup-table upload API (config.lookupTablesBaseUrl).
+    - app: lookup-tables
+      ports: [{ port: 9503 }]
   additionalIngress: []
   additionalEgress: []
 
@@ -108,6 +111,9 @@ config:
   # `apps/gateway/src/proxy.rs`). Operators don't normally touch this
   # — it follows directly from the umbrella chart's layout.
   upstreamBaseUrl: "http://ui"
+  # The lookup-table upload API, the lookup-tables service. Empty answers its routes with 503;
+  # set it to "http://lookup-tables:9503" together with lookup-tables.enabled.
+  lookupTablesBaseUrl: ""
   # Meta, for fleet registration: the gateway publishes its pod IP and named
   # ports there, so the in-product collector can scrape it without asking the
   # Kubernetes API, and the query service finds it to reach remote sites through

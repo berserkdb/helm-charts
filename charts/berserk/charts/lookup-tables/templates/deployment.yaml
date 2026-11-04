@@ -1,0 +1,55 @@
+{{- include "berserk-common.deployment.header" . }}
+{{- /* The install's service account and storage credentials, as janitor's: one storage identity
+      per install (IRSA, Workload Identity, or the s3-credentials Secret). */}}
+{{- include "berserk-common.serviceAccountName" . }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      containers:
+        - name: lookup-tables
+          image: {{ include "berserk-common.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | default .Values.global.imagePullPolicy | default "Always" }}
+          securityContext:
+            allowPrivilegeEscalation: false
+          args:
+            - "--config"
+            - "/config/config.yaml"
+          ports:
+            - containerPort: {{ .Values.service.port }}
+              name: http
+              protocol: TCP
+          env:
+            {{- include "berserk-common.env.master-key" . | nindent 12 }}
+            {{- include "berserk-common.env.s3-pool" . | nindent 12 }}
+            {{- include "berserk-common.env.cluster-name" . | nindent 12 }}
+            {{- include "berserk-common.env.s3-credentials" (dict "accessKeyEnv" "LOOKUP_TABLES_STORAGE_ACCESS_KEY" "secretKeyEnv" "LOOKUP_TABLES_STORAGE_SECRET_KEY" "Values" .Values) | nindent 12 }}
+            - name: RUST_BACKTRACE
+              value: "1"
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          startupProbe:
+            httpGet:
+              path: /health/started
+              port: http
+            failureThreshold: 60
+            periodSeconds: 3
+          volumeMounts:
+            {{- include "berserk-common.volumeMount.config" . | nindent 12 }}
+            - name: scratch
+              mountPath: /scratch
+      volumes:
+        {{- include "berserk-common.volume.config" . | nindent 8 }}
+        # Staged parts, the decompressed upload and the built file of each build in flight.
+        - name: scratch
+          emptyDir:
+            sizeLimit: {{ .Values.scratch.size }}

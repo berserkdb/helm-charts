@@ -2,8 +2,8 @@ apiVersion: v2
 name: berserk
 description: Berserk - High-performance observability data platform
 type: application
-version: 1.1.17-rc.1
-appVersion: 1.1.17-rc.1
+version: 1.1.18-rc.1
+appVersion: 1.1.18-rc.1
 
 dependencies:
   - name: meta
@@ -45,3 +45,7 @@ dependencies:
   - name: puller
     version: ">=0.0.0-0"
     condition: puller.enabled
+
+  - name: lookup-tables
+    version: ">=0.0.0-0"
+    condition: lookup-tables.enabled

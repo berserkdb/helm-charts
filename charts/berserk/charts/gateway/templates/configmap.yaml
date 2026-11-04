@@ -25,6 +25,9 @@ data:
     {{- with .Values.config.upstreamBaseUrl }}
     upstream_base_url: {{ . | quote }}
     {{- end }}
+    {{- with .Values.config.lookupTablesBaseUrl }}
+    lookup_tables_base_url: {{ . | quote }}
+    {{- end }}
     permissions_base_url: {{ .Values.config.permissions.baseUrl | quote }}
     permissions_request_timeout_secs: {{ .Values.config.permissions.requestTimeoutSecs }}
     permissions_connect_timeout_secs: {{ .Values.config.permissions.connectTimeoutSecs }}

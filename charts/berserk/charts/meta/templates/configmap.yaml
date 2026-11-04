@@ -62,6 +62,10 @@ data:
       idle_in_transaction_secs: {{ int $dbPool.idleInTransactionSecs }}
       {{- end }}
     {{- end }}
+    lookup_tables_enabled: {{ .Values.config.lookupTablesEnabled | default false }}
+    {{- with .Values.config.lookupTablesMaxDatabaseBytes }}
+    lookup_tables_max_database_bytes: {{ int64 . }}
+    {{- end }}
     {{- include "berserk-common.observability-config" . | nindent 4 }}
 {{- end }}
 {{- include "berserk-common.configmap" . }}

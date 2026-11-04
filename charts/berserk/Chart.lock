@@ -29,5 +29,8 @@ dependencies:
 - name: puller
   repository: ""
   version: '>=0.0.0-0'
-digest: sha256:f9e888884af3a9980ecb128d4f63bc79437c7ddabc461f202c27c6eeaba9022d
-generated: "2026-10-30T21:00:00.000000000+01:00"
+- name: lookup-tables
+  repository: ""
+  version: '>=0.0.0-0'
+digest: sha256:fed762f662e9242bbdd3d155df2c56eb62aa24eff3507f4469d9bebc7f2fce7d
+generated: "2026-11-04T12:00:06.133487583+01:00"

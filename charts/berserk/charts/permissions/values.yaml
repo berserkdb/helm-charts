@@ -23,6 +23,9 @@ networkPolicy:
       ports: [{port: 9580}]
     - app: ui
       ports: [{port: 9580}]
+    # The lookup-table upload API checks MetaWrite.
+    - app: lookup-tables
+      ports: [{port: 9580}]
   egressTo:
     # Fleet registration only (config.metaEndpoint) — no authorization decision
     # leaves this pod. Drop the rule if you clear that.
