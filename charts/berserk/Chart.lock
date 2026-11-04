@@ -26,5 +26,8 @@ dependencies:
 - name: audit-shipper
   repository: ""
   version: '>=0.0.0-0'
-digest: sha256:a8bb4e4086b98f4b67e1ed0f5c84c2114947db3e2d93001bdc0c8bb58d3cb57c
-generated: "2026-10-06T11:47:36.157829584+02:00"
+- name: puller
+  repository: ""
+  version: '>=0.0.0-0'
+digest: sha256:f9e888884af3a9980ecb128d4f63bc79437c7ddabc461f202c27c6eeaba9022d
+generated: "2026-10-30T21:00:00.000000000+01:00"

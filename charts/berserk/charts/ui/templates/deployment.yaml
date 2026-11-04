@@ -110,6 +110,8 @@
               value: {{ .Values.config.gatewayInternalBaseUrl | quote }}
             - name: PERMISSIONS_HTTP_ENDPOINT
               value: {{ .Values.config.permissions.baseUrl | quote }}
+            - name: PULLER_HTTP_ENDPOINT
+              value: {{ .Values.config.puller.baseUrl | quote }}
             {{- $ingest := .Values.config.ingest | default dict }}
             # The public ingestion endpoints shown on Settings -> Endpoints.
             # Stated, not discovered: a sender dials the ingress entrypoint,

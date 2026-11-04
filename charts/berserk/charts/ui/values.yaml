@@ -64,6 +64,9 @@ networkPolicy:
       ports: [{ port: 9560 }]
     - app: permissions
       ports: [{ port: 9580 }]
+    # The Integrations page manages Pub/Sub sources through the puller's API.
+    - app: puller
+      ports: [{ port: 9590 }]
   additionalIngress: []
   additionalEgress: []
   # Workflow outbound hooks (webhook HTTPS + tenant SMTP) when
@@ -155,6 +158,9 @@ config:
   #   maxPendingRunsPerWorkflow: 100
   permissions:
     baseUrl: "http://permissions:9580"
+  # The puller's API, where the Integrations page manages Pub/Sub sources.
+  puller:
+    baseUrl: "http://puller:9590"
   # In-cluster gateway Service URL for the UI's internal calls (the
   # /internal/users Members API, GATEWAY_HTTP_ENDPOINT). Keeps the call inside
   # the cluster rather than hairpinning through the public ingress.

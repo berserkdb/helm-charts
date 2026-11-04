@@ -1,0 +1,55 @@
+# One puller per install: each source's status and the memory budget assume
+# one, and Pub/Sub keeps every message until it is acked, so a pod restart only
+# delays them.
+replicaCount: 1
+component: backend
+strategy:
+  type: Recreate
+
+image:
+  repository: puller
+  tag: ""
+
+service:
+  type: ClusterIP
+  port: 9590
+
+networkPolicy:
+  allowExternal: false
+  # Pub/Sub, and the metadata server that names the install's Google identity,
+  # are outside the cluster.
+  allowExternalEgress: true
+  ingressFrom:
+    # The Integrations page manages sources through the puller's API.
+    - app: ui
+      ports: [{port: 9590}]
+  egressTo:
+    - app: meta
+      ports: [{port: 9560}]
+    - app: ingest
+      ports: [{port: 4318}]
+  additionalIngress: []
+  additionalEgress: []
+
+resources:
+  requests:
+    memory: "64Mi"
+    cpu: "50m"
+  limits:
+    # Received messages are budgeted at 256 MiB, as estimated per message; each
+    # source's stream can go one response past that.
+    memory: "1Gi"
+
+config:
+  metaEndpoint: "http://meta:9560"
+  ingestEndpoint: "http://ingest:4318"
+  pubsubEndpoint: "https://pubsub.googleapis.com"
+  # The GKE metadata server, which names the install's Google identity
+  # (Workload Identity). Off Google nothing answers there; a cluster admin can
+  # set a service account key on the Integrations page instead.
+  gkeMetadataEndpoint: "http://169.254.169.254"
+  # Batches with ingest at once, per source (1-16).
+  batchesPerSource: 4
+  observability:
+    serviceName: "puller"
+    logLevel: "info"

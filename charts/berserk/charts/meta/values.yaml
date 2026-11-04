@@ -48,6 +48,9 @@ networkPolicy:
     # audit-shipper reads the audit chain and reports what it archived
     - app: audit-shipper
       ports: [{port: 9560}]
+    # puller creates each Pub/Sub source's ingest token
+    - app: puller
+      ports: [{port: 9560}]
     # post-install setup job creates the default table via meta
     - app: setup
       ports: [{port: 9560}]

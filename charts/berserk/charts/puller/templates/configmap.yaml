@@ -1,0 +1,12 @@
+{{- define "puller.config-data" -}}
+data:
+  config.yaml: |
+    bind: "0.0.0.0:{{ .Values.service.port }}"
+    meta_endpoint: {{ .Values.config.metaEndpoint | quote }}
+    ingest_endpoint: {{ .Values.config.ingestEndpoint | quote }}
+    pubsub_endpoint: {{ .Values.config.pubsubEndpoint | quote }}
+    gke_metadata_endpoint: {{ .Values.config.gkeMetadataEndpoint | quote }}
+    batches_per_source: {{ int .Values.config.batchesPerSource }}
+    {{- include "berserk-common.observability-config" . | nindent 4 }}
+{{- end }}
+{{- include "berserk-common.configmap" . }}
