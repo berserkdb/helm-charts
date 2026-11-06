@@ -36,8 +36,8 @@ resources:
     memory: "64Mi"
     cpu: "50m"
   limits:
-    # Received messages are budgeted at 256 MiB, as estimated per message; each
-    # source's stream can go one response past that.
+    # Received messages are budgeted at 256 MiB, as estimated per message; the
+    # pod's 16 pulls in flight can add about 200 MB more while they decode.
     memory: "1Gi"
 
 config:

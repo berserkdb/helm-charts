@@ -79,15 +79,16 @@ groups:
   # ---------------------------------------------------------------------------
   - name: berserk.query
     rules:
-      # Grafana: rate_above 0.001 errors/s.
+      # Grafana: rate_above 0.001 errors/s. Only the classes we can fix; `user`
+      # and `cancelled` are the caller's.
       - alert: QueryErrorRate
-        expr: sum by (service) (rate(bzrk_query_errors[5m])) > 0.001
+        expr: sum by (service) (rate(bzrk_query_errors{class=~"internal|unavailable|timeout"}[5m])) > 0.001
         for: 5m
         labels:
           severity: warning
         annotations:
-          summary: "query error rate elevated"
-          description: "{{ $value | printf \"%.4f\" }} query errors/s over 5m."
+          summary: "backend query error rate elevated"
+          description: "{{ $value | printf \"%.4f\" }} backend query errors/s over 5m."
 
       # No direct Grafana equivalent (its latency alert is vsearch-specific and
       # feature-gated). Included as a general end-to-end latency SLO example —
