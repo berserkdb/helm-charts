@@ -8,6 +8,9 @@ data:
     scratch_dir: "/scratch"
     sandbox: {{ .Values.config.sandbox | quote }}
     permissions_base_url: {{ .Values.config.permissionsBaseUrl | quote }}
+    import_private_hosts: {{ .Values.config.importPrivateHosts }}
+    max_upload_bytes: {{ int64 (required "global.lookupTablesMaxUploadBytes is required" .Values.global.lookupTablesMaxUploadBytes) }}
+    max_value_bytes: {{ int64 .Values.config.maxValueBytes }}
     {{- include "berserk-common.observability-config" . | nindent 4 }}
 {{- end }}
 {{- include "berserk-common.configmap" . }}

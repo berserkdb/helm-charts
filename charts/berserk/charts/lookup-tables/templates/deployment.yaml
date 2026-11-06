@@ -2,7 +2,11 @@
 {{- /* The install's service account and storage credentials, as janitor's: one storage identity
       per install (IRSA, Workload Identity, or the s3-credentials Secret). */}}
 {{- include "berserk-common.serviceAccountName" . }}
-      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      {{- /* The longest build's deadline (120 s + 60 s per 128 MiB of upload), then writing and
+            committing its file. */}}
+      {{- $upload := int64 (required "global.lookupTablesMaxUploadBytes is required" .Values.global.lookupTablesMaxUploadBytes) }}
+      {{- $deadline := add 120 (mul 60 (div (add $upload 134217727) 134217728)) }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds | default (add $deadline 180) }}
       containers:
         - name: lookup-tables
           image: {{ include "berserk-common.image" . }}

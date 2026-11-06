@@ -154,6 +154,11 @@ resources:
 
 config:
   metaEndpoint: "http://meta:9560"
+  # Disk for cached lookup-table files on each query node; files no query is using are evicted.
+  # Unset, it is 5% of cache.size, at least 5 GiB and at most 50 GiB. It is carved out of the
+  # cache volume first: the segment and result percentages apply to what is left. The chart
+  # refuses a budget over half of cache.size.
+  # lookupTableCacheBytes: 53687091200
   # Anonymized query-usage records always go to the service log stream. Set
   # an endpoint to also ship them to a table of their own, which is what makes
   # them separately queryable and exportable:

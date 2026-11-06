@@ -39,6 +39,8 @@ data:
           Appending "B" turns the k8s quantity (500Gi -> 500GiB) into a
           bytesize the binary parses; no arithmetic happens in the template. */}}
     cache_total_size: "{{ .Values.cache.size }}B"
+    {{- /* Carved out of cache_total_size before the percentages below apply. */}}
+    lookup_table_cache_bytes: {{ include "query.lookupTableCacheBytes" . }}
     {{- if hasKey .Values.cache "segmentCachePercent" }}
     cache_segment_percent: {{ .Values.cache.segmentCachePercent }}
     {{- end }}

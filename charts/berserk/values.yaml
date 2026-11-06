@@ -89,6 +89,12 @@ global:
   # queries touch only a fraction of the corpus. See
   # docs/dev/merge-cache-seeding.md.
   mergeCacheSeeding: index
+  # The most bytes one lookup-table upload may be, uncompressed. Meta refuses a larger upload at
+  # registration and lookup-tables at creation, so the two read this one value. The row stream
+  # (8 ×), the built file (2 ×), an IP-range index's temporary space (2 ×), the extractor's
+  # memory (2 ×, at least 2 GiB) and the build deadline (120 s + 60 s per 128 MiB) derive from
+  # it; scale lookup-tables' scratch.size (about 4 ×) and memory limit (about 2 ×) with it.
+  lookupTablesMaxUploadBytes: 2147483648
   # Name of this Berserk cluster (a Helm install / logical tenant). Stamped on
   # every telemetry record as `bzrk.cluster.name` so alerts and dashboards can
   # scope queries to one install when multiple installs share a k8s cluster
@@ -792,12 +798,13 @@ lookup-tables:
     prometheus.io/path: /metrics
     prometheus.io/port: "9503"
 
+  # The memory limit scales with global.lookupTablesMaxUploadBytes: about 2 × it.
   resources:
     requests:
       memory: "128Mi"
       cpu: "50m"
     limits:
-      memory: "2Gi"
+      memory: "4Gi"
 
   config:
     observability:

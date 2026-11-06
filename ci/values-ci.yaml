@@ -61,6 +61,8 @@ query:
     size: "1Gi"
   config:
     transport: "in_process"
+    # The 5 GiB floor is more than half this 1Gi volume, which the chart refuses.
+    lookupTableCacheBytes: 268435456
   resources:
     requests:
       memory: "128Mi"

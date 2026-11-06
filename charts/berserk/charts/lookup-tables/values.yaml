@@ -2,10 +2,11 @@
 # meta, so more than one replica is safe.
 replicaCount: 1
 component: backend
-# SIGTERM lets a build in flight finish: the extractor's 120 s deadline, then writing up to 256 MiB
-# and the commit. Killed sooner, its upload waits out the 10-minute claim before another replica
-# retries it.
-terminationGracePeriodSeconds: 300
+# SIGTERM lets a build in flight finish. Unset, the grace period covers the longest build the
+# upload limit (global.lookupTablesMaxUploadBytes) allows: its deadline, 120 s + 60 s per 128 MiB,
+# then 180 s to write and commit the file; 1260 s at 2 GiB. Killed sooner, its upload waits out
+# the 10-minute claim before another replica retries it.
+# terminationGracePeriodSeconds: 1260
 
 image:
   repository: lookup-tables
@@ -37,16 +38,18 @@ networkPolicy:
   additionalIngress: []
   additionalEgress: []
 
-# Each build holds its staged parts, the decompressed upload (at most 1 GiB) and the built file.
+# Each build holds its staged parts, the decompressed upload and the built file: about 4 × the
+# upload limit (global.lookupTablesMaxUploadBytes, 2 GiB by default). Scale it with that limit.
 scratch:
-  size: "4Gi"
+  size: "8Gi"
 
 resources:
   requests:
     memory: "128Mi"
     cpu: "100m"
+  # The extractor may map 2 × the upload limit; scale the memory limit with it.
   limits:
-    memory: "2Gi"
+    memory: "4Gi"
 
 config:
   metaEndpoint: "http://meta:9560"
@@ -55,6 +58,13 @@ config:
   # them, network rules) or "rlimits-only" for a kernel without Landlock. The service logs which at
   # start; under "enforce" without Landlock every upload fails.
   sandbox: "enforce"
+  # Lets URL imports (`bzrk lookup-table upload NAME https://…`) reach http and private,
+  # loopback and link-local hosts, such as an object store inside the cluster's own network.
+  # Off, imports fetch public https URLs only.
+  importPrivateHosts: false
+  # The most bytes one value of a lookup table may be, at most 16 MiB. The upload size limit is
+  # global.lookupTablesMaxUploadBytes, which meta reads too.
+  maxValueBytes: 2097152
   observability:
     serviceName: "lookup-tables"
     logLevel: "info"

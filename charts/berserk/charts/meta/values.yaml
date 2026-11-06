@@ -83,7 +83,7 @@ config:
   # lookup-tables.enabled and gateway.config.lookupTablesBaseUrl, once the bucket's lifecycle rule
   # aborts abandoned multipart uploads.
   lookupTablesEnabled: false
-  # lookupTablesMaxDatabaseBytes: 2147483648  # current versions of all lookup tables in one database
+  # lookupTablesMaxDatabaseBytes: 549755813888  # 512 GiB: current versions of all lookup tables in one database
   observability:
     serviceName: "meta"
     logLevel: "info"

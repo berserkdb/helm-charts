@@ -66,6 +66,9 @@ data:
     {{- with .Values.config.lookupTablesMaxDatabaseBytes }}
     lookup_tables_max_database_bytes: {{ int64 . }}
     {{- end }}
+    {{- with .Values.global.lookupTablesMaxUploadBytes }}
+    lookup_tables_max_upload_bytes: {{ int64 . }}
+    {{- end }}
     {{- include "berserk-common.observability-config" . | nindent 4 }}
 {{- end }}
 {{- include "berserk-common.configmap" . }}
