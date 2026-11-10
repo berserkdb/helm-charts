@@ -3,6 +3,11 @@ Runs a query the way a user does: signed in at the gateway, which forwards it to
 query with a token query trusts. Query refuses anything the gateway did not sign,
 so the test needs a credential, and the only one a fresh install has is the
 bootstrap admin. Without a bootstrap password there is no query test.
+
+The bootstrap admin is break-glass, which may change access but holds no database
+rules, and a new cluster binds no one (docs/dev/access-control.md). So when the
+admin may not query yet, it binds itself to `observer` first, as an operator
+setting up the cluster does. An admin that may already query is left as it is.
 */ -}}
 {{- $bootstrap := .Values.gateway.bootstrap }}
 {{- if and .Values.query.enabled .Values.gateway.enabled $bootstrap.adminEmail (or $bootstrap.adminPassword $bootstrap.existingSecret.name) }}
@@ -24,7 +29,8 @@ spec:
   restartPolicy: Never
   containers:
     - name: test-query
-      image: busybox:1.37
+      # curl, not busybox: busybox's wget cannot send the PUT that binds a role.
+      image: curlimages/curl:8.10.1
       securityContext:
         allowPrivilegeEscalation: false
       env:
@@ -38,43 +44,56 @@ spec:
       command: ["/bin/sh", "-c"]
       args:
         - |
-          set -e
+          set -eu
           GATEWAY="http://gateway:{{ .Values.gateway.service.port }}"
 
           echo "Waiting for the gateway to be ready..."
-          until wget -q --spider "${GATEWAY}/health/ready" 2>/dev/null; do
+          until curl -sf -o /dev/null "${GATEWAY}/health/ready"; do
             echo "Gateway not ready yet, retrying in 3s..."
             sleep 3
           done
 
-          json_string() { printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'; }
-          # A file, not --post-data, keeps the password out of the process list.
-          printf '{"email": "%s", "password": "%s"}' \
-            "$(json_string "$ADMIN_EMAIL")" "$(json_string "$ADMIN_PASSWORD")" > /tmp/login.json
-
+          # --variable reads the environment, so the password never reaches argv.
           echo "Signing in as ${ADMIN_EMAIL}..."
-          LOGIN_STATUS=0
-          LOGIN=$(wget -S -O /dev/null \
-            --header="Content-Type: application/json" \
-            --post-file=/tmp/login.json \
-            "${GATEWAY}/auth/login" 2>&1) || LOGIN_STATUS=$?
-          rm /tmp/login.json
-          if [ "${LOGIN_STATUS}" -ne 0 ]; then
+          if ! curl -sS -f -o /dev/null -D /tmp/login.headers \
+            -H "Content-Type: application/json" \
+            --variable %ADMIN_EMAIL --variable %ADMIN_PASSWORD \
+            --expand-data '{"email": "{{ "{{" }}ADMIN_EMAIL:json{{ "}}" }}", "password": "{{ "{{" }}ADMIN_PASSWORD:json{{ "}}" }}"}' \
+            "${GATEWAY}/auth/login"; then
             echo "FAILED: the bootstrap admin could not sign in at the gateway"
-            echo "${LOGIN}" | grep "HTTP/" || true
             exit 1
           fi
-          SESSION=$(echo "${LOGIN}" | sed -n 's/^ *[Ss]et-[Cc]ookie: *\([^;]*\).*/\1/p' | head -n 1)
+          SESSION=$(sed -n 's/^ *[Ss]et-[Cc]ookie: *\([^;]*\).*/\1/p' /tmp/login.headers | head -n 1)
           if [ -z "${SESSION}" ]; then
             echo "FAILED: the gateway signed the admin in but set no session cookie"
             exit 1
           fi
 
+          CAN_QUERY=$(curl -sS -f \
+            -H "Cookie: ${SESSION}" \
+            -H "Content-Type: application/json" \
+            --data '{"kind": "databases", "verb": "query"}' \
+            "${GATEWAY}/api/access/can-i")
+          case "${CAN_QUERY}" in
+            *'"allowed":true'*)
+              echo "The admin may already query; its bindings are left as they are."
+              ;;
+            *)
+              echo "The admin may not query yet; binding it to observer..."
+              curl -sS -f -o /dev/null -X PUT \
+                -H "Cookie: ${SESSION}" \
+                -H "Content-Type: application/json" \
+                --data '{"roles": ["observer"]}' \
+                --variable %ADMIN_EMAIL \
+                --expand-url "${GATEWAY}/api/access/bindings/users/{{ "{{" }}ADMIN_EMAIL:url{{ "}}" }}"
+              ;;
+          esac
+
           echo "Running through the gateway: {{ .Values.global.defaultTable }} | take 1"
-          RESPONSE=$(wget -qO- \
-            --header="Cookie: ${SESSION}" \
-            --header="Content-Type: application/json" \
-            --post-data='{"db": "{{ .Values.global.defaultDatabase | default "default" }}", "csl": "{{ .Values.global.defaultTable }} | take 1"}' \
+          RESPONSE=$(curl -sS -f \
+            -H "Cookie: ${SESSION}" \
+            -H "Content-Type: application/json" \
+            --data '{"db": "{{ .Values.global.defaultDatabase | default "default" }}", "csl": "{{ .Values.global.defaultTable }} | take 1"}' \
             "${GATEWAY}/v1/rest/query")
 
           echo "Response: ${RESPONSE}"

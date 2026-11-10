@@ -70,8 +70,6 @@ config:
   metaEndpoint: "http://meta:9560"
   # Polling interval for meta service in seconds
   metaPollIntervalSecs: 5
-  # Stream inactivity timeout in seconds
-  streamTimeoutSecs: 300
   # The merge cadence and the combine policy are unset here on purpose: the
   # compiled defaults are the values we intend everywhere, so an environment
   # that sets one of these is stating that it differs, not filling in a blank.

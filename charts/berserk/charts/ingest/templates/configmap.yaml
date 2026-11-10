@@ -26,7 +26,6 @@ data:
 
     max_batch_bytes: {{ int .Values.config.batch.maxBatchBytes }}
     max_batch_age_secs: {{ .Values.config.batch.maxBatchAgeSecs }}
-    keep_alive_interval_secs: {{ .Values.config.batch.keepAliveIntervalSecs }}
 
     {{- with .Values.config.maxConcurrentRequests }}
     max_concurrent_requests: {{ . }}

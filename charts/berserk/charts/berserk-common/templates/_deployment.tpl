@@ -119,6 +119,26 @@ Usage: {{ include "berserk-common.env.master-key" . | nindent 12 }}
 {{- end }}
 
 {{/*
+License keys (docs/dev/licensing.md). Meta reads META_LICENSE_KEYS, a JSON array of
+key strings, at startup. Keys are not secret, so the default renders them inline; set
+`global.license.existingSecret` to read them from a Secret instead.
+Usage: {{ include "berserk-common.env.license" . | nindent 12 }}
+*/}}
+{{- define "berserk-common.env.license" -}}
+{{- $license := .Values.global.license | default dict }}
+{{- if $license.existingSecret }}
+- name: META_LICENSE_KEYS
+  valueFrom:
+    secretKeyRef:
+      name: {{ $license.existingSecret }}
+      key: {{ $license.existingSecretKey | default "license_keys" }}
+{{- else if $license.keys }}
+- name: META_LICENSE_KEYS
+  value: {{ toJson $license.keys | quote }}
+{{- end }}
+{{- end }}
+
+{{/*
 Telemetry resource attributes — stamps `bzrk.cluster.name`, `service.namespace`
 and the standard k8s.{pod,namespace,node}.name via OTEL_RESOURCE_ATTRIBUTES,
 which the Rust SDK merges into every exported record.
@@ -258,5 +278,79 @@ Usage: {{ include "berserk-common.env.s3-pool" . | nindent 12 }}
 {{- if and (ne $userTimeout "") (ne $userTimeout "<nil>") }}
 - name: BZRK_S3_TCP_USER_TIMEOUT
   value: {{ $userTimeout | quote }}
+{{- end }}
+{{- end }}
+
+{{/*
+Split debug info (docs/dev/stripped-builds-split-debuginfo.md). Release binaries ship fully
+stripped; on the clusters we operate, an init-container fetches each binary's <build-id>.debug from
+the password-gated symbol store and lays it under /usr/lib/debug, where blazesym (the profiler) and
+std's panic backtrace resolve it unchanged. Gated on global.symbols.enabled; absent elsewhere, so
+self-hosted installs run the same stripped image with no symbols.
+
+The artifact reference is service name + the chart's imageTag — exactly what the release published —
+so the symbols can never drift from the binary and no in-cluster digest resolution is needed. The CI
+publish preserves the file layout, so the init-container is the stock oras image pulling straight
+into /usr/lib/debug.
+
+Fail-open on purpose: symbols are a debugging aid, so a failed fetch (registry down, credential
+revoked, secret missing) logs `debug_symbols_fetch_failed` and the service starts without them —
+frames resolve to hex. Revoking a consumer's credential must never stop its pods from restarting.
+*/}}
+{{- define "berserk-common.debuginfoRef" -}}
+{{- $prefix := .Values.global.symbols.repoPrefix | default "images.bzrk.dev/debug" -}}
+{{- $tag := .Values.image.tag | default .Values.global.imageTag | default (printf "v%s" .Chart.AppVersion) -}}
+{{- printf "%s/%s:%s" $prefix .Chart.Name $tag -}}
+{{- end }}
+
+{{- define "berserk-common.initContainer.symbols" -}}
+{{- if .Values.global.symbols.enabled }}
+- name: fetch-debug-symbols
+  image: {{ .Values.global.symbols.fetcherImage | quote }}
+  imagePullPolicy: {{ .Values.global.imagePullPolicy | default "Always" }}
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    allowPrivilegeEscalation: false
+  env:
+    - name: SYMBOLS_USERNAME
+      value: {{ .Values.global.symbols.username | quote }}
+    - name: SYMBOLS_REF
+      value: {{ include "berserk-common.debuginfoRef" . | quote }}
+    - name: SYMBOLS_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: {{ .Values.global.symbols.passwordSecret.name | quote }}
+          key: {{ .Values.global.symbols.passwordSecret.key | quote }}
+          # A missing secret must not block the pod either; the pull then fails and is logged.
+          optional: true
+  # The password goes over stdin, never argv.
+  command: ["/bin/sh", "-c"]
+  args:
+    - |
+      if printf '%s' "$SYMBOLS_PASSWORD" | oras pull --username "$SYMBOLS_USERNAME" --password-stdin --output /usr/lib/debug "$SYMBOLS_REF"; then
+        echo "debug symbols fetched: $SYMBOLS_REF"
+      else
+        echo "debug_symbols_fetch_failed ref=$SYMBOLS_REF user=$SYMBOLS_USERNAME: starting without debug symbols" >&2
+      fi
+  volumeMounts:
+    - name: debug-symbols
+      mountPath: /usr/lib/debug
+{{- end }}
+{{- end }}
+
+{{- define "berserk-common.volume.symbols" -}}
+{{- if .Values.global.symbols.enabled }}
+- name: debug-symbols
+  emptyDir: {}
+{{- end }}
+{{- end }}
+
+{{- define "berserk-common.volumeMount.symbols" -}}
+{{- if .Values.global.symbols.enabled }}
+- name: debug-symbols
+  mountPath: /usr/lib/debug
+  readOnly: true
 {{- end }}
 {{- end }}

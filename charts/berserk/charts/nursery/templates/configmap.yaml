@@ -7,7 +7,6 @@ data:
     cloud_storage_secret_key: ${NURSERY_STORAGE_SECRET_KEY:}
     working_dir: "/var/cache/nursery"
     meta_default_poll_interval_secs: {{ .Values.config.metaPollIntervalSecs }}
-    stream_timeout_secs: {{ .Values.config.streamTimeoutSecs }}
     {{- /* int64: Helm reads every number as float64, so anything past ~1e7
            renders as scientific notation and no integer field parses it. */}}
     {{- if hasKey .Values.config "mergeAgeTriggerSecs" }}

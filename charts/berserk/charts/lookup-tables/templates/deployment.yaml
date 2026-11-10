@@ -7,6 +7,10 @@
       {{- $upload := int64 (required "global.lookupTablesMaxUploadBytes is required" .Values.global.lookupTablesMaxUploadBytes) }}
       {{- $deadline := add 120 (mul 60 (div (add $upload 134217727) 134217728)) }}
       terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds | default (add $deadline 180) }}
+      {{- if .Values.global.symbols.enabled }}
+      initContainers:
+        {{- include "berserk-common.initContainer.symbols" . | nindent 8 }}
+      {{- end }}
       containers:
         - name: lookup-tables
           image: {{ include "berserk-common.image" . }}
@@ -49,10 +53,12 @@
             periodSeconds: 3
           volumeMounts:
             {{- include "berserk-common.volumeMount.config" . | nindent 12 }}
+            {{- include "berserk-common.volumeMount.symbols" . | nindent 12 }}
             - name: scratch
               mountPath: /scratch
       volumes:
         {{- include "berserk-common.volume.config" . | nindent 8 }}
+        {{- include "berserk-common.volume.symbols" . | nindent 8 }}
         # Staged parts, the decompressed upload and the built file of each build in flight.
         - name: scratch
           emptyDir:

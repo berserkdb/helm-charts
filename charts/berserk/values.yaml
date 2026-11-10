@@ -53,6 +53,26 @@ global:
   imageTag: ""
   # Image pull secrets (for private registry mirrors, air-gapped environments, etc.)
   imagePullSecrets: []
+  # Split debug info (docs/dev/stripped-builds-split-debuginfo.md). Release binaries ship fully
+  # stripped. On the clusters we operate, an init-container fetches each binary's <build-id>.debug
+  # from the password-gated symbol store and lays it under /usr/lib/debug, restoring in-process
+  # profiling and symbolized panic backtraces. Off by default: self-hosted installs run the same
+  # stripped image with no symbols. Enable only where the password secret below is present (the
+  # clusters we operate); every release publishes symbols, so an enabled install always finds them.
+  symbols:
+    enabled: false
+    # Password-gated OCI repo prefix the init-container pulls `<service>:<imageTag>` from.
+    repoPrefix: images.bzrk.dev/debug
+    # The read credential for that repo. ONE PER CONSUMER — each cluster we operate and each managed
+    # customer sets its OWN username here and its own sealed password below; never share a credential
+    # across clusters. A deterrent, not a boundary (see the design doc). The matching {name, hash}
+    # goes into registry_symbols_users on the registry (Caddy basic_auth).
+    username: ""
+    passwordSecret:
+      name: debug-symbols-password
+      key: password
+    # Stock oras image used only to pull + lay out the symbols. Pinned.
+    fetcherImage: ghcr.io/oras-project/oras:v1.2.0
   # ServiceAccount name for pod specs (e.g. for IRSA on EKS)
   serviceAccountName: ""
   # Labels applied to all resources
@@ -227,6 +247,23 @@ global:
   ingestToken:
     enabled: false
     tokenName: "default_ingest_token"
+  # Product licensing (docs/dev/licensing.md). An install is licensed when it
+  # holds a valid Berserk-signed license key. Keys are not secret — a key grants
+  # nothing beyond its own signed terms — so they ride a plain env var by
+  # default. Meta stores the keys it is given and applies the most recently
+  # issued one that is valid now; operators can also add keys at runtime with
+  # `bzrk license-key add`, and those survive a redeploy. An unlicensed cluster
+  # is not yet restricted.
+  license:
+    # The license keys to install at startup, one string each; line breaks and
+    # spaces inside a key are ignored. Listed keys that meta cannot verify fail
+    # the deploy; an expired key is stored, not applied.
+    keys: []
+    # Read the keys from an existing Secret instead of `keys`: `existingSecretKey`
+    # holds a JSON array of key strings, e.g. ["eyJ…", "eyJ…"]. Use this if you would rather not put the keys in
+    # values, though they are not secret.
+    existingSecret: ""
+    existingSecretKey: "license_keys"
   # Observability configuration (OTLP telemetry)
   observability:
     otlpEnabled: false
@@ -490,7 +527,6 @@ ingest:
     batch:
       maxBatchBytes: 16777216
       maxBatchAgeSecs: 2
-      keepAliveIntervalSecs: 120
     # Refuse requests that present no token. With false they go on as
     # anonymous, which meta accepts only with `global.ingestToken.enabled`.
     requireAuth: true
@@ -847,8 +883,6 @@ nursery:
     metaEndpoint: "http://meta:9560"
     # Polling interval for meta service in seconds
     metaPollIntervalSecs: 5
-    # Stream inactivity timeout in seconds
-    streamTimeoutSecs: 300
 
 # Operator-tier Prometheus (#3792). Off by default — a self-managed, single-pod
 # Prometheus (no Operator/CRDs) that scrapes the annotation-based operator

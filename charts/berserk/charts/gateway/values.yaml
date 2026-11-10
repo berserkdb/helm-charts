@@ -169,9 +169,6 @@ config:
   inviteTtlSecs: 604800 # 7 d
   resetTtlSecs: 3600 # 1 h
   oidcChallengeTtlSecs: 600 # 10 min
-  grantOutboxTickSecs: 5
-  grantOutboxRetryDelaySecs: 5
-  grantOutboxBatchSize: 50
   sessionCleanupIntervalSecs: 3600
 
   observability:
@@ -196,9 +193,6 @@ config:
     # extras like `offline_access` or `groups`.
     scopes: []
     requireEmailVerified: true
-    # YAML list of email addresses made cluster admin when their account
-    # is created, by SSO or by invite: the page's "Admin emails".
-    bootstrapAdminEmails: []
 
   # Trusted reverse-proxy (PP) auth — trust identity headers from an
   # upstream authenticating proxy. Leave `enabled: false` (default)
@@ -226,8 +220,10 @@ config:
     # YAML list restricting auto-provisioning to these email domains.
     # Empty (default) allows any domain.
     allowedDomains: []
-    # YAML list of emails auto-promoted to cluster admin on first sign-in.
-    adminEmails: []
+    # Header carrying the user's groups, comma-separated: what the access
+    # policy's group bindings match. Empty reads no groups. Same rules as
+    # userHeader.
+    groupsHeader: ""
 
 # Secrets. The cookie key and every service token derive from the master
 # key (`global.masterKey`). The one reference here is compatibility only.

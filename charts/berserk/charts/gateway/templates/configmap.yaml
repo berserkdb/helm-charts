@@ -46,9 +46,6 @@ data:
     invite_ttl_secs: {{ int .Values.config.inviteTtlSecs }}
     reset_ttl_secs: {{ int .Values.config.resetTtlSecs }}
     oidc_challenge_ttl_secs: {{ int .Values.config.oidcChallengeTtlSecs }}
-    grant_outbox_tick_secs: {{ int .Values.config.grantOutboxTickSecs }}
-    grant_outbox_retry_delay_secs: {{ int .Values.config.grantOutboxRetryDelaySecs }}
-    grant_outbox_batch_size: {{ int .Values.config.grantOutboxBatchSize }}
     session_cleanup_interval_secs: {{ int .Values.config.sessionCleanupIntervalSecs }}
     {{- if .Values.config.oidc.enabled }}
     # Compatibility only: single sign-on settings an install configured here
@@ -63,10 +60,6 @@ data:
     oidc_require_email_verified: {{ .Values.config.oidc.requireEmailVerified }}
     {{- with .Values.config.oidc.scopes }}
     oidc_scopes:
-      {{- toYaml . | nindent 6 }}
-    {{- end }}
-    {{- with .Values.config.oidc.bootstrapAdminEmails }}
-    oidc_bootstrap_admin_emails:
       {{- toYaml . | nindent 6 }}
     {{- end }}
     {{- end }}
@@ -87,9 +80,8 @@ data:
     trusted_proxy_allowed_domains:
       {{- toYaml . | nindent 6 }}
     {{- end }}
-    {{- with .Values.config.trustedProxy.adminEmails }}
-    trusted_proxy_admin_emails:
-      {{- toYaml . | nindent 6 }}
+    {{- with .Values.config.trustedProxy.groupsHeader }}
+    trusted_proxy_groups_header: {{ . | quote }}
     {{- end }}
     {{- end }}
     {{- $dbPool := .Values.config.dbPool | default dict }}

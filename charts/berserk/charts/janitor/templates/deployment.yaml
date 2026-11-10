@@ -1,6 +1,10 @@
 {{- include "berserk-common.deployment.header" . }}
 {{- include "berserk-common.serviceAccountName" . }}
       terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      {{- if .Values.global.symbols.enabled }}
+      initContainers:
+        {{- include "berserk-common.initContainer.symbols" . | nindent 8 }}
+      {{- end }}
       containers:
         - name: janitor
           image: {{ include "berserk-common.image" . }}
@@ -54,10 +58,12 @@
             failureThreshold: 3
           volumeMounts:
             {{- include "berserk-common.volumeMount.config" . | nindent 12 }}
+            {{- include "berserk-common.volumeMount.symbols" . | nindent 12 }}
             - name: cache
               mountPath: /tmp/segment-cache
       volumes:
         {{- include "berserk-common.volume.config" . | nindent 8 }}
+        {{- include "berserk-common.volume.symbols" . | nindent 8 }}
         - name: cache
           emptyDir:
             sizeLimit: {{ .Values.cache.size }}

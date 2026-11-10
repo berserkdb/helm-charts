@@ -5,6 +5,10 @@
 {{- /* The install's service account: on GKE its Workload Identity is the Google
       identity customers grant on their subscriptions. */}}
 {{- include "berserk-common.serviceAccountName" . }}
+      {{- if .Values.global.symbols.enabled }}
+      initContainers:
+        {{- include "berserk-common.initContainer.symbols" . | nindent 8 }}
+      {{- end }}
       containers:
         - name: puller
           image: {{ include "berserk-common.image" . }}
@@ -52,5 +56,7 @@
             periodSeconds: 3
           volumeMounts:
             {{- include "berserk-common.volumeMount.config" . | nindent 12 }}
+            {{- include "berserk-common.volumeMount.symbols" . | nindent 12 }}
       volumes:
         {{- include "berserk-common.volume.config" . | nindent 8 }}
+        {{- include "berserk-common.volume.symbols" . | nindent 8 }}

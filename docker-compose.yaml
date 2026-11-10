@@ -102,6 +102,7 @@ configs:
     content: |
       bind: "0.0.0.0:9510"
       meta_endpoint: "http://meta:9560"
+      cluster_name: "compose"
       # Fan out to each nursery's NurseryQueryService for un-merged baby
       # segments before they merge to S3 — without this, freshly ingested
       # data isn't queryable until a merge lands (minutes, not seconds).
@@ -143,7 +144,6 @@ configs:
 
       max_batch_bytes: 16777216
       max_batch_age_secs: 2
-      keep_alive_interval_secs: 120
 
       observability:
         service_name: "ingest"
@@ -181,7 +181,6 @@ configs:
       cloud_storage_secret_key: $${NURSERY_STORAGE_SECRET_KEY:}
       working_dir: "/var/cache/nursery"
       meta_default_poll_interval_secs: 5
-      stream_timeout_secs: 300
       # Query-in-nursery lane: serve un-merged baby segments to the query
       # coordinator's fan-out (paired with query's query_via_nursery) so fresh
       # data is queryable before it merges to S3. qws_bin is bundled at
@@ -216,9 +215,6 @@ configs:
       invite_ttl_secs: 604800
       reset_ttl_secs: 3600
       oidc_challenge_ttl_secs: 600
-      grant_outbox_tick_secs: 5
-      grant_outbox_retry_delay_secs: 5
-      grant_outbox_batch_size: 50
       session_cleanup_interval_secs: 3600
       observability:
         service_name: "gateway"
@@ -317,7 +313,7 @@ services:
 
   meta:
     <<: *common
-    image: images.bzrk.dev/release/meta:v1.1.18-rc.3
+    image: images.bzrk.dev/release/meta:v1.1.19-rc.2
     depends_on:
       postgres:
         condition: service_healthy
@@ -346,7 +342,7 @@ services:
 
   query:
     <<: *common
-    image: images.bzrk.dev/release/query:v1.1.18-rc.3
+    image: images.bzrk.dev/release/query:v1.1.19-rc.2
     depends_on:
       meta:
         condition: service_healthy
@@ -389,7 +385,7 @@ services:
   # that token.
   ingest:
     <<: *common
-    image: images.bzrk.dev/release/ingest:v1.1.18-rc.3
+    image: images.bzrk.dev/release/ingest:v1.1.19-rc.2
     depends_on:
       meta:
         condition: service_healthy
@@ -424,7 +420,7 @@ services:
 
   janitor:
     <<: *common
-    image: images.bzrk.dev/release/janitor:v1.1.18-rc.3
+    image: images.bzrk.dev/release/janitor:v1.1.19-rc.2
     depends_on:
       meta:
         condition: service_healthy
@@ -456,7 +452,7 @@ services:
 
   nursery:
     <<: *common
-    image: images.bzrk.dev/release/nursery:v1.1.18-rc.3
+    image: images.bzrk.dev/release/nursery:v1.1.19-rc.2
     depends_on:
       meta:
         condition: service_healthy
@@ -486,7 +482,7 @@ services:
 
   ui:
     <<: *common
-    image: images.bzrk.dev/release/ui:v1.1.18-rc.3
+    image: images.bzrk.dev/release/ui:v1.1.19-rc.2
     depends_on:
       postgres:
         condition: service_healthy
@@ -532,7 +528,7 @@ services:
 
   permissions:
     <<: *common
-    image: images.bzrk.dev/release/permissions:v1.1.18-rc.3
+    image: images.bzrk.dev/release/permissions:v1.1.19-rc.2
     depends_on:
       postgres:
         condition: service_healthy
@@ -551,7 +547,7 @@ services:
 
   gateway:
     <<: *common
-    image: images.bzrk.dev/release/gateway:v1.1.18-rc.3
+    image: images.bzrk.dev/release/gateway:v1.1.19-rc.2
     depends_on:
       postgres:
         condition: service_healthy

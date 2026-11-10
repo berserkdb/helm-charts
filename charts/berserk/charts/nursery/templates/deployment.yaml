@@ -1,5 +1,9 @@
 {{- include "berserk-common.deployment.header" . }}
 {{- include "berserk-common.serviceAccountName" . }}
+      {{- if .Values.global.symbols.enabled }}
+      initContainers:
+        {{- include "berserk-common.initContainer.symbols" . | nindent 8 }}
+      {{- end }}
       containers:
         - name: nursery
           image: {{ include "berserk-common.image" . }}
@@ -82,10 +86,12 @@
             periodSeconds: 3
           volumeMounts:
             {{- include "berserk-common.volumeMount.config" . | nindent 12 }}
+            {{- include "berserk-common.volumeMount.symbols" . | nindent 12 }}
             - name: working-dir
               mountPath: /var/cache/nursery
       volumes:
         {{- include "berserk-common.volume.config" . | nindent 8 }}
+        {{- include "berserk-common.volume.symbols" . | nindent 8 }}
         - name: working-dir
           emptyDir:
             sizeLimit: {{ .Values.workingDir.size }}

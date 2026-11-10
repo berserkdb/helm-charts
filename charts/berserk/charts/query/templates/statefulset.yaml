@@ -65,12 +65,14 @@ spec:
         fsGroupChangePolicy: OnRootMismatch
 {{- include "berserk-common.scheduling" . }}
 {{- include "berserk-common.serviceAccountName" . }}
-      {{- if and .Values.cache.enabled .Values.cache.hostPath }}
-      # hostPath segment cache (e.g. /mnt/nvme/<customer> on the instance-store
-      # NVMe): the kubelet creates the dir as root:0755 and hostPath volumes
-      # ignore fsGroup, so the non-root query process (uid 1000) can't write to
-      # it. Chown it to the pod's uid/gid once, as root, before query starts.
+      {{- if or (and .Values.cache.enabled .Values.cache.hostPath) .Values.global.symbols.enabled }}
       initContainers:
+        {{- include "berserk-common.initContainer.symbols" . | nindent 8 }}
+        {{- if and .Values.cache.enabled .Values.cache.hostPath }}
+        # hostPath segment cache (e.g. /mnt/nvme/<customer> on the instance-store
+        # NVMe): the kubelet creates the dir as root:0755 and hostPath volumes
+        # ignore fsGroup, so the non-root query process (uid 1000) can't write to
+        # it. Chown it to the pod's uid/gid once, as root, before query starts.
         - name: init-segment-cache
           image: {{ include "berserk-common.image" . }}
           imagePullPolicy: {{ .Values.image.pullPolicy | default .Values.global.imagePullPolicy | default "Always" }}
@@ -84,6 +86,7 @@ spec:
           volumeMounts:
             - name: segment-cache
               mountPath: /segment_cache
+        {{- end }}
       {{- end }}
       containers:
         - name: query
@@ -238,6 +241,7 @@ spec:
             periodSeconds: 3
           volumeMounts:
             {{- include "berserk-common.volumeMount.config" . | nindent 12 }}
+            {{- include "berserk-common.volumeMount.symbols" . | nindent 12 }}
             {{- if .Values.cache.enabled }}
             - name: segment-cache
               mountPath: /segment_cache
@@ -255,6 +259,7 @@ spec:
               `qws-grpc` port on this container. */}}
       volumes:
         {{- include "berserk-common.volume.config" . | nindent 8 }}
+        {{- include "berserk-common.volume.symbols" . | nindent 8 }}
         {{- if and .Values.cache.enabled (not .Values.cache.persistent) }}
         - name: segment-cache
           {{- if .Values.cache.hostPath }}

@@ -3,6 +3,10 @@
 {{- end }}
 {{- include "berserk-common.deployment.header" . }}
       serviceAccountName: {{ .Values.serviceAccountName | default "default" }}
+      {{- if .Values.global.symbols.enabled }}
+      initContainers:
+        {{- include "berserk-common.initContainer.symbols" . | nindent 8 }}
+      {{- end }}
       containers:
         - name: audit-shipper
           image: {{ include "berserk-common.image" . }}
@@ -31,5 +35,7 @@
             {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
             {{- include "berserk-common.volumeMount.config" . | nindent 12 }}
+            {{- include "berserk-common.volumeMount.symbols" . | nindent 12 }}
       volumes:
         {{- include "berserk-common.volume.config" . | nindent 8 }}
+        {{- include "berserk-common.volume.symbols" . | nindent 8 }}

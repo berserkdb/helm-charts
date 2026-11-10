@@ -137,7 +137,6 @@ config:
   batch:
     maxBatchBytes: 16777216         # 16 MiB
     maxBatchAgeSecs: 2
-    keepAliveIntervalSecs: 120
 
   # Admission control. All default in the binary, so leave unset unless you
   # have a specific reason to override (see apps/ingest/src/config.rs):

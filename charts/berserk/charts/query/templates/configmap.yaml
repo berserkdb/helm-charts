@@ -3,6 +3,8 @@ data:
   config.yaml: |
     bind: "0.0.0.0:{{ .Values.service.port }}"
     meta_endpoint: {{ .Values.config.metaEndpoint | quote }}
+    {{- /* The name telemetry stamps as `bzrk.cluster.name`, which `current_cluster()` gives. */}}
+    cluster_name: {{ .Values.global.clusterName | default "default" | quote }}
     cloud_storage_access_key: ${AWS_ACCESS_KEY_ID:}
     cloud_storage_secret_key: ${AWS_SECRET_ACCESS_KEY:}
     {{- if hasKey .Values.config "workersPerQuery" }}
