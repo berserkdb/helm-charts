@@ -139,14 +139,12 @@ spec:
     {{- end }}
     {{- /* Rule: OTLP ingress -- when this service is the OTLP target, allow namespace-wide ingress */ -}}
     {{- if .Values.global.observability.otlpEnabled }}
-    {{- $otlpIngressEndpoint := .Values.global.observability.otlpEndpoint | default "ingest:4317" | trimPrefix "https://" | trimPrefix "http://" }}
-    {{- $otlpIngressHost := index (splitList ":" $otlpIngressEndpoint) 0 }}
-    {{- $otlpIngressPort := index (splitList ":" $otlpIngressEndpoint) 1 | default "4317" }}
-    {{- if eq $otlpIngressHost .Chart.Name }}
+    {{- $otlpIngressTarget := splitList ":" (include "berserk-common.otlp-local-target" .) }}
+    {{- if eq (first $otlpIngressTarget) .Chart.Name }}
     - from:
         - podSelector: {}
       ports:
-        - port: {{ $otlpIngressPort | int }}
+        - port: {{ last $otlpIngressTarget | int }}
           protocol: TCP
     {{- end }}
     {{- end }}
@@ -192,9 +190,9 @@ spec:
     {{- end }}
     {{- end }}
     {{- $obs := .Values.global.observability }}
-    {{- $otlpEndpoint := $obs.otlpEndpoint | default "ingest:4317" | trimPrefix "https://" | trimPrefix "http://" }}
-    {{- $otlpHost := index (splitList ":" $otlpEndpoint) 0 }}
-    {{- $otlpPort := index (splitList ":" $otlpEndpoint) 1 | default "4317" }}
+    {{- $otlpTarget := splitList ":" (include "berserk-common.otlp-local-target" .) }}
+    {{- $otlpHost := first $otlpTarget }}
+    {{- $otlpPort := last $otlpTarget }}
     {{- $otlpRemote := ($obs.remote | default dict).endpoint }}
     {{- if and $obs.otlpEnabled (eq $otlpHost "ingest") }}
     - to:
@@ -285,4 +283,20 @@ spec:
     {{- toYaml . | nindent 4 }}
     {{- end }}
 {{- end }}
+{{- end }}
+
+
+{{/*
+`service:port` for the in-namespace Service global.observability.otlpEndpoint
+names, short or namespaced, else `:port`. It takes the namespaced forms the
+system token does, so an endpoint that gets the token also gets through.
+*/}}
+{{- define "berserk-common.otlp-local-target" -}}
+{{- $endpoint := .Values.global.observability.otlpEndpoint | default "ingest:4317" | trimPrefix "https://" | trimPrefix "http://" | trimSuffix "/" }}
+{{- $parts := splitList ":" $endpoint }}
+{{- $port := ternary (last $parts) "4317" (gt (len $parts) 1) }}
+{{- $local := printf "^[a-z0-9-]+(\\.%s(\\.svc(\\.cluster\\.local)?)?)?$" (regexQuoteMeta .Release.Namespace) }}
+{{- if regexMatch $local (first $parts) }}
+{{- first (splitList "." (first $parts)) }}
+{{- end }}:{{ $port }}
 {{- end }}

@@ -326,9 +326,9 @@ global:
     # OTLP egress rules used when global.observability.otlpEndpoint points
     # outside this Helm release's namespace. Each entry must specify either
     # `cidr` (external ipBlock) OR `namespace` + `podLabels` (cross-namespace
-    # in-cluster peer). Egress to the default endpoint (ingest:4317) is
-    # handled automatically; otlpEgress covers any other otlpEndpoint and the
-    # remote destination (observability.remote.endpoint).
+    # in-cluster peer). Egress to this install's own ingest, by its short or
+    # namespaced name, is handled automatically; otlpEgress covers any other
+    # otlpEndpoint and the remote destination (observability.remote.endpoint).
     otlpEgress: []
     # External collector via ipBlock:
     #  - cidr: 10.0.0.0/8
