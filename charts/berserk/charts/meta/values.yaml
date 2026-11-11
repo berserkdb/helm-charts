@@ -48,7 +48,7 @@ networkPolicy:
     # audit-shipper reads the audit chain and reports what it archived
     - app: audit-shipper
       ports: [{port: 9560}]
-    # puller creates each Pub/Sub source's ingest token
+    # puller creates each Pub/Sub source's ingest token and pipeline
     - app: puller
       ports: [{port: 9560}]
     # lookup-tables registers uploads, claims builds and commits versions

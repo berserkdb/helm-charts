@@ -313,7 +313,7 @@ services:
 
   meta:
     <<: *common
-    image: images.bzrk.dev/release/meta:v1.1.19-rc.2
+    image: images.bzrk.dev/release/meta:v1.1.19-rc.3
     depends_on:
       postgres:
         condition: service_healthy
@@ -321,7 +321,8 @@ services:
       <<: *common-env
       POD_IP: meta
       META_DATABASE_URL: "postgres://berserk:berserk@postgres:5432/berserk"
-      # Registers the default ingest token (derived from the key) and creates
+      # Registers the default ingest token (derived from the key) with its
+      # ingest pipeline, and creates
       # the `default` table on first boot.
       BZRK_MASTER_KEY: *master-key
       # Anonymous ingest: meta answers a sender with no token with that token.
@@ -342,7 +343,7 @@ services:
 
   query:
     <<: *common
-    image: images.bzrk.dev/release/query:v1.1.19-rc.2
+    image: images.bzrk.dev/release/query:v1.1.19-rc.3
     depends_on:
       meta:
         condition: service_healthy
@@ -385,7 +386,7 @@ services:
   # that token.
   ingest:
     <<: *common
-    image: images.bzrk.dev/release/ingest:v1.1.19-rc.2
+    image: images.bzrk.dev/release/ingest:v1.1.19-rc.3
     depends_on:
       meta:
         condition: service_healthy
@@ -420,7 +421,7 @@ services:
 
   janitor:
     <<: *common
-    image: images.bzrk.dev/release/janitor:v1.1.19-rc.2
+    image: images.bzrk.dev/release/janitor:v1.1.19-rc.3
     depends_on:
       meta:
         condition: service_healthy
@@ -452,7 +453,7 @@ services:
 
   nursery:
     <<: *common
-    image: images.bzrk.dev/release/nursery:v1.1.19-rc.2
+    image: images.bzrk.dev/release/nursery:v1.1.19-rc.3
     depends_on:
       meta:
         condition: service_healthy
@@ -482,7 +483,7 @@ services:
 
   ui:
     <<: *common
-    image: images.bzrk.dev/release/ui:v1.1.19-rc.2
+    image: images.bzrk.dev/release/ui:v1.1.19-rc.3
     depends_on:
       postgres:
         condition: service_healthy
@@ -528,7 +529,7 @@ services:
 
   permissions:
     <<: *common
-    image: images.bzrk.dev/release/permissions:v1.1.19-rc.2
+    image: images.bzrk.dev/release/permissions:v1.1.19-rc.3
     depends_on:
       postgres:
         condition: service_healthy
@@ -547,7 +548,7 @@ services:
 
   gateway:
     <<: *common
-    image: images.bzrk.dev/release/gateway:v1.1.19-rc.2
+    image: images.bzrk.dev/release/gateway:v1.1.19-rc.3
     depends_on:
       postgres:
         condition: service_healthy

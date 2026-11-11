@@ -240,7 +240,8 @@ global:
   # Anonymous ingest: with `enabled: true`, meta answers a sender that
   # presents no token with the default token, which it derives from the master
   # key and registers at startup (one row per configured key, named
-  # `<tokenName>-<key id>`, routed to `defaultDatabase`/`defaultTable`). Ingest
+  # `<tokenName>-<key id>`, all on one ingest pipeline that a fresh install
+  # names `<tokenName>` and points at `defaultDatabase`/`defaultTable`). Ingest
   # sends such requests on only with `ingest.config.requireAuth: false`. Off by
   # default: every sender presents its own token, and with `enabled: false`
   # meta retires the rows.
@@ -266,13 +267,38 @@ global:
     existingSecretKey: "license_keys"
   # Observability configuration (OTLP telemetry)
   observability:
-    otlpEnabled: false
+    # Every service ships its own traces, logs and metrics to otlpEndpoint, by
+    # default this install's ingest, which stores them in the `system` database.
+    # otlpEnabled switches that local export only; a service's
+    # `config.observability.otlpEnabled: false` opts it out alone. The remote
+    # below ships either way: to turn self-telemetry off entirely, set
+    # otlpEnabled: false and leave remote.endpoint empty.
+    otlpEnabled: true
     otlpEndpoint: "ingest:4317"
+    # Whether that telemetry carries the system ingest token, derived from the
+    # master key, which ingest routes into `system`. Unset: on only when
+    # otlpEndpoint is this install's own ingest (`ingest:4317`), so the token
+    # never reaches another collector. Set true or false to override.
+    # systemToken: true
+    # A second destination every service also ships its own telemetry to, such
+    # as a monitoring cluster, each destination through its own queue so neither
+    # holds up the other. `endpoint` takes its scheme; https verifies against the
+    # system's trusted roots. `tokenSecret`, optional, names the Secret key
+    # holding the ingest token that destination issued; without it no
+    # authorization header is sent there. Never the master key Secret. With
+    # network policies on, list the endpoint's address in
+    # networkPolicy.otlpEgress.
+    remote:
+      endpoint: ""
+      tokenSecret:
+        name: ""
+        key: ""
     # Run the CPU (and, where enabled, wait) profiler in every service and the
     # children it spawns. Set a service's own `config.observability.profilerEnabled`
     # to override this for that service alone.
     profilerEnabled: true
-  # Database and table the default ingest token routes to. meta creates the
+  # Database and table the default ingest token's pipeline starts out
+  # routing to. meta creates the
   # table at startup when it is missing; both default to the `default`
   # database/table that meta's migration 026 seeds.
   defaultDatabase: "default"
@@ -300,8 +326,9 @@ global:
     # OTLP egress rules used when global.observability.otlpEndpoint points
     # outside this Helm release's namespace. Each entry must specify either
     # `cidr` (external ipBlock) OR `namespace` + `podLabels` (cross-namespace
-    # in-cluster peer). When using the default (ingest:4317), egress is
-    # handled automatically and otlpEgress is ignored.
+    # in-cluster peer). Egress to the default endpoint (ingest:4317) is
+    # handled automatically; otlpEgress covers any other otlpEndpoint and the
+    # remote destination (observability.remote.endpoint).
     otlpEgress: []
     # External collector via ipBlock:
     #  - cidr: 10.0.0.0/8

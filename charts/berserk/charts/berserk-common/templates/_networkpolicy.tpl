@@ -191,11 +191,12 @@ spec:
         {{- end }}
     {{- end }}
     {{- end }}
-    {{- if .Values.global.observability.otlpEnabled }}
-    {{- $otlpEndpoint := .Values.global.observability.otlpEndpoint | default "ingest:4317" | trimPrefix "https://" | trimPrefix "http://" }}
+    {{- $obs := .Values.global.observability }}
+    {{- $otlpEndpoint := $obs.otlpEndpoint | default "ingest:4317" | trimPrefix "https://" | trimPrefix "http://" }}
     {{- $otlpHost := index (splitList ":" $otlpEndpoint) 0 }}
     {{- $otlpPort := index (splitList ":" $otlpEndpoint) 1 | default "4317" }}
-    {{- if eq $otlpHost "ingest" }}
+    {{- $otlpRemote := ($obs.remote | default dict).endpoint }}
+    {{- if and $obs.otlpEnabled (eq $otlpHost "ingest") }}
     - to:
         - podSelector:
             matchLabels:
@@ -204,7 +205,10 @@ spec:
       ports:
         - port: {{ $otlpPort | int }}
           protocol: TCP
-    {{- else }}
+    {{- end }}
+    {{- /* Outside the release: the OTLP endpoint when it is not ingest, and the
+           second destination, global.observability.remote. */ -}}
+    {{- if or (and $obs.otlpEnabled (ne $otlpHost "ingest")) $otlpRemote }}
     {{- /* External: each otlpEgress entry must specify {cidr} for an ipBlock
            rule, {namespace, podLabels} for a cross-namespace in-cluster peer,
            or {anyDestination: true} for a port-scoped rule with no destination
@@ -241,7 +245,6 @@ spec:
         - port: {{ .port }}
           protocol: {{ .protocol | default "TCP" }}
         {{- end }}
-    {{- end }}
     {{- end }}
     {{- end }}
     {{- end }}

@@ -57,6 +57,13 @@ A copy is also shipped inside each image at /usr/share/doc/berserk/NOTICE.md.
 NetworkPolicy is ENABLED. Ensure your cluster has a CNI plugin that supports
 NetworkPolicy enforcement (Calico, Cilium, or EKS VPC CNI v1.14+).
 
+{{- $otlpRemote := (.Values.global.observability.remote | default dict).endpoint }}
+{{- if and $otlpRemote (not .Values.global.networkPolicy.otlpEgress) }}
+
+WARNING: telemetry also ships to {{ $otlpRemote }} (global.observability.remote),
+but no egress rules are configured for it. NetworkPolicy will block that copy.
+List its address and port in global.networkPolicy.otlpEgress.
+{{- end }}
 {{- $otlpEndpoint := .Values.global.observability.otlpEndpoint | default "ingest:4317" }}
 {{- if and .Values.global.observability.otlpEnabled (ne $otlpEndpoint "ingest:4317") (not .Values.global.networkPolicy.otlpEgress) }}
 
