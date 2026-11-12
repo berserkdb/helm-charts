@@ -313,7 +313,7 @@ services:
 
   meta:
     <<: *common
-    image: images.bzrk.dev/release/meta:v1.1.19-rc.7
+    image: images.bzrk.dev/release/meta:v1.1.19-rc.8
     depends_on:
       postgres:
         condition: service_healthy
@@ -343,7 +343,7 @@ services:
 
   query:
     <<: *common
-    image: images.bzrk.dev/release/query:v1.1.19-rc.7
+    image: images.bzrk.dev/release/query:v1.1.19-rc.8
     depends_on:
       meta:
         condition: service_healthy
@@ -386,7 +386,7 @@ services:
   # that token.
   ingest:
     <<: *common
-    image: images.bzrk.dev/release/ingest:v1.1.19-rc.7
+    image: images.bzrk.dev/release/ingest:v1.1.19-rc.8
     depends_on:
       meta:
         condition: service_healthy
@@ -421,7 +421,7 @@ services:
 
   janitor:
     <<: *common
-    image: images.bzrk.dev/release/janitor:v1.1.19-rc.7
+    image: images.bzrk.dev/release/janitor:v1.1.19-rc.8
     depends_on:
       meta:
         condition: service_healthy
@@ -453,7 +453,7 @@ services:
 
   nursery:
     <<: *common
-    image: images.bzrk.dev/release/nursery:v1.1.19-rc.7
+    image: images.bzrk.dev/release/nursery:v1.1.19-rc.8
     depends_on:
       meta:
         condition: service_healthy
@@ -483,7 +483,7 @@ services:
 
   ui:
     <<: *common
-    image: images.bzrk.dev/release/ui:v1.1.19-rc.7
+    image: images.bzrk.dev/release/ui:v1.1.19-rc.8
     depends_on:
       postgres:
         condition: service_healthy
@@ -529,7 +529,7 @@ services:
 
   permissions:
     <<: *common
-    image: images.bzrk.dev/release/permissions:v1.1.19-rc.7
+    image: images.bzrk.dev/release/permissions:v1.1.19-rc.8
     depends_on:
       postgres:
         condition: service_healthy
@@ -548,7 +548,7 @@ services:
 
   gateway:
     <<: *common
-    image: images.bzrk.dev/release/gateway:v1.1.19-rc.7
+    image: images.bzrk.dev/release/gateway:v1.1.19-rc.8
     depends_on:
       postgres:
         condition: service_healthy
