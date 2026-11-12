@@ -9,6 +9,11 @@ Supports three port patterns via values:
 Additional values:
   - .Values.service.type (required, e.g. ClusterIP)
   - .Values.service.portName (optional, defaults to "http")
+  - .Values.service.appProtocols (optional, map of camelCase port name ->
+    appProtocol, keyed like .Values.service.ports). Gateway API implementations
+    and service meshes read `appProtocol` to pick the protocol they speak to the
+    port, e.g. `kubernetes.io/h2c` for gRPC without TLS. A key that names no
+    port fails the render.
   - .Values.service.annotations (optional, map of string -> string) — e.g.
     LoadBalancer-controller annotations, cert-manager hints, external-dns
     hostnames. Useful when a Service needs to be exposed via a public LB.
@@ -47,14 +52,26 @@ spec:
 {{/*
 Port list shared by `berserk-common.service` and `berserk-common.service.headless`,
 rendered without indentation. Callers place it with `trim | nindent <n>`.
+
+`appProtocol` says what the port speaks, which holds for either Service, so the
+headless one carries it too.
 */}}
 {{- define "berserk-common.service.ports" -}}
+{{- $appProtocols := .Values.service.appProtocols | default dict }}
+{{- range $name, $_ := $appProtocols }}
+{{- if not (hasKey ($.Values.service.ports | default dict) $name) }}
+{{- fail (printf "%s: service.appProtocols.%s names no port in service.ports" (include "berserk-common.fullname" $) $name) }}
+{{- end }}
+{{- end }}
 {{- if .Values.service.ports }}
 {{- range $name, $port := .Values.service.ports }}
 - port: {{ $port }}
   targetPort: {{ $port }}
   protocol: TCP
   name: {{ $name | kebabcase }}
+  {{- with get $appProtocols $name }}
+  appProtocol: {{ . | quote }}
+  {{- end }}
 {{- end }}
 {{- else }}
 - port: {{ .Values.service.port }}

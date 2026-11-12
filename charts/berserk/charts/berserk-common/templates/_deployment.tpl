@@ -350,7 +350,7 @@ frames resolve to hex. Revoking a consumer's credential must never stop its pods
 {{- define "berserk-common.debuginfoRef" -}}
 {{- $prefix := .Values.global.symbols.repoPrefix | default "images.bzrk.dev/debug" -}}
 {{- $tag := .Values.image.tag | default .Values.global.imageTag | default (printf "v%s" .Chart.AppVersion) -}}
-{{- printf "%s/%s:%s" $prefix .Chart.Name $tag -}}
+{{- printf "%s/%s%s:%s" $prefix .Chart.Name (.Values.global.symbols.repoSuffix | default "") $tag -}}
 {{- end }}
 
 {{- define "berserk-common.initContainer.symbols" -}}
@@ -364,10 +364,26 @@ frames resolve to hex. Revoking a consumer's credential must never stop its pods
     runAsGroup: 1000
     allowPrivilegeEscalation: false
   env:
-    - name: SYMBOLS_USERNAME
-      value: {{ .Values.global.symbols.username | quote }}
     - name: SYMBOLS_REF
       value: {{ include "berserk-common.debuginfoRef" . | quote }}
+  {{- if .Values.global.symbols.registryConfigSecret }}
+  command: ["/bin/sh", "-c"]
+  args:
+    - |
+      if oras pull --registry-config /run/debug-symbols-auth/.dockerconfigjson --output /usr/lib/debug "$SYMBOLS_REF"; then
+        echo "debug symbols fetched: $SYMBOLS_REF"
+      else
+        echo "debug_symbols_fetch_failed ref=$SYMBOLS_REF: starting without debug symbols" >&2
+      fi
+  volumeMounts:
+    - name: debug-symbols
+      mountPath: /usr/lib/debug
+    - name: debug-symbols-auth
+      mountPath: /run/debug-symbols-auth
+      readOnly: true
+  {{- else }}
+    - name: SYMBOLS_USERNAME
+      value: {{ .Values.global.symbols.username | quote }}
     - name: SYMBOLS_PASSWORD
       valueFrom:
         secretKeyRef:
@@ -387,6 +403,7 @@ frames resolve to hex. Revoking a consumer's credential must never stop its pods
   volumeMounts:
     - name: debug-symbols
       mountPath: /usr/lib/debug
+  {{- end }}
 {{- end }}
 {{- end }}
 
@@ -394,6 +411,13 @@ frames resolve to hex. Revoking a consumer's credential must never stop its pods
 {{- if .Values.global.symbols.enabled }}
 - name: debug-symbols
   emptyDir: {}
+{{- if .Values.global.symbols.registryConfigSecret }}
+- name: debug-symbols-auth
+  secret:
+    secretName: {{ .Values.global.symbols.registryConfigSecret | quote }}
+    # A missing secret must not block the pod; the pull then fails and is logged.
+    optional: true
+{{- end }}
 {{- end }}
 {{- end }}
 

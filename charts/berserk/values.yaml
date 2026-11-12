@@ -61,8 +61,12 @@ global:
   # clusters we operate); every release publishes symbols, so an enabled install always finds them.
   symbols:
     enabled: false
-    # Password-gated OCI repo prefix the init-container pulls `<service>:<imageTag>` from.
+    # Password-gated OCI repo prefix the init-container pulls `<service><repoSuffix>:<imageTag>` from.
     repoPrefix: images.bzrk.dev/debug
+    repoSuffix: ""
+    # A kubernetes.io/dockerconfigjson Secret to pull with instead of username + passwordSecret,
+    # for symbols that sit beside the images and share their pull secret.
+    registryConfigSecret: ""
     # The read credential for that repo. ONE PER CONSUMER — each cluster we operate and each managed
     # customer sets its OWN username here and its own sealed password below; never share a credential
     # across clusters. A deterrent, not a boundary (see the design doc). The matching {name, hash}

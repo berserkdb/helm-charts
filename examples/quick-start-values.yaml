@@ -14,7 +14,7 @@
 #   --set global.s3Credentials.accessKeyId=YOUR_ACCESS_KEY \
 #   --set global.s3Credentials.secretAccessKey=YOUR_SECRET_KEY \
 #   --set global.postgresCredentials.databaseUrl="postgres://<user>:<password>@<host>:5432/<database>" \
-#   -f values.yaml
+#   -f quick-start-values.yaml
 
 global:
   # Public URL of the install — inherited by gateway + admin-ui.
@@ -27,15 +27,16 @@ global:
     managed: true
   postgresCredentials:
     managed: true
+  # With `ingest.config.requireAuth: false` below: senders need no ingest token.
   ingestToken:
-    managed: true
+    enabled: true
 
 # Feel free to modify the allocations below.
 
 query:
   replicaCount: 1
   cache:
-    size: "256GiB"
+    size: "256Gi"
   resources:
     requests:
       memory: "4Gi"
@@ -44,6 +45,8 @@ query:
 
 ingest:
   replicaCount: 1
+  config:
+    requireAuth: false
   resources:
     requests:
       memory: "1Gi"

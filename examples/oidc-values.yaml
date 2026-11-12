@@ -14,8 +14,6 @@ global:
     managed: true # S3 access via IRSA (serviceAccountName below)
   postgresCredentials:
     managed: true
-  ingestToken:
-    managed: false
   observability:
     # Ship the Berserk services' own telemetry (logs/traces/metrics) to the
     # and OTLP-enabled endpoint

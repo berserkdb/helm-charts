@@ -43,6 +43,12 @@ service:
     # in-cluster monitoring tooling can reach `ingest:9550/health/live`.
     # Aligns with the rest of the Berserk 95XX port convention.
     health: 9550
+  # `appProtocol` per port, keyed like `ports`. Gateway API implementations
+  # and service meshes read it where an Ingress controller reads an
+  # annotation: without `kubernetes.io/h2c` (HTTP/2 cleartext) they can
+  # forward OTLP gRPC as HTTP/1.1, which fails like the Traefik case above.
+  appProtocols:
+    otlpGrpc: kubernetes.io/h2c
 
 # Ingress (optional). Disabled by default. When enabled, exposes the
 # ingest Service via an Ingress controller of the cluster's choice. For
@@ -56,6 +62,9 @@ service:
 #             ignores the same annotation if placed on the Ingress —
 #             setting it there causes every external request to return
 #             HTTP 500 from tonic's h2 preface check.
+# A Gateway API route (HTTPRoute, GRPCRoute) needs no annotation: the
+# `otlp-grpc` port carries `appProtocol: kubernetes.io/h2c` (see
+# `service.appProtocols` above).
 # A single Ingress can fan out to gRPC (4317) and HTTP (4318) using
 # per-path `portName: otlp-grpc | otlp-http`.
 ingress:
