@@ -14,6 +14,14 @@ For subcharts, .Chart.Name equals the subchart name (e.g., "meta", "query").
 {{- end }}
 
 {{/*
+The kind of workload a chart renders. Only query has a persistent cache, which
+needs a StatefulSet's volume claims; every other chart is a Deployment.
+*/}}
+{{- define "berserk-common.workloadKind" -}}
+{{- if and .Values.cache .Values.cache.enabled .Values.cache.persistent }}StatefulSet{{ else }}Deployment{{ end }}
+{{- end }}
+
+{{/*
 Create chart name and version as used by the chart label.
 */}}
 {{- define "berserk-common.chart" -}}

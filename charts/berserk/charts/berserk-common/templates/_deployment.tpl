@@ -157,12 +157,10 @@ Used to distinguish Berserk installs in alerts/queries, especially when
 services ship telemetry across cluster boundaries and bypass any
 k8sattributes-enriching collector.
 
-The k8s.* attrs come from the downward API. Kubelet expands $(POD_NAME) /
-$(POD_NAMESPACE) / $(NODE_NAME) inside subsequent env values, so apps don't
-need any SDK-side k8s detector. This lets services preserve k8s.pod.name /
-k8s.namespace.name / k8s.node.name on self-telemetry that goes straight to
-the ingest service without traversing an upstream k8sattributes processor
-(notably the EKS deployment, which has no in-cluster otel-collector).
+The k8s.* attrs are set here because self-telemetry goes straight to ingest,
+never through a k8sattributes processor. Pod, namespace, node and uid come
+from the downward API (kubelet expands $(POD_NAME) etc. inside later env
+values); the workload's name and kind are the ones this chart renders it with.
 
 Usage: {{ include "berserk-common.env.cluster-name" . | nindent 12 }}
 */}}
@@ -179,8 +177,12 @@ Usage: {{ include "berserk-common.env.cluster-name" . | nindent 12 }}
   valueFrom:
     fieldRef:
       fieldPath: spec.nodeName
+- name: POD_UID
+  valueFrom:
+    fieldRef:
+      fieldPath: metadata.uid
 - name: OTEL_RESOURCE_ATTRIBUTES
-  value: "bzrk.cluster.name={{ .Values.global.clusterName | default "default" }}{{ with .Values.global.serviceNamespace }},service.namespace={{ . }}{{ end }},k8s.pod.name=$(POD_NAME),k8s.namespace.name=$(POD_NAMESPACE),k8s.node.name=$(NODE_NAME)"
+  value: "bzrk.cluster.name={{ .Values.global.clusterName | default "default" }}{{ with .Values.global.serviceNamespace }},service.namespace={{ . }}{{ end }},k8s.pod.name=$(POD_NAME),k8s.pod.uid=$(POD_UID),k8s.namespace.name=$(POD_NAMESPACE),k8s.node.name=$(NODE_NAME),k8s.{{ include "berserk-common.workloadKind" . | lower }}.name={{ include "berserk-common.fullname" . }}"
 {{- include "berserk-common.env.otlp-remote-token" . }}
 {{- end }}
 

@@ -82,6 +82,14 @@ config:
   #   tasksPerJanitor: 2
   #   minMergeTasksPerTable: 3
   #   maxMergeTasksPerTable: 100
+  # Stream liveness: how often an ingester writes a keep-alive to an idle
+  # stream, and how long a silent stream lives before its nursery stops it.
+  # Meta hands both out and refuses to start unless the reap is at least twice
+  # the keep-alive. Unset keys use the binary defaults.
+  # ingest:
+  #   keepAliveInterval: 30s
+  # nursery:
+  #   streamReapAfter: 90s
   # Lookup-table uploads (docs/dev/PLAN-lookup-tables.md). Turn on together with
   # lookup-tables.enabled and gateway.config.lookupTablesBaseUrl, once the bucket's lifecycle rule
   # aborts abandoned multipart uploads.

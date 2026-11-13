@@ -33,6 +33,16 @@ data:
       max_merge_tasks_per_table: {{ int . }}
       {{- end }}
     {{- end }}
+    {{- $ingest := .Values.config.ingest | default dict }}
+    {{- if hasKey $ingest "keepAliveInterval" }}
+    ingest:
+      keep_alive_interval: {{ $ingest.keepAliveInterval | toString | quote }}
+    {{- end }}
+    {{- $nursery := .Values.config.nursery | default dict }}
+    {{- if hasKey $nursery "streamReapAfter" }}
+    nursery:
+      stream_reap_after: {{ $nursery.streamReapAfter | toString | quote }}
+    {{- end }}
     {{- $dbPool := .Values.config.dbPool | default dict }}
     {{- $keys := list "maxConnections" "minConnections" "idleTimeoutSecs"
                       "acquireTimeoutSecs" "maxLifetimeSecs"

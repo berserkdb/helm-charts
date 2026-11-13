@@ -1,16 +1,12 @@
 apiVersion: apps/v1
-{{- if and .Values.cache.enabled .Values.cache.persistent }}
-kind: StatefulSet
-{{- else }}
-kind: Deployment
-{{- end }}
+kind: {{ include "berserk-common.workloadKind" . }}
 metadata:
   name: {{ include "berserk-common.fullname" . }}
   labels:
     {{- include "berserk-common.labels" . | nindent 4 }}
     component: {{ .Values.component | default "backend" }}
 spec:
-  {{- if and .Values.cache.enabled .Values.cache.persistent }}
+  {{- if eq (include "berserk-common.workloadKind" .) "StatefulSet" }}
   serviceName: {{ include "berserk-common.fullname" . }}
   {{- end }}
   {{- if and (not .Values.cache.persistent) .Values.cache.hostPath }}
@@ -271,7 +267,7 @@ spec:
             sizeLimit: {{ .Values.cache.size }}
           {{- end }}
         {{- end }}
-  {{- if and .Values.cache.enabled .Values.cache.persistent }}
+  {{- if eq (include "berserk-common.workloadKind" .) "StatefulSet" }}
   volumeClaimTemplates:
     - metadata:
         name: segment-cache
