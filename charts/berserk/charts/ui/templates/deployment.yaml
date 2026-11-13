@@ -159,10 +159,6 @@
                   key: {{ $.Values.secrets.feedbackSigningSecretKey | default "feedback_signing_secret" | quote }}
                   optional: true
             {{- end }}
-            {{/* `hasKey`, not `default`: Helm counts `false` as empty, so a
-                 per-service `otlpEnabled: false` used to inherit a global
-                 `true` instead of opting the service out. */}}
-            {{- $otlp := ternary (index .Values.config.observability "otlpEnabled") .Values.global.observability.otlpEnabled (hasKey .Values.config.observability "otlpEnabled") }}
             {{- $collector := .Values.collector | default dict }}
             {{- if $collector.enabled }}
             # In-product operator-metrics collector (#4122). The default discovery
@@ -189,19 +185,15 @@
             - name: BZRK_COLLECTOR_ENABLED
               value: "false"
             {{- end }}
-            # OpenTelemetry: the install's ingest is OTEL_EXPORTER_OTLP_ENDPOINT, on with
-            # $otlp; the shared helper below adds the remote destination on its own
-            # terms, OTEL_RESOURCE_ATTRIBUTES (bzrk.cluster.name + k8s.*), and the
-            # downward-API names collector discovery reads.
+            # OpenTelemetry: both destinations from berserk-common.otlp-destinations,
+            # as the Rust services get theirs; the shared helper below adds the
+            # remote's token, OTEL_RESOURCE_ATTRIBUTES (bzrk.cluster.name + k8s.*),
+            # and the downward-API names collector discovery reads.
             - name: OTEL_SERVICE_NAME
               value: {{ .Values.config.observability.serviceName | quote }}
             - name: OTEL_EXPORTER_OTLP_PROTOCOL
               value: "grpc"
-            {{- if $otlp }}
-            {{- $endpoint := .Values.config.observability.otlpEndpoint | default .Values.global.observability.otlpEndpoint }}
-            - name: OTEL_EXPORTER_OTLP_ENDPOINT
-              value: {{ ternary $endpoint (printf "http://%s" $endpoint) (or (hasPrefix "http://" $endpoint) (hasPrefix "https://" $endpoint)) | quote }}
-            {{- end }}
+            {{- include "berserk-common.env.otlp-ui" . | trim | nindent 12 }}
             {{- include "berserk-common.env.cluster-name" . | nindent 12 }}
             {{- with .Values.extraEnv }}
             {{- toYaml . | nindent 12 }}

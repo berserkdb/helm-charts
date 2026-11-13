@@ -61,11 +61,14 @@ networkPolicy:
     # tokens / tables; the label is documented in the chart NOTES.
     - app: admin
       ports: [{port: 9560}]
-  egressTo: []
+  egressTo:
+    - app: permissions
+      ports: [{port: 9580}]
   additionalIngress: []
   additionalEgress: []
 
 config:
+  permissionsBaseUrl: "http://permissions:9580"
 
   # dbPool: {}  # pool sizing and timeouts; fields and defaults in libs/bzrk_db
   # storageEndpoint: ""

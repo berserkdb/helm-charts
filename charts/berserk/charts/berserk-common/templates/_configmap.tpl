@@ -30,19 +30,16 @@ immutable: true
 {{- end }}
 
 {{/*
-Common observability config block for config.yaml data.
-Renders the observability YAML block used by 5 of 6 services.
+Common observability config block for config.yaml data. Both telemetry
+destinations render from berserk-common.otlp-destinations; the remote's token is
+substituted at load from BZRK_OTLP_REMOTE_TOKEN, which
+berserk-common.env.otlp-remote-token sets from its Secret.
 Include with appropriate nindent inside the config.yaml data section.
 */}}
 {{- define "berserk-common.observability-config" -}}
 {{- $obs := .Values.config.observability -}}
-{{/* `hasKey`, not `default`: Helm counts `false` as empty, so `default` made a
-     per-service `otlpEnabled: false` silently inherit a global `true` and a
-     service could not be opted out. The endpoint stays on `default`, where an
-     empty string genuinely does mean unset. */}}
-{{- $otlpEnabled := ternary (index $obs "otlpEnabled") .Values.global.observability.otlpEnabled (hasKey $obs "otlpEnabled") -}}
-{{- $otlpEndpoint := $obs.otlpEndpoint | default .Values.global.observability.otlpEndpoint -}}
-{{/* Same `hasKey` rule as otlpEnabled. Rendered only when off: the binaries
+{{- $d := include "berserk-common.otlp-destinations" . | fromYaml -}}
+{{/* The `hasKey` rule of berserk-common.otlp-destinations. Rendered only when off: the binaries
      default to on, and a config that names the key is rejected by any image
      older than it, so the default must not depend on every service having
      been rebuilt. */}}
@@ -50,8 +47,16 @@ Include with appropriate nindent inside the config.yaml data section.
 observability:
   service_name: {{ .Values.config.observability.serviceName | quote }}
   log_level: {{ .Values.config.observability.logLevel | quote }}
-  otlp_enabled: {{ $otlpEnabled }}
-  otlp_endpoint: {{ $otlpEndpoint | quote }}
+  otlp_enabled: {{ $d.localEnabled }}
+  otlp_endpoint: {{ $d.localEndpoint | quote }}
+  system_token: {{ $d.systemToken }}
+{{- with $d.remoteEndpoint }}
+  remote:
+    endpoint: {{ . | quote }}
+{{- if $d.remoteTokenSecret.name }}
+    token: "${BZRK_OTLP_REMOTE_TOKEN:}"
+{{- end }}
+{{- end }}
 {{- if eq $profilerEnabled false }}
   profiler_enabled: false
 {{- end }}

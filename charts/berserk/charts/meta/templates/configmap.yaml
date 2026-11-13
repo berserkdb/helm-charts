@@ -3,6 +3,7 @@ data:
   config.yaml: |
     bind: "0.0.0.0:{{ .Values.service.port }}"
     database_url: ${META_DATABASE_URL}
+    permissions_base_url: {{ .Values.config.permissionsBaseUrl | quote }}
     {{- $storageEndpoint := .Values.config.storageEndpoint | default .Values.global.storage.endpoint }}
     {{- $storageBucket := .Values.config.storageBucket | default .Values.global.storage.bucket }}
     {{- $storageRegion := .Values.config.storageRegion | default .Values.global.storage.region }}

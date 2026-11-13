@@ -11,7 +11,7 @@ service:
   port: 9580
   externalIPs: []
 
-# NetworkPolicy: only gateway + ui should reach permissions in
+# NetworkPolicy: only authorized backend services reach permissions in
 # normal operation. allowExternal is off — there's no reason to
 # expose this externally.
 networkPolicy:
@@ -23,7 +23,9 @@ networkPolicy:
       ports: [{port: 9580}]
     - app: ui
       ports: [{port: 9580}]
-    # The lookup-table upload API checks MetaWrite.
+    - app: meta
+      ports: [{port: 9580}]
+    # The lookup-table upload API checks scoped management.
     - app: lookup-tables
       ports: [{port: 9580}]
   egressTo:

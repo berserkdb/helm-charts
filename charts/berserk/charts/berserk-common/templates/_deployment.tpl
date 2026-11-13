@@ -181,56 +181,7 @@ Usage: {{ include "berserk-common.env.cluster-name" . | nindent 12 }}
       fieldPath: spec.nodeName
 - name: OTEL_RESOURCE_ATTRIBUTES
   value: "bzrk.cluster.name={{ .Values.global.clusterName | default "default" }}{{ with .Values.global.serviceNamespace }},service.namespace={{ . }}{{ end }},k8s.pod.name=$(POD_NAME),k8s.namespace.name=$(POD_NAMESPACE),k8s.node.name=$(NODE_NAME)"
-{{- include "berserk-common.env.otlp-remote" . }}
-{{- include "berserk-common.env.otlp-system-token" . }}
-{{- end }}
-
-{{/*
-Whether a service's own telemetry carries the system ingest token to its OTLP
-endpoint (global.observability.systemToken). By default only when the endpoint
-is this install's own ingest, by its short or namespaced service name, so the
-token never reaches another collector.
-*/}}
-{{- define "berserk-common.env.otlp-system-token" -}}
-{{- $obs := .Values.global.observability }}
-{{- $endpoint := ((.Values.config | default dict).observability | default dict).otlpEndpoint | default $obs.otlpEndpoint | trimPrefix "http://" | trimPrefix "https://" | trimSuffix "/" }}
-{{- $ingest := printf "^ingest(\\.%s(\\.svc(\\.cluster\\.local)?)?)?:4317$" (regexQuoteMeta .Release.Namespace) }}
-{{- $on := ternary $obs.systemToken (regexMatch $ingest $endpoint) (hasKey $obs "systemToken") }}
-- name: BZRK_OTLP_SYSTEM_TOKEN
-  value: {{ ternary "true" "false" (eq (toString $on) "true") | quote }}
-{{- end }}
-
-{{/*
-The second telemetry destination (global.observability.remote), which every
-service and the children it relays for ship to beside this install's ingest.
-*/}}
-{{- define "berserk-common.env.otlp-remote" -}}
-{{- $remote := .Values.global.observability.remote | default dict }}
-{{- $secret := $remote.tokenSecret | default dict }}
-{{- if and $secret.name (eq $secret.name $.Values.global.masterKey.secretName) }}
-{{- fail "global.observability.remote.tokenSecret names the master key Secret; the remote takes an ingest token its cluster issued" }}
-{{- end }}
-{{- if and (or $secret.name $secret.key) (not (and $secret.name $secret.key)) }}
-{{- fail "global.observability.remote.tokenSecret needs both name and key, or neither" }}
-{{- end }}
-{{- with $remote.endpoint }}
-{{- if not (or (hasPrefix "http://" .) (hasPrefix "https://" .)) }}
-{{- fail (printf "global.observability.remote.endpoint %s needs an http:// or https:// scheme" .) }}
-{{- end }}
-- name: BZRK_OTLP_REMOTE_ENDPOINT
-  value: {{ . | quote }}
-{{- with $secret.name }}
-- name: BZRK_OTLP_REMOTE_TOKEN
-  valueFrom:
-    secretKeyRef:
-      name: {{ . }}
-      key: {{ $secret.key }}
-{{- end }}
-{{- else }}
-{{- if $secret.name }}
-{{- fail "global.observability.remote.tokenSecret is set without global.observability.remote.endpoint" }}
-{{- end }}
-{{- end }}
+{{- include "berserk-common.env.otlp-remote-token" . }}
 {{- end }}
 
 {{/*
