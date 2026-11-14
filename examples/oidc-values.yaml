@@ -20,8 +20,6 @@ global:
     otlpEnabled: true
   networkPolicy:
     enabled: true
-  # This is the default table, where the telemetry ends up.
-  defaultTable: "default"
 
 # ─── Data plane ───────────────────────────────────────────────────────
 ingest:

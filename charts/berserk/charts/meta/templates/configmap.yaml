@@ -73,6 +73,7 @@ data:
       idle_in_transaction_secs: {{ int $dbPool.idleInTransactionSecs }}
       {{- end }}
     {{- end }}
+    accept_visitor_tokens: {{ .Values.config.acceptVisitorTokens | default false }}
     lookup_tables_enabled: {{ .Values.config.lookupTablesEnabled | default false }}
     {{- with .Values.config.lookupTablesMaxDatabaseBytes }}
     lookup_tables_max_database_bytes: {{ int64 . }}

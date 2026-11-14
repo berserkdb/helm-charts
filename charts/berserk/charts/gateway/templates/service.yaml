@@ -35,6 +35,9 @@ spec:
       targetPort: {{ .Values.extraListener.port }}
       protocol: TCP
       name: {{ .Values.extraListener.name | default "grpc" }}
+      {{- with .Values.extraListener.appProtocol }}
+      appProtocol: {{ . | quote }}
+      {{- end }}
     {{- end }}
     {{- with .Values.metricsPort }}
     {{/*

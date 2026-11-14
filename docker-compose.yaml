@@ -25,7 +25,9 @@
 #   bzrk profile add local --endpoint http://localhost:${HOST_GATEWAY_PORT:-9500}
 #   bzrk profile use local
 #   bzrk login
-#   bzrk search "default | take 10" --since "1h ago"
+#   # The first admin reads no data until it holds a role:
+#   bzrk access assign --user <your email> --role admin
+#   bzrk search 'database("system").logs | take 10' --since "1h ago"
 #
 # Requires Docker Compose v2.23.1+ (for inline configs).
 #
@@ -51,7 +53,7 @@ x-logging: &logging
 
 # One master key for the stack. The gateway's cookie key, the service-to-service
 # tokens (the cluster token every service presents to the others among them),
-# the ui's secret_key_base, the default ingest token and the key that wraps the
+# the ui's secret_key_base, the system ingest token and the key that wraps the
 # ui's data key all derive from it (docs/dev/master-key.md), so every service
 # below gets the same value. Localhost placeholder: in production
 # generate one (`openssl rand -base64 32`), at least 32 bytes, and treat it as
@@ -96,7 +98,8 @@ configs:
         service_name: "meta"
         log_level: "info"
         otlp_enabled: true
-        otlp_endpoint: "ingest:4317"
+        otlp_endpoint: "http://ingest:4317"
+        system_token: true
 
   query-config:
     content: |
@@ -127,7 +130,8 @@ configs:
         service_name: "query"
         log_level: "info"
         otlp_enabled: true
-        otlp_endpoint: "ingest:4317"
+        otlp_endpoint: "http://ingest:4317"
+        system_token: true
 
   ingest-config:
     content: |
@@ -137,7 +141,6 @@ configs:
       grpc_bind: "0.0.0.0:4317"
       health_bind: "0.0.0.0:9550"
 
-      require_auth: false
       lax_utf8: true
 
       loki_enabled: false
@@ -149,29 +152,25 @@ configs:
         service_name: "ingest"
         log_level: "info"
         otlp_enabled: true
-        otlp_endpoint: "ingest:4317"
+        otlp_endpoint: "http://ingest:4317"
+        system_token: true
 
   janitor-config:
     content: |
       bind: "0.0.0.0:9502"
       meta_endpoint: "http://meta:9560"
-      query_endpoint: "http://query:9510"
       cloud_storage_access_key: $${JANITOR_STORAGE_ACCESS_KEY:}
       cloud_storage_secret_key: $${JANITOR_STORAGE_SECRET_KEY:}
       # Idle re-poll cadence, as the chart defaults it. It is also how often
       # the janitor polls meta for merge tasks, which the vector-index write
       # gate must see within its grant period before it opens.
-      merger:
-        interval_seconds: 10
+      merger_interval_seconds: 10
       observability:
         service_name: "janitor"
         log_level: "info"
         otlp_enabled: true
-        otlp_endpoint: "ingest:4317"
-      # Probe canary off, matching the Helm chart default. Explicit [] rather
-      # than an absent key: the pinned image predates the empty compiled-in
-      # default, and omitting the key there re-enables one probe.
-      probe_jobs: []
+        otlp_endpoint: "http://ingest:4317"
+        system_token: true
 
   nursery-config:
     content: |
@@ -199,7 +198,8 @@ configs:
         service_name: "nursery"
         log_level: "info"
         otlp_enabled: true
-        otlp_endpoint: "ingest:4317"
+        otlp_endpoint: "http://ingest:4317"
+        system_token: true
 
   gateway-config:
     content: |
@@ -220,7 +220,8 @@ configs:
         service_name: "gateway"
         log_level: "info"
         otlp_enabled: true
-        otlp_endpoint: "ingest:4317"
+        otlp_endpoint: "http://ingest:4317"
+        system_token: true
 
   # No bootstrap SQL needed: as of v1.0.112, gateway / ui /
   # permissions share the meta DB and isolate themselves via the
@@ -313,7 +314,7 @@ services:
 
   meta:
     <<: *common
-    image: images.bzrk.dev/release/meta:v1.1.20-rc.1
+    image: images.bzrk.dev/release/meta:v1.1.20-rc.2
     depends_on:
       postgres:
         condition: service_healthy
@@ -321,12 +322,7 @@ services:
       <<: *common-env
       POD_IP: meta
       META_DATABASE_URL: "postgres://berserk:berserk@postgres:5432/berserk"
-      # Registers the default ingest token (derived from the key) with its
-      # ingest pipeline, and creates
-      # the `default` table on first boot.
       BZRK_MASTER_KEY: *master-key
-      # Anonymous ingest: meta answers a sender with no token with that token.
-      META_DEFAULT_INGEST_TOKEN_ENABLED: "true"
     command: ["-c", "/config/config.yaml"]
     ports:
       - "127.0.0.1:9560:9560"
@@ -343,7 +339,7 @@ services:
 
   query:
     <<: *common
-    image: images.bzrk.dev/release/query:v1.1.20-rc.1
+    image: images.bzrk.dev/release/query:v1.1.20-rc.2
     depends_on:
       meta:
         condition: service_healthy
@@ -380,13 +376,12 @@ services:
       start_period: 10s
       retries: 10
 
-  # Pushes without a bearer token land in the `default` table: ingest sends
-  # them on as anonymous (`require_auth: false` above), and meta answers with
-  # its default ingest token. Senders with a token of their own are routed by
-  # that token.
+  # Every push needs an ingest token; the token's pipeline picks the tables.
+  # The services' own telemetry arrives with the system ingest token, which
+  # each derives from the master key, and lands in the `system` database.
   ingest:
     <<: *common
-    image: images.bzrk.dev/release/ingest:v1.1.20-rc.1
+    image: images.bzrk.dev/release/ingest:v1.1.20-rc.2
     depends_on:
       meta:
         condition: service_healthy
@@ -401,9 +396,6 @@ services:
       AWS_ACCESS_KEY_ID: minioadmin
       AWS_SECRET_ACCESS_KEY: minioadmin
       BZRK_MASTER_KEY: *master-key
-      # Only the pinned image reads this, deriving the default token itself.
-      # Drop it with the bump past 1.1.11.
-      DEFAULT_INGEST_TOKEN_ENABLED: "true"
     ports:
       - "127.0.0.1:14317:4317"   # OTLP gRPC
       - "127.0.0.1:14318:4318"   # OTLP HTTP
@@ -421,7 +413,7 @@ services:
 
   janitor:
     <<: *common
-    image: images.bzrk.dev/release/janitor:v1.1.20-rc.1
+    image: images.bzrk.dev/release/janitor:v1.1.20-rc.2
     depends_on:
       meta:
         condition: service_healthy
@@ -453,7 +445,7 @@ services:
 
   nursery:
     <<: *common
-    image: images.bzrk.dev/release/nursery:v1.1.20-rc.1
+    image: images.bzrk.dev/release/nursery:v1.1.20-rc.2
     depends_on:
       meta:
         condition: service_healthy
@@ -483,7 +475,7 @@ services:
 
   ui:
     <<: *common
-    image: images.bzrk.dev/release/ui:v1.1.20-rc.1
+    image: images.bzrk.dev/release/ui:v1.1.20-rc.2
     depends_on:
       postgres:
         condition: service_healthy
@@ -529,7 +521,7 @@ services:
 
   permissions:
     <<: *common
-    image: images.bzrk.dev/release/permissions:v1.1.20-rc.1
+    image: images.bzrk.dev/release/permissions:v1.1.20-rc.2
     depends_on:
       postgres:
         condition: service_healthy
@@ -548,7 +540,7 @@ services:
 
   gateway:
     <<: *common
-    image: images.bzrk.dev/release/gateway:v1.1.20-rc.1
+    image: images.bzrk.dev/release/gateway:v1.1.20-rc.2
     depends_on:
       postgres:
         condition: service_healthy

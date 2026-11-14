@@ -54,11 +54,7 @@ networkPolicy:
     # lookup-tables registers uploads, claims builds and commits versions
     - app: lookup-tables
       ports: [{port: 9560}]
-    # post-install setup job creates the default table via meta
-    - app: setup
-      ports: [{port: 9560}]
-    # ad-hoc operator-run admin pods (e.g. `kubectl run bzrk-cli`) creating
-    # tokens / tables; the label is documented in the chart NOTES.
+    # ad-hoc admin pods an operator runs with the label `app: admin`
     - app: admin
       ports: [{port: 9560}]
   egressTo:
@@ -90,6 +86,8 @@ config:
   #   keepAliveInterval: 30s
   # nursery:
   #   streamReapAfter: 90s
+  # Accept tokens meta mints for processes outside the cluster (`meta_bin mint-visitor-token`).
+  acceptVisitorTokens: false
   # Lookup-table uploads (docs/dev/PLAN-lookup-tables.md). Turn on together with
   # lookup-tables.enabled and gateway.config.lookupTablesBaseUrl, once the bucket's lifecycle rule
   # aborts abandoned multipart uploads.

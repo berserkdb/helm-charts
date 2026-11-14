@@ -89,12 +89,22 @@ spec:
               ;;
           esac
 
-          echo "Running through the gateway: {{ .Values.global.defaultTable }} | take 1"
-          RESPONSE=$(curl -sS -f \
+          # Meta creates the system database in the background after it starts.
+          echo "Running through the gateway, in the system database: logs | take 1"
+          ATTEMPTS=0
+          until RESPONSE=$(curl -sS -f \
             -H "Cookie: ${SESSION}" \
             -H "Content-Type: application/json" \
-            --data '{"db": "{{ .Values.global.defaultDatabase | default "default" }}", "csl": "{{ .Values.global.defaultTable }} | take 1"}' \
-            "${GATEWAY}/v1/rest/query")
+            --data '{"db": "system", "csl": "logs | take 1"}' \
+            "${GATEWAY}/v1/rest/query"); do
+            ATTEMPTS=$((ATTEMPTS + 1))
+            if [ "${ATTEMPTS}" -ge 20 ]; then
+              echo "FAILED: the query through the gateway kept failing"
+              exit 1
+            fi
+            echo "Query failed, retrying in 3s..."
+            sleep 3
+          done
 
           echo "Response: ${RESPONSE}"
           echo "${RESPONSE}" | grep -q '"Tables"'

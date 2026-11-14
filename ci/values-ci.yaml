@@ -34,8 +34,6 @@ global:
   # auth-side binaries also default to "auth" when the env var is
   # unset, so this only needs to be overridden to "" for two-DB
   # layouts (see charts/values-dev.yaml).
-  ingestToken:
-    enabled: true
 
 meta:
   resources:
@@ -75,9 +73,6 @@ query:
       cpu: "500m"
 
 ingest:
-  # Self-telemetry arrives without a token, into the default token above.
-  config:
-    requireAuth: false
   resources:
     requests:
       memory: "128Mi"

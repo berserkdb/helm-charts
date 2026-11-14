@@ -7,7 +7,6 @@ data:
     grpc_bind: "0.0.0.0:{{ .Values.service.ports.otlpGrpc }}"
     health_bind: "0.0.0.0:{{ .Values.service.ports.health }}"
 
-    require_auth: {{ .Values.config.requireAuth }}
     lax_utf8: {{ .Values.config.laxUtf8 }}
 
     loki_enabled: {{ .Values.config.lokiEnabled }}

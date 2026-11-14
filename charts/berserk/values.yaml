@@ -217,7 +217,7 @@ global:
   authDatabaseSchema: "auth"
   # The master key: the one internal secret. Every internal key — the gateway
   # cookie key, the service-to-service tokens, the ui `secret_key_base`, the
-  # default ingest token and the key that wraps the ui vault's data-encryption
+  # system ingest token and the key that wraps the ui vault's data-encryption
   # key — is derived from it (docs/dev/master-key.md; Berserk docs → Operations
   # → Deployment → Secrets).
   #
@@ -241,17 +241,6 @@ global:
     # base64 and alphanumeric all work as given — so lower it, to 24 at the
     # lowest, only when your generator caps below 32.
     minLength: 32
-  # Anonymous ingest: with `enabled: true`, meta answers a sender that
-  # presents no token with the default token, which it derives from the master
-  # key and registers at startup (one row per configured key, named
-  # `<tokenName>-<key id>`, all on one ingest pipeline that a fresh install
-  # names `<tokenName>` and points at `defaultDatabase`/`defaultTable`). Ingest
-  # sends such requests on only with `ingest.config.requireAuth: false`. Off by
-  # default: every sender presents its own token, and with `enabled: false`
-  # meta retires the rows.
-  ingestToken:
-    enabled: false
-    tokenName: "default_ingest_token"
   # Product licensing (docs/dev/licensing.md). An install is licensed when it
   # holds a valid Berserk-signed license key. Keys are not secret — a key grants
   # nothing beyond its own signed terms — so they ride a plain env var by
@@ -301,13 +290,6 @@ global:
     # children it spawns. Set a service's own `config.observability.profilerEnabled`
     # to override this for that service alone.
     profilerEnabled: true
-  # Database and table the default ingest token's pipeline starts out
-  # routing to. meta creates the
-  # table at startup when it is missing; both default to the `default`
-  # database/table that meta's migration 026 seeds.
-  defaultDatabase: "default"
-  # Default table name for Berserk
-  defaultTable: "default"
   # NetworkPolicy configuration
   # Requires a CNI plugin that supports NetworkPolicy (Calico, Cilium, or
   # EKS VPC CNI v1.14+ with ENABLE_NETWORK_POLICY).
@@ -421,15 +403,6 @@ global:
   nodeSelector: {}
   tolerations: []
   affinity: {}
-
-# Post-install setup job configuration
-setup:
-  # meta creates the default table at startup, so this job is only needed for
-  # installs that set up more than that.
-  enabled: false
-  image:
-    repository: cli
-    # tag: overrides global.imageTag
 
 # Meta service configuration
 meta:
@@ -558,9 +531,6 @@ ingest:
     batch:
       maxBatchBytes: 16777216
       maxBatchAgeSecs: 2
-    # Refuse requests that present no token. With false they go on as
-    # anonymous, which meta accepts only with `global.ingestToken.enabled`.
-    requireAuth: true
     laxUtf8: true
     lokiEnabled: true
     observability:

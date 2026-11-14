@@ -36,6 +36,13 @@ extraListener:
   port: 9501
   # Service/containerPort name (DNS-1123 label, ≤15 chars).
   name: grpc
+  # `appProtocol` of the Service port. Gateway API implementations and service
+  # meshes read it where an Ingress controller reads an annotation: without
+  # `kubernetes.io/h2c` (HTTP/2 cleartext) they can forward native gRPC as
+  # HTTP/1.1. `service.port` carries none, because a port has one `appProtocol`
+  # and that port also serves WebSocket upgrades, which need HTTP/1.1. Set
+  # `null` to render none here too.
+  appProtocol: kubernetes.io/h2c
 
 # Ingress (optional). The gateway is the public edge — once exposed it
 # terminates user-facing HTTPS and proxies to ui (HTTP) plus gRPC

@@ -162,9 +162,6 @@ config:
   # maxConcurrentRequests: 10000
   # maxTotalInflightBytes: 1073741824
 
-  # Refuse requests that present no ingest token. With false they go on as
-  # anonymous, which meta accepts only with `global.ingestToken.enabled`.
-  requireAuth: true
   laxUtf8: true                     # Replace invalid UTF-8 with U+FFFD instead of rejecting
 
   # Loki push API receiver. When enabled, ingest binds an additional listener

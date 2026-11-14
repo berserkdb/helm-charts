@@ -1,6 +1,5 @@
 # Quick start values for running POC of Berserk.
-# Note this sets up our ingest with a default ingest token, meaning it accepts unauthenticated requests.
-# So be sure to protect the cluster and don't expose it to the Internet.
+# Senders need an ingest token: the install notes show how to create one.
 #
 # To start:
 # $ curl -o quick-start-values.yaml https://raw.githubusercontent.com/berserkdb/helm-charts/refs/heads/main/examples/quick-start-values.yaml
@@ -27,9 +26,6 @@ global:
     managed: true
   postgresCredentials:
     managed: true
-  # With `ingest.config.requireAuth: false` below: senders need no ingest token.
-  ingestToken:
-    enabled: true
 
 # Feel free to modify the allocations below.
 
@@ -45,8 +41,6 @@ query:
 
 ingest:
   replicaCount: 1
-  config:
-    requireAuth: false
   resources:
     requests:
       memory: "1Gi"
