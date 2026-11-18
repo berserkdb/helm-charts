@@ -3,9 +3,13 @@
        second island: each pod's queues would wait for their next poll rather
        than being woken, with nothing logged. Cluster the nodes or move back to
        `Oban.Notifiers.Postgres` (a connection per pod) before raising this.
+       `BzrkExplore.Jobs.OrphanRescue` relies on one pod too: it returns any job
+       its own producers do not hold to the queue, so it would re-run a second
+       pod's jobs.
 
        Offline schema upgrades use Recreate so the old scheduler cannot execute
-       newly migrated definitions. The image migrates before starting the app.
+       newly migrated definitions, and so no old pod still holds jobs when the
+       new one starts. The image migrates before starting the app.
 
        This guard also cannot see runtime scaling: an HPA (there is no template
        for one today) or a hand-run `kubectl scale` would pass it. */ -}}
