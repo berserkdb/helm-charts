@@ -2,16 +2,15 @@
 replicaCount: 1
 component: frontend
 
-# Offline upgrades stop the old UI and scheduler before the new image's
-# entrypoint migrates the database. Required for the alert measurement migration.
-strategy:
-  type: Recreate
-
+# Database migrations. When enabled (default), a pre-install/pre-upgrade hook
+# Job runs the Ecto migrations to completion before the app rolls out — the
+# safe path for multi-replica installs. Disable only if migrations are applied
+# out of band; the image entrypoint still migrates idempotently on boot.
 migrations:
-  offline: true
-  # Dedicated pre-upgrade Job, used only when offline is false. Opt into online
-  # migration only when every pending migration supports the running UI version.
   enabled: true
+  # Fails the migration hook instead of letting it hang the release. Covers both
+  # a migration that never finishes and an image that never pulls. Raise it if a
+  # data migration legitimately needs longer.
   activeDeadlineSeconds: 600
 
 image:

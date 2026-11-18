@@ -1,6 +1,13 @@
-{{- if and .Values.migrations.enabled (not .Values.migrations.offline) }}
-{{- /* Online migrations are opt-in: old pods remain running during this hook.
-Offline upgrades instead run the image's boot migration after Recreate stops them. */ -}}
+{{- if .Values.migrations.enabled }}
+{{- /*
+Runs the Ecto migrations to completion BEFORE the app rolls out, as a
+pre-install / pre-upgrade Helm hook. The image entrypoint also migrates on boot
+(idempotent), which is enough for a single replica; this hook is what makes a
+multi-replica rollout safe — migrations finish once, here, so the app pods boot
+against an already-current schema instead of racing each other. A migration
+failure fails the hook (and the release) cleanly, rather than crash-looping the
+app on a half-applied schema.
+*/ -}}
 apiVersion: batch/v1
 kind: Job
 metadata:

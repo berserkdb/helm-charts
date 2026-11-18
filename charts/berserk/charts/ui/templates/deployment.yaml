@@ -3,21 +3,21 @@
        second island: each pod's queues would wait for their next poll rather
        than being woken, with nothing logged. Cluster the nodes or move back to
        `Oban.Notifiers.Postgres` (a connection per pod) before raising this.
-       `BzrkExplore.Jobs.OrphanRescue` relies on one pod too: it returns any job
-       its own producers do not hold to the queue, so it would re-run a second
-       pod's jobs.
 
-       Offline schema upgrades use Recreate so the old scheduler cannot execute
-       newly migrated definitions, and so no old pod still holds jobs when the
-       new one starts. The image migrates before starting the app.
+       A rolling update overlaps two pods for a few seconds, and that window is
+       not free. Leadership holds — `Oban.Peers.Database` elects through the
+       `oban_peers` table, so cron does not double-fire — but cancellation
+       travels by notifier, not by the database: an `Oban.cancel_job` issued on
+       one pod does not reach a job already executing on the other, and the DB
+       fence stops its later writes rather than the work itself. Deliveries are
+       on that path. The window is seconds per deploy and the alternative is
+       downtime on every deploy, so it is accepted here deliberately, not
+       because it costs nothing.
 
        This guard also cannot see runtime scaling: an HPA (there is no template
        for one today) or a hand-run `kubectl scale` would pass it. */ -}}
 {{- if gt (int .Values.replicaCount) 1 }}
 {{- fail (printf "ui: replicaCount is %d, but Oban's PG notifier needs Erlang clustering above one replica — see apps/ui_phoenix/config/config.exs" (int .Values.replicaCount)) }}
-{{- end }}
-{{- if and .Values.migrations.offline (ne (.Values.strategy.type | default "") "Recreate") }}
-{{- fail "ui: offline migrations require strategy.type=Recreate" }}
 {{- end }}
 {{- include "berserk-common.deployment.header" . }}
 {{- /* Its own account only while the collector lists pods through the Kubernetes
