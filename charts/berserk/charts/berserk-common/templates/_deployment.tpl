@@ -299,11 +299,25 @@ into /usr/lib/debug.
 Fail-open on purpose: symbols are a debugging aid, so a failed fetch (registry down, credential
 revoked, secret missing) logs `debug_symbols_fetch_failed` and the service starts without them —
 frames resolve to hex. Revoking a consumer's credential must never stop its pods from restarting.
+The pull is retried once: each failed try costs the pod's start up to a minute or more.
 */}}
 {{- define "berserk-common.debuginfoRef" -}}
 {{- $prefix := .Values.global.symbols.repoPrefix | default "images.bzrk.dev/debug" -}}
 {{- $tag := .Values.image.tag | default .Values.global.imageTag | default (printf "v%s" .Chart.AppVersion) -}}
 {{- printf "%s/%s%s:%s" $prefix .Chart.Name (.Values.global.symbols.repoSuffix | default "") $tag -}}
+{{- end }}
+
+{{- define "berserk-common.symbols.pullWithRetry" -}}
+attempt=1
+until pull; do
+  if [ "$attempt" -ge 2 ]; then
+    echo "debug_symbols_fetch_failed ref=$SYMBOLS_REF${SYMBOLS_USERNAME:+ user=$SYMBOLS_USERNAME} attempts=$attempt: starting without debug symbols" >&2
+    exit 0
+  fi
+  sleep 2
+  attempt=$((attempt + 1))
+done
+echo "debug symbols fetched: $SYMBOLS_REF attempt=$attempt"
 {{- end }}
 
 {{- define "berserk-common.initContainer.symbols" -}}
@@ -323,11 +337,8 @@ frames resolve to hex. Revoking a consumer's credential must never stop its pods
   command: ["/bin/sh", "-c"]
   args:
     - |
-      if oras pull --registry-config /run/debug-symbols-auth/.dockerconfigjson --output /usr/lib/debug "$SYMBOLS_REF"; then
-        echo "debug symbols fetched: $SYMBOLS_REF"
-      else
-        echo "debug_symbols_fetch_failed ref=$SYMBOLS_REF: starting without debug symbols" >&2
-      fi
+      pull() { oras pull --registry-config /run/debug-symbols-auth/.dockerconfigjson --output /usr/lib/debug "$SYMBOLS_REF"; }
+      {{- include "berserk-common.symbols.pullWithRetry" . | nindent 6 }}
   volumeMounts:
     - name: debug-symbols
       mountPath: /usr/lib/debug
@@ -348,11 +359,8 @@ frames resolve to hex. Revoking a consumer's credential must never stop its pods
   command: ["/bin/sh", "-c"]
   args:
     - |
-      if printf '%s' "$SYMBOLS_PASSWORD" | oras pull --username "$SYMBOLS_USERNAME" --password-stdin --output /usr/lib/debug "$SYMBOLS_REF"; then
-        echo "debug symbols fetched: $SYMBOLS_REF"
-      else
-        echo "debug_symbols_fetch_failed ref=$SYMBOLS_REF user=$SYMBOLS_USERNAME: starting without debug symbols" >&2
-      fi
+      pull() { printf '%s' "$SYMBOLS_PASSWORD" | oras pull --username "$SYMBOLS_USERNAME" --password-stdin --output /usr/lib/debug "$SYMBOLS_REF"; }
+      {{- include "berserk-common.symbols.pullWithRetry" . | nindent 6 }}
   volumeMounts:
     - name: debug-symbols
       mountPath: /usr/lib/debug
