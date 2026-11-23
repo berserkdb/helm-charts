@@ -37,8 +37,11 @@ autoscaling:
 # in-flight merge; it hard-aborts (cleanup + release) ~60s before this
 # deadline, so SIGKILL is never relied on. The same value feeds the janitor's
 # `shutdown_grace_seconds` config via the ConfigMap. Grace is a ceiling, not a
-# wait: an idle janitor still terminates instantly.
-terminationGracePeriodSeconds: 1500
+# wait: an idle janitor still terminates instantly. An hour, because a normal
+# merge (~3 GB out, ~44 GB uncompressed in) takes ~24 min on dev's faster heavy
+# node and ~twice that on the slower one: at 1500 s a drain aborted it, and each
+# retry downloaded its inputs again.
+terminationGracePeriodSeconds: 3600
 
 image:
   repository: janitor
@@ -98,12 +101,6 @@ config:
   # volume (emptyDir mounted at /tmp/segment-cache) — NOT the container's
   # system-wide /tmp, which is often a small tmpfs that would fill instantly.
   cacheDir: "/tmp/segment-cache"
-  # Every row a merge writes is walked before it is kept, and every row of its
-  # output again when the output is verified: each value, each length and each
-  # field-index entry. A malformed row fails the merge rather than being
-  # stored. false emits BZRK_ROW_STRUCTURE_CHECK_DISABLED; turn it off only if
-  # the check costs more merge time than the cluster can spare.
-  rowStructureCheck: true
   observability:
     serviceName: "janitor"
     logLevel: "info"

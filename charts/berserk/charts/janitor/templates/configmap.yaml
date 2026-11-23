@@ -17,6 +17,7 @@ data:
     {{- with .Values.global.rowsZstdLevel }}
     rows_zstd_level: {{ int . }}
     {{- end }}
+    verify_row_contents: {{ .Values.global.verifyRowContents | default false }}
     {{- with .Values.global.mergeCacheSeeding }}
     merge_cache_seeding: {{ . | quote }}
     {{- end }}

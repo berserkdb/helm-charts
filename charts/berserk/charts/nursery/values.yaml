@@ -78,13 +78,12 @@ config:
   # mergeMinBytes / mergeMaxSizeBytes / mergeAgeTriggerSecs
   # combineMinAgeSecs / combineMaxBytes / combineMaxConcurrent (0 disables) /
   # combineBackoffSecs
-  #
-  # mergeWriterMemoryBudget has no default and is the one an operator is
-  # expected to reach for: the merger refuses anything under 1 GiB, so it is
-  # worth setting only on a pod large enough to fund that and still leave the
-  # fetch backlog room. It is charged against the same memory the backpressure
-  # tiers derive from, so setting it lowers the resident bytes at which ingest
-  # is throttled.
+
+  # The merges' share of the pod's memory limit, in percent: their writers and
+  # dedup accelerators between them. Each merge's writers are held to their
+  # part, so a merge needing more runs in passes instead of past the limit; the
+  # rest funds the base resident set and the fetch backlog.
+  mergeMemoryPercent: 25
 
   # gRPC bind for the per-nursery `NurseryQueryService` that
   # apps/query's coordinator fans out to when `queryViaNursery` is on.
@@ -99,13 +98,6 @@ config:
   # remains. Merges are unaffected — the switch only reaches readers serving
   # queries.
   audtVerify: true
-  # Every row the nursery writes, at ingest and in its merges, is walked before
-  # it is kept, and every row of a merge's or combine's output again when the
-  # output is verified: each value, each length and each field-index entry. A
-  # malformed row is refused rather than stored. false emits
-  # BZRK_ROW_STRUCTURE_CHECK_DISABLED; turn it off only if the check costs more
-  # merge time than the cluster can spare.
-  rowStructureCheck: true
   observability:
     serviceName: "nursery"
     logLevel: "info"

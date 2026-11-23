@@ -113,6 +113,15 @@ global:
   # queries touch only a fraction of the corpus. See
   # docs/dev/merge-cache-seeding.md.
   mergeCacheSeeding: index
+  # Whether the nursery's and janitor's merges walk every row they write before
+  # keeping it, and read back every row of their output: its structure and
+  # shortcuts, its SHAR entries, and FSUM and the key bloom against the rows.
+  # Off, a merge checks every chunk's checksum and that its output holds as many
+  # rows as its inputs. It costs merge CPU and finds bugs a new build brings, so
+  # dev, where every build runs first, turns it on; other clusters run builds dev
+  # has already proven. Ingest walks every row it writes either way: those rows
+  # come from outside.
+  verifyRowContents: false
   # The most bytes one lookup-table upload may be, uncompressed. Meta refuses a larger upload at
   # registration and lookup-tables at creation, so the two read this one value. The row stream
   # (8 ×), the built file (2 ×), an IP-range index's temporary space (2 ×), the extractor's
@@ -581,7 +590,7 @@ janitor:
   #   minReplicas: 1
   #   maxReplicas: 20
   #   targetCPUAverageValue: 800m
-  # terminationGracePeriodSeconds: 1500
+  # terminationGracePeriodSeconds: 3600
 
   cache:
     # Merge scratch lives on this pod-internal emptyDir (mounted at

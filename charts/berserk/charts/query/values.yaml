@@ -206,10 +206,6 @@ config:
   # verified against meta's record when the segment is opened, and merge,
   # rewrite and `segdump` keep hashing every chunk.
   audtVerify: true
-  # Every row the query service writes (datatable segments) is walked before it
-  # is kept: each value, each length and each field-index entry. false emits
-  # BZRK_ROW_STRUCTURE_CHECK_DISABLED, which forked children inherit.
-  rowStructureCheck: true
   observability:
     serviceName: "query"
     logLevel: "info"

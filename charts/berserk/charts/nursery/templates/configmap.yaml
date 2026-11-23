@@ -18,12 +18,11 @@ data:
     {{- if hasKey .Values.config "mergeMaxSizeBytes" }}
     merge_max_size_bytes: {{ int64 .Values.config.mergeMaxSizeBytes }}
     {{- end }}
-    {{- if hasKey .Values.config "mergeWriterMemoryBudget" }}
-    merge_writer_memory_budget: {{ int64 .Values.config.mergeWriterMemoryBudget }}
-    {{- end }}
+    merge_memory_percent: {{ int .Values.config.mergeMemoryPercent }}
     {{- with .Values.global.rowsZstdLevel }}
     rows_zstd_level: {{ int . }}
     {{- end }}
+    verify_row_contents: {{ .Values.global.verifyRowContents | default false }}
     {{- with .Values.global.mergeCacheSeeding }}
     merge_cache_seeding: {{ . | quote }}
     {{- end }}
