@@ -2,8 +2,8 @@ apiVersion: v2
 name: lookup-tables
 description: Berserk Lookup Tables - the lookup-table upload API, builder and sweep
 type: application
-version: 1.4.0
-appVersion: 1.4.0
+version: 1.4.1-rc.1
+appVersion: 1.4.1-rc.1
 dependencies:
   - name: berserk-common
     version: "*"
