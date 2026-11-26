@@ -22,6 +22,9 @@ data:
     {{- with .Values.config.ackMode }}
     ack_mode: {{ . }}
     {{- end }}
+    {{- with .Values.config.inMemoryHoldLimitSecs }}
+    in_memory_hold_limit_secs: {{ int . }}
+    {{- end }}
 
     max_batch_bytes: {{ int .Values.config.batch.maxBatchBytes }}
     max_batch_age_secs: {{ .Values.config.batch.maxBatchAgeSecs }}

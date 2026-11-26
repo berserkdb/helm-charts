@@ -136,13 +136,25 @@ config:
   #   in_memory_drop       ack on receipt, persist async; drop excess when full — never
   #                        backs the client up, at-most-once durability.
   # The in_memory modes remove head-of-line blocking for Loki/promtail multi-senders
-  # (a slow ack to one sender stalls them all) at the cost of at-most-once durability
-  # on a crash. Since any request can ask for in_memory, ingest needs a pod memory
-  # limit — without one the buffer is capped and the RSS shed-gate watches the host
-  # (ingest logs a warning at startup). Leave unset to keep the binary default
-  # (durable); override per-environment in charts/values-<env>.yaml (Dev runs
-  # in_memory_drop, under its old name fast_drop).
+  # (a slow ack to one sender stalls them all) at the cost of at-most-once durability:
+  # acked data is lost on a crash, or when S3 stays unavailable longer than
+  # inMemoryHoldLimitSecs. Since any request can ask for in_memory, ingest needs
+  # a pod memory limit — without one the buffer is capped and the RSS shed-gate
+  # watches the host (ingest logs a warning at startup). Leave unset to keep the
+  # binary default (durable); override per-environment in
+  # charts/values-<env>.yaml (Dev runs in_memory_drop, under its old name
+  # fast_drop).
   # ackMode: durable
+
+  # How long a batch whose senders were all acked on receipt (in_memory,
+  # in_memory_drop) keeps retrying S3 before it is dropped and counted in
+  # bzrk.ingest.lost_after_ack. Longer loses less in an S3 outage; meanwhile
+  # the stream holds newer data in memory and, once the byte budget is full,
+  # throttles (in_memory) or drops (in_memory_drop) it. A batch that also holds
+  # a durable request ends on that request's deadline instead. Unset keeps the
+  # binary default (21s). Above roughly 60s a silent stream can reach meta's
+  # stream reap (meta.config.nursery.streamReapAfter, 90s) under the held batch.
+  # inMemoryHoldLimitSecs: 21
 
   # Batching knobs (see apps/ingest/src/config.rs for the full surface). The
   # window a batch gets is derived from ackTimeout, and startup refuses a
